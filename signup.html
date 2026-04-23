@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Sign Up — Nuvvu Nenu</title>
+  <link rel="stylesheet" href="styles-global.css">
+  <link rel="stylesheet" href="styles-premium-glass.css">
+
+  <!-- Only firebase.js needed here -->
+  <script type="module" src="firebase.js"></script>
+</head>
+
+<body class="auth-body">
+
+  <div class="auth-card glass">
+    <h2>Create Account 💕</h2>
+
+    <input id="signup-email" type="email" placeholder="Email">
+    <input id="signup-password" type="password" placeholder="Password">
+
+    <button onclick="doSignup()">Create Account</button>
+
+    <p class="switch">Already have an account?
+      <a href="login.html">Login</a>
+    </p>
+  </div>
+
+
+  <!-- SIGNUP LOGIC -->
+  <script type="module">
+    import { signupEmail } from "./firebase.js";
+
+    window.doSignup = async function () {
+      const email = document.getElementById("signup-email").value;
+      const pass = document.getElementById("signup-password").value;
+
+      try {
+        await signupEmail(email, pass); 
+        window.location.href = "app.html";
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Login — Nuvvu Nenu</title>
+  <link rel="stylesheet" href="styles-global.css">
+  <link rel="stylesheet" href="styles-premium-glass.css">
+</head>
+
+<body class="auth-body">
+
+  <div class="auth-card glass">
+    <h2>Welcome Back ❤️</h2>
+
+    <input id="login-email" type="email" placeholder="Email">
+    <input id="login-password" type="password" placeholder="Password">
+
+    <button onclick="doEmailLogin()">Login</button>
+
+    <div class="or">OR</div>
+
+    <button onclick="doGoogle()">Continue with Google</button>
+
+    <p class="switch">Don’t have an account?  
+      <a href="signup.html">Sign Up</a>
+    </p>
+  </div>
+
+
+  <!-- Only firebase.js is needed -->
+  <script type="module">
+    import { googleLogin, loginEmail } from "./firebase.js";
+
+    window.doGoogle = async function () {
+      try {
+        await googleLogin();
+        window.location.href = "app.html";
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+
+    window.doEmailLogin = async function () {
+      const email = document.getElementById("login-email").value;
+      const pass = document.getElementById("login-password").value;
+
+      try {
+        await loginEmail(email, pass);
+        window.location.href = "app.html";
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+  </script>
+
+</body>
+</html>

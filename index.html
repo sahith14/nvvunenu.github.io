@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Nuvvu Nenu</title>
+  <link rel="stylesheet" href="styles-global.css">
+</head>
+
+<body class="intro-body">
+
+  <!-- SPLASH SCREEN -->
+  <div id="splash" class="splash-screen">
+    <h1 class="splash-title">Nuvvu Nenu 💜</h1>
+  </div>
+
+  <script>
+    // Remove splash + redirect smoothly
+    setTimeout(() => {
+      const splash = document.getElementById("splash");
+      splash.classList.add("fade-out");
+
+      setTimeout(() => {
+        window.location.href = "login.html";
+      }, 800);  // wait for fade animation
+    }, 2200); // how long splash stays
+  </script>
+  <div id="profileModal" class="profile-modal hidden"></div>
+</body>
+</html>
