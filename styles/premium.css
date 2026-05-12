@@ -1,0 +1,42 @@
+/* NUVVU NENU — Premium Page */
+.premium-page{display:flex;flex-direction:column;gap:var(--space-lg);padding-bottom:var(--space-2xl)}
+
+.premium-header{text-align:center;padding:var(--space-xl) 0}
+.premium-header h2{font-size:var(--font-2xl);font-weight:800;background:var(--glow-pink);-webkit-background-clip:text;background-clip:text;color:transparent}
+.premium-header p{color:var(--muted);font-size:var(--font-sm);margin-top:4px}
+
+/* Plan cards */
+.plan-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);
+  padding:var(--space-xl);position:relative;overflow:hidden;
+}
+.plan-card.featured{border-color:rgba(155,140,255,.4);box-shadow:var(--shadow-glow)}
+.plan-card.featured::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--glow-pink);
+}
+.plan-badge{
+  position:absolute;top:var(--space-md);right:var(--space-md);
+  padding:4px 10px;border-radius:var(--radius-full);
+  background:rgba(155,140,255,.15);color:var(--violet);font-size:var(--font-xs);font-weight:600;
+}
+.plan-name{font-size:var(--font-lg);font-weight:700}
+.plan-price{font-size:var(--font-2xl);font-weight:800;margin-top:var(--space-sm)}
+.plan-price span{font-size:var(--font-sm);font-weight:400;color:var(--muted)}
+.plan-features{margin-top:var(--space-md);display:flex;flex-direction:column;gap:8px}
+.plan-features li{
+  display:flex;align-items:center;gap:var(--space-sm);
+  font-size:var(--font-sm);color:var(--text-secondary);
+}
+.plan-features li::before{content:'✓';color:var(--green);font-weight:700}
+.plan-card .btn{width:100%;margin-top:var(--space-lg)}
+
+/* Free tier */
+.free-tier{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:var(--space-lg);
+}
+.free-tier h3{font-size:var(--font-base);font-weight:600}
+.free-tier p{font-size:var(--font-sm);color:var(--muted);margin-top:4px}
+.free-tier ul{margin-top:var(--space-sm);display:flex;flex-direction:column;gap:6px}
+.free-tier li{font-size:var(--font-sm);color:var(--text-secondary);padding-left:16px;position:relative}
+.free-tier li::before{content:'•';position:absolute;left:0;color:var(--muted)}

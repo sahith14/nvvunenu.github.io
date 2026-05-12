@@ -1,0 +1,102 @@
+/* NUVVU NENU — Motion System */
+
+/* Breathing pulse */
+@keyframes breathe{
+  0%,100%{transform:scale(1);opacity:.8}
+  50%{transform:scale(1.05);opacity:1}
+}
+
+/* Soft float */
+@keyframes float{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+
+/* Glow pulse */
+@keyframes glow-pulse{
+  0%,100%{box-shadow:0 0 20px rgba(155,140,255,.2)}
+  50%{box-shadow:0 0 40px rgba(155,140,255,.4)}
+}
+
+/* Fade in up */
+@keyframes fadeInUp{
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Fade in */
+@keyframes fadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+/* Scale in */
+@keyframes scaleIn{
+  from{opacity:0;transform:scale(.9)}
+  to{opacity:1;transform:scale(1)}
+}
+
+/* Slide in from bottom */
+@keyframes slideUp{
+  from{transform:translateY(100%)}
+  to{transform:translateY(0)}
+}
+
+/* Heart beat */
+@keyframes heartbeat{
+  0%,100%{transform:scale(1)}
+  15%{transform:scale(1.15)}
+  30%{transform:scale(1)}
+  45%{transform:scale(1.1)}
+}
+
+/* Orbit (for presence indicator) */
+@keyframes orbit{
+  from{transform:rotate(0deg) translateX(3px) rotate(0deg)}
+  to{transform:rotate(360deg) translateX(3px) rotate(-360deg)}
+}
+
+/* Shimmer loading */
+@keyframes shimmer{
+  0%{background-position:-200% 0}
+  100%{background-position:200% 0}
+}
+
+/* Gradient shift */
+@keyframes gradientShift{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+
+/* Page transition */
+.page-enter{animation:fadeInUp var(--duration-normal) var(--ease-out) forwards}
+.page-exit{animation:fadeIn var(--duration-fast) var(--ease-out) reverse forwards}
+
+/* Stagger children */
+.stagger>*{opacity:0;animation:fadeInUp var(--duration-normal) var(--ease-out) forwards}
+.stagger>*:nth-child(1){animation-delay:.05s}
+.stagger>*:nth-child(2){animation-delay:.1s}
+.stagger>*:nth-child(3){animation-delay:.15s}
+.stagger>*:nth-child(4){animation-delay:.2s}
+.stagger>*:nth-child(5){animation-delay:.25s}
+.stagger>*:nth-child(6){animation-delay:.3s}
+
+/* Presence breathing */
+.presence-orb{
+  width:10px;height:10px;border-radius:50%;
+  animation:breathe 3s var(--ease-out) infinite;
+}
+.presence-orb.online{background:var(--green)}
+.presence-orb.away{background:var(--warm)}
+.presence-orb.sleeping{background:var(--blue)}
+.presence-orb.missing{background:var(--pink)}
+
+/* Touch ripple */
+.ripple{
+  position:absolute;border-radius:50%;background:rgba(155,140,255,.3);
+  transform:scale(0);animation:rippleOut .6s var(--ease-out) forwards;pointer-events:none;
+}
+@keyframes rippleOut{
+  to{transform:scale(4);opacity:0}
+}

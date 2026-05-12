@@ -1,126 +1,67 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nuvvu Nenu — Stay Connected</title>
-  <meta name="description"
-    content="Nuvvu Nenu - A premium couple app for real-time connection, daily engagement, and emotional bonding">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+  <meta name="theme-color" content="#0F1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Nuvvu Nenu">
+  <link rel="manifest" href="manifest.json">
+  <title>Nuvvu Nenu</title>
+  <meta name="description" content="Nuvvu Nenu — The emotional operating system for your relationship.">
 
-  <!-- Core styles -->
-  <link rel="stylesheet" href="styles-global.css">
-  <link rel="stylesheet" href="styles-feed.css">
-  <link rel="stylesheet" href="styles-profile.css">
-  <link rel="stylesheet" href="styles-messages.css">
-  <link rel="stylesheet" href="styles-partner.css">
-  <link rel="stylesheet" href="styles-spaces.css">
-  <link rel="stylesheet" href="styles-search.css">
-  <link rel="stylesheet" href="styles-settings.css">
-  <link rel="stylesheet" href="features.css">
-  <!-- Premium glass overrides (must be last) -->
-  <link rel="stylesheet" href="styles-premium-glass.css">
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles/core.css">
+  <link rel="stylesheet" href="styles/theme.css">
+  <link rel="stylesheet" href="styles/motion.css">
+  <link rel="stylesheet" href="styles/nav.css">
+  <link rel="stylesheet" href="styles/home.css">
+  <link rel="stylesheet" href="styles/space.css">
+  <link rel="stylesheet" href="styles/moments.css">
+  <link rel="stylesheet" href="styles/bond.css">
+  <link rel="stylesheet" href="styles/profile.css">
+  <link rel="stylesheet" href="styles/premium.css">
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-
 <body>
   <div id="app">
-
     <div class="app-shell">
-      <aside class="brand-rail" aria-label="Nuvvu Nenu">
-        <div class="brand-mark" aria-hidden="true">💜</div>
-        <div class="brand-text">
-          <strong>Nuvvu Nenu</strong>
-          <span>stay connected</span>
-        </div>
-      </aside>
       <div id="page"></div>
     </div>
 
-    <!-- FEATURE DRAWER (expandable from space nav) -->
-    <div id="featureDrawer" class="feature-drawer hidden">
-      <div class="drawer-content glass-premium">
-        <div class="drawer-header">
-          <h3>💜 Features</h3>
-          <button class="drawer-close" onclick="toggleFeatureDrawer()"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="drawer-grid">
-          <button class="drawer-item" onclick="loadPage('checkin')">
-            <span class="di-icon">💫</span><span class="di-label">Check-In</span>
-          </button>
-          <button class="drawer-item" onclick="loadPage('memories')">
-            <span class="di-icon">💝</span><span class="di-label">Memories</span>
-          </button>
-          <button class="drawer-item" onclick="loadPage('gifts')">
-            <span class="di-icon">🎁</span><span class="di-label">Gifts</span>
-          </button>
-          <button class="drawer-item" onclick="loadPage('dashboard')">
-            <span class="di-icon">📊</span><span class="di-label">Dashboard</span>
-          </button>
-          <button class="drawer-item" onclick="loadPage('lovenotes')">
-            <span class="di-icon">💌</span><span class="di-label">Love Notes</span>
-          </button>
-          <button class="drawer-item" onclick="loadPage('calendar')">
-            <span class="di-icon">📅</span><span class="di-label">Calendar</span>
-          </button>
-          <button class="drawer-item" onclick="loadPage('pet')">
-            <span class="di-icon">🐾</span><span class="di-label">Our Pet</span>
-          </button>
-          <button class="drawer-item" onclick="loadPage('dateplanner')">
-            <span class="di-icon">🗓️</span><span class="di-label">Date Plans</span>
-          </button>
-          <button class="drawer-item" onclick="loadPage('space')">
-            <span class="di-icon">⭐</span><span class="di-label">Space</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <nav class="desktop-nav">
-      <button onclick="loadPage('feed')" id="nav-feed-desktop"><i class="fas fa-home"></i> <span>Feed</span></button>
-      <button onclick="loadPage('search')" id="nav-search-desktop"><i class="fas fa-search"></i>
-        <span>Search</span></button>
-      <button onclick="loadPage('messages')" id="nav-messages-desktop"><i class="fas fa-envelope"></i>
-        <span>DMs</span></button>
-      <button onclick="loadPage('partner')" id="nav-partner-desktop"><i class="fas fa-heart"></i>
-        <span>Partner</span></button>
-      <button onclick="loadPage('space')" id="nav-space-desktop"><i class="fas fa-star"></i> <span>Space</span></button>
-      <button onclick="loadPage('profile')" id="nav-profile-desktop"><i class="fas fa-user"></i>
-        <span>Profile</span></button>
-      <div class="nav-divider"></div>
-      <button onclick="toggleFeatureDrawer()" id="nav-features-desktop"><i class="fas fa-th"></i>
-        <span>Features</span></button>
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav" id="bottomNav">
+      <button data-page="home" onclick="loadPage('home')">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </button>
+      <button data-page="space" onclick="loadPage('space')">
+        <span class="nav-icon">✨</span>
+        <span class="nav-label">Space</span>
+      </button>
+      <button data-page="moments" onclick="loadPage('moments')">
+        <span class="nav-icon">💜</span>
+        <span class="nav-label">Moments</span>
+      </button>
+      <button data-page="bond" onclick="loadPage('bond')">
+        <span class="nav-icon">💫</span>
+        <span class="nav-label">Bond</span>
+      </button>
+      <button data-page="profile" onclick="loadPage('profile')">
+        <span class="nav-icon">🫧</span>
+        <span class="nav-label">You</span>
+      </button>
     </nav>
 
-    <nav class="bottom-nav">
-      <button id="nav-feed" onclick="loadPage('feed')"><i class="fas fa-home"></i></button>
-      <button id="nav-search" onclick="loadPage('search')"><i class="fas fa-search"></i></button>
-      <button id="nav-messages" onclick="loadPage('messages')"><i class="fas fa-envelope"></i></button>
-      <button id="nav-partner" onclick="loadPage('partner')"><i class="fas fa-heart"></i></button>
-      <button id="nav-features" onclick="toggleFeatureDrawer()" class="features-trigger"><i
-          class="fas fa-th"></i></button>
-      <button id="nav-profile" onclick="loadPage('profile')"><i class="fas fa-user"></i></button>
-    </nav>
-
-    <div id="animatedThemeLayer" class="animated-theme hidden">
-      <div class="love-particle"></div>
-      <div class="love-particle"></div>
-      <div class="love-particle"></div>
-      <div class="love-particle"></div>
-      <div class="love-particle"></div>
-    </div>
-
-    <!-- GLOBAL TOAST -->
-    <div id="globalToast" class="global-toast"></div>
-
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
   </div>
 
   <script type="module" src="firebase.js"></script>
   <script type="module" src="app.js"></script>
 </body>
-
 </html>

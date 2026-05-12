@@ -1,0 +1,60 @@
+/* NUVVU NENU — Home Page */
+.home-page{display:flex;flex-direction:column;gap:var(--space-lg)}
+
+/* Hero greeting */
+.home-hero{text-align:center;padding:var(--space-xl) 0 var(--space-md)}
+.home-greeting{font-size:var(--font-xl);font-weight:700;color:var(--text)}
+.home-greeting span{display:block;font-size:var(--font-sm);color:var(--muted);font-weight:400;margin-top:4px}
+
+/* Partner presence card */
+.presence-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);
+  padding:var(--space-lg);display:flex;align-items:center;gap:var(--space-md);
+  box-shadow:var(--shadow-glow);
+}
+.presence-avatar{
+  width:56px;height:56px;border-radius:50%;background:var(--glow-pink);
+  display:flex;align-items:center;justify-content:center;font-size:24px;
+  position:relative;animation:breathe 4s var(--ease-out) infinite;
+}
+.presence-avatar .orb{position:absolute;bottom:2px;right:2px;width:12px;height:12px;border-radius:50%;border:2px solid var(--card)}
+.presence-info{flex:1}
+.presence-name{font-weight:600;font-size:var(--font-base)}
+.presence-status{font-size:var(--font-sm);color:var(--muted);margin-top:2px}
+.presence-last{font-size:var(--font-xs);color:var(--muted);margin-top:4px}
+
+/* Check-in section */
+.checkin-section{display:flex;flex-direction:column;gap:var(--space-sm)}
+.checkin-section h3{font-size:var(--font-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.checkin-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:var(--space-md);display:flex;align-items:center;gap:var(--space-md);
+}
+.checkin-mood{font-size:28px}
+.checkin-details{flex:1}
+.checkin-details .label{font-size:var(--font-sm);color:var(--muted)}
+.checkin-details .value{font-size:var(--font-base);font-weight:500}
+.love-battery{
+  height:6px;background:var(--surface);border-radius:var(--radius-full);overflow:hidden;margin-top:6px;
+}
+.love-battery .fill{height:100%;background:var(--glow-pink);border-radius:var(--radius-full);transition:width .6s var(--ease-out)}
+
+/* Today together stats */
+.today-stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-sm)}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:var(--space-md);text-align:center;
+}
+.stat-card .num{font-size:var(--font-xl);font-weight:700;background:var(--glow-pink);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat-card .label{font-size:var(--font-xs);color:var(--muted);margin-top:4px}
+
+/* Quick actions */
+.quick-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-sm)}
+.quick-action{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:var(--space-md) var(--space-sm);display:flex;flex-direction:column;align-items:center;gap:8px;
+  transition:all var(--duration-fast) var(--ease-out);
+}
+.quick-action:active{transform:scale(.93);background:var(--card-hover)}
+.quick-action .icon{font-size:28px}
+.quick-action .label{font-size:var(--font-xs);color:var(--text-secondary);font-weight:500;text-align:center}

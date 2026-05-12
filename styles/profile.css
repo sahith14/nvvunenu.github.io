@@ -1,0 +1,62 @@
+/* NUVVU NENU — You (Profile) Page */
+.profile-page{display:flex;flex-direction:column;gap:var(--space-lg)}
+
+/* Couple identity header */
+.couple-header{
+  text-align:center;padding:var(--space-xl) 0;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);
+  position:relative;overflow:hidden;
+}
+.couple-header::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(155,140,255,.1),transparent 70%);
+}
+.couple-avatars{display:flex;align-items:center;justify-content:center;gap:var(--space-md);position:relative;z-index:1}
+.couple-avatar{
+  width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:28px;border:2px solid var(--border);
+}
+.couple-heart{font-size:20px;color:var(--pink);animation:heartbeat 2s var(--ease-out) infinite}
+.couple-names{font-size:var(--font-lg);font-weight:700;margin-top:var(--space-sm);position:relative;z-index:1}
+.couple-days{font-size:var(--font-sm);color:var(--muted);margin-top:4px;position:relative;z-index:1}
+
+/* Emotional identity */
+.identity-section{display:flex;flex-direction:column;gap:var(--space-sm)}
+.identity-section h3{font-size:var(--font-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.identity-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:var(--space-md);display:flex;align-items:center;gap:var(--space-md);
+}
+.identity-card .icon{font-size:24px}
+.identity-card .info{flex:1}
+.identity-card .label{font-size:var(--font-xs);color:var(--muted)}
+.identity-card .value{font-size:var(--font-sm);font-weight:500;margin-top:2px}
+
+/* Voice intro */
+.voice-intro{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:var(--space-lg);display:flex;align-items:center;gap:var(--space-md);
+}
+.voice-intro .play-btn{
+  width:48px;height:48px;border-radius:50%;background:var(--glow-pink);
+  display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;
+  flex-shrink:0;
+}
+.voice-intro .info{flex:1}
+.voice-intro .label{font-size:var(--font-sm);font-weight:600}
+.voice-intro .duration{font-size:var(--font-xs);color:var(--muted);margin-top:2px}
+
+/* Settings list */
+.settings-list{display:flex;flex-direction:column;gap:2px}
+.settings-item{
+  display:flex;align-items:center;gap:var(--space-md);
+  padding:14px var(--space-md);background:var(--card);
+  border:1px solid var(--border);
+  transition:background var(--duration-fast) var(--ease-out);
+}
+.settings-item:first-child{border-radius:var(--radius-md) var(--radius-md) 0 0}
+.settings-item:last-child{border-radius:0 0 var(--radius-md) var(--radius-md)}
+.settings-item:active{background:var(--card-hover)}
+.settings-item .icon{font-size:18px;width:24px;text-align:center}
+.settings-item .label{flex:1;font-size:var(--font-sm);font-weight:500}
+.settings-item .arrow{color:var(--muted);font-size:var(--font-sm)}

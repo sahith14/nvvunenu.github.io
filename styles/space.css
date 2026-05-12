@@ -1,0 +1,79 @@
+/* NUVVU NENU — Space Page */
+.space-page{display:flex;flex-direction:column;gap:var(--space-lg)}
+
+/* Live room */
+.live-room{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);
+  padding:var(--space-xl);text-align:center;position:relative;overflow:hidden;
+  min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.live-room::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 50%,rgba(155,140,255,.08) 0%,transparent 70%);
+  animation:breathe 6s var(--ease-out) infinite;
+}
+.room-avatars{display:flex;gap:var(--space-xl);position:relative;z-index:1}
+.room-avatar{
+  width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:32px;position:relative;
+}
+.room-avatar.you{background:linear-gradient(135deg,rgba(155,140,255,.3),rgba(126,215,255,.2));border:2px solid rgba(155,140,255,.4)}
+.room-avatar.partner{background:linear-gradient(135deg,rgba(255,126,182,.3),rgba(155,140,255,.2));border:2px solid rgba(255,126,182,.4)}
+.room-status{font-size:var(--font-sm);color:var(--muted);margin-top:var(--space-md);position:relative;z-index:1}
+
+/* Breathing orb */
+.breathing-orb{
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle,rgba(155,140,255,.4),rgba(155,140,255,.05));
+  animation:breathe 5s var(--ease-out) infinite;
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  filter:blur(20px);
+}
+
+/* Activity cards */
+.space-activities{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-sm)}
+.activity-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:var(--space-md);display:flex;flex-direction:column;align-items:center;gap:8px;
+  text-align:center;transition:all var(--duration-fast) var(--ease-out);
+}
+.activity-card:active{transform:scale(.95)}
+.activity-card .icon{font-size:32px}
+.activity-card .name{font-size:var(--font-sm);font-weight:600}
+.activity-card .desc{font-size:var(--font-xs);color:var(--muted)}
+
+/* Sleep mode */
+.sleep-mode{
+  background:linear-gradient(180deg,#0a0c14,#0F1117);border:1px solid rgba(126,215,255,.1);
+  border-radius:var(--radius-xl);padding:var(--space-xl);text-align:center;
+}
+.sleep-mode .moon{font-size:48px;animation:float 4s var(--ease-out) infinite}
+.sleep-mode h3{color:var(--blue);margin-top:var(--space-sm);font-weight:600}
+.sleep-mode p{color:var(--muted);font-size:var(--font-sm);margin-top:4px}
+
+/* Touch zone */
+.touch-zone{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);
+  padding:var(--space-2xl);text-align:center;position:relative;overflow:hidden;
+  user-select:none;-webkit-user-select:none;
+}
+.touch-zone .hint{font-size:var(--font-sm);color:var(--muted)}
+.touch-zone .fingerprint{
+  width:80px;height:80px;border-radius:50%;margin:var(--space-md) auto;
+  border:2px dashed rgba(255,126,182,.3);display:flex;align-items:center;justify-content:center;
+  font-size:36px;transition:all .3s var(--ease-out);
+}
+.touch-zone.active .fingerprint{
+  border-color:var(--pink);background:rgba(255,126,182,.1);
+  box-shadow:0 0 30px rgba(255,126,182,.3);transform:scale(1.1);
+}
+
+/* Games grid */
+.games-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-sm)}
+.game-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:var(--space-md);text-align:center;transition:all var(--duration-fast) var(--ease-out);
+}
+.game-card:active{transform:scale(.95)}
+.game-card .icon{font-size:28px;margin-bottom:6px}
+.game-card .name{font-size:var(--font-sm);font-weight:600}

@@ -1,89 +1,56 @@
-import * as feed from "./modules/feed.js";
-import * as search from "./modules/search.js";
-import * as messages from "./modules/messages.js";
-import * as partner from "./modules/partner.js";
-import * as space from "./modules/space.js";
-import * as profile from "./modules/profile.js";
-import * as profileView from "./modules/profileView.js";
-import * as checkin from "./modules/checkin.js";
-import * as memories from "./modules/memories.js";
-import * as gifts from "./modules/gifts.js";
-import * as dashboard from "./modules/dashboard.js";
-import * as lovenotes from "./modules/lovenotes.js";
-import * as calendar from "./modules/calendar.js";
-import * as pet from "./modules/pet.js";
-import * as dateplanner from "./modules/dateplanner.js";
+// NUVVU NENU — App Core
+import { auth } from './firebase.js';
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
-const pages = {
-  feed,
-  search,
-  messages,
-  partner,
-  space,
-  profile,
-  profileView,
-  checkin,
-  memories,
-  gifts,
-  dashboard,
-  lovenotes,
-  calendar,
-  pet,
-  dateplanner
-};
+// Page modules
+import { renderHome } from './modules/home.js';
+import { renderSpace } from './modules/space.js';
+import { renderMoments } from './modules/moments.js';
+import { renderBond } from './modules/bond.js';
+import { renderProfile } from './modules/profile.js';
+import { renderSubscription } from './modules/subscription.js';
 
-window.loadPage = async function (page, data) {
-  const container = document.getElementById("page");
-  if (!container) return;
+const pages = { home: renderHome, space: renderSpace, moments: renderMoments, bond: renderBond, profile: renderProfile, subscription: renderSubscription };
+let currentPage = 'home';
 
-  if (!pages[page]) {
-    console.error("Page not found:", page);
-    return;
-  }
-
-  try {
-    const mod = pages[page];
-
-    container.innerHTML = mod.render(data || "");
-
-    if (mod.init) {
-      if (window.currentCleanup) {
-        try { window.currentCleanup(); } catch { }
-      }
-      window.currentCleanup = mod.init();
-    }
-
-    document.querySelectorAll(".bottom-nav button, .desktop-nav button")
-      .forEach(btn => btn.classList.remove("active"));
-
-    const btn = document.getElementById(`nav-${page}`) ||
-      document.getElementById(`nav-${page}-desktop`);
-    if (btn) btn.classList.add("active");
-
-    // Close drawer on mobile if open
-    const drawer = document.getElementById('featureDrawer');
-    if (drawer) drawer.classList.add('hidden');
-
-  } catch (e) {
-    console.error("Page load failed:", e);
-  }
-};
-
-// Feature drawer toggle
-window.toggleFeatureDrawer = function () {
-  const drawer = document.getElementById('featureDrawer');
-  if (drawer) drawer.classList.toggle('hidden');
-};
-
-// Auto-load feed on startup
-import { auth } from "./firebase.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    window.loadPage('feed');
-  } else {
-    // Redirect to login if not authenticated
-    window.location.href = 'login.html';
-  }
+// Auth guard
+onAuthStateChanged(auth, user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  window.currentUser = user;
+  loadPage('home');
 });
+
+// Router
+window.loadPage = function(page) {
+  if (!pages[page]) return;
+  currentPage = page;
+  const container = document.getElementById('page');
+  container.className = 'page-enter';
+  container.innerHTML = '';
+  pages[page](container);
+  updateNav(page);
+};
+
+function updateNav(page) {
+  document.querySelectorAll('.bottom-nav button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === page);
+  });
+}
+
+// Toast utility
+window.showToast = function(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+};
+
+// Time greeting
+window.getGreeting = function() {
+  const h = new Date().getHours();
+  if (h < 5) return 'Good night';
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  if (h < 21) return 'Good evening';
+  return 'Good night';
+};

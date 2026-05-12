@@ -1,0 +1,14 @@
+{
+  "name": "Nuvvu Nenu",
+  "short_name": "Nuvvu Nenu",
+  "description": "The emotional operating system for your relationship.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0F1117",
+  "theme_color": "#0F1117",
+  "orientation": "portrait",
+  "categories": ["lifestyle", "social"],
+  "icons": [
+    { "src": "favicon.ico", "sizes": "64x64", "type": "image/x-icon" }
+  ]
+}

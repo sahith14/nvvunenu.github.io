@@ -1,0 +1,110 @@
+/* NUVVU NENU — Design Tokens */
+:root{
+  /* Surfaces */
+  --bg:#0F1117;
+  --surface:#171A22;
+  --card:#1E2230;
+  --card-hover:#252A3A;
+  --border:rgba(255,255,255,.06);
+
+  /* Accent palette */
+  --pink:#FF7EB6;
+  --violet:#9B8CFF;
+  --blue:#7ED7FF;
+  --warm:#FFB88C;
+  --green:#7EFFC2;
+
+  /* Gradients */
+  --glow-pink:linear-gradient(135deg,#FF7EB6,#9B8CFF);
+  --glow-violet:linear-gradient(135deg,#9B8CFF,#7ED7FF);
+  --glow-warm:linear-gradient(135deg,#FFB88C,#FF7EB6);
+
+  /* Text */
+  --text:#F5F7FA;
+  --text-secondary:#C8CDD8;
+  --muted:#98A2B3;
+
+  /* Spacing */
+  --space-xs:4px;
+  --space-sm:8px;
+  --space-md:16px;
+  --space-lg:24px;
+  --space-xl:32px;
+  --space-2xl:48px;
+
+  /* Radius */
+  --radius-sm:8px;
+  --radius-md:14px;
+  --radius-lg:20px;
+  --radius-xl:28px;
+  --radius-full:9999px;
+
+  /* Shadows */
+  --shadow-sm:0 2px 8px rgba(0,0,0,.2);
+  --shadow-md:0 4px 20px rgba(0,0,0,.3);
+  --shadow-lg:0 8px 40px rgba(0,0,0,.4);
+  --shadow-glow:0 0 30px rgba(155,140,255,.15);
+
+  /* Typography */
+  --font-xs:.75rem;
+  --font-sm:.8125rem;
+  --font-base:.9375rem;
+  --font-lg:1.125rem;
+  --font-xl:1.5rem;
+  --font-2xl:2rem;
+  --font-3xl:2.5rem;
+
+  /* Timing */
+  --ease-out:cubic-bezier(.22,1,.36,1);
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --duration-fast:.2s;
+  --duration-normal:.4s;
+  --duration-slow:.8s;
+}
+
+/* Card system */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:var(--space-lg);
+  backdrop-filter:blur(12px);
+  box-shadow:var(--shadow-sm);
+  transition:transform var(--duration-fast) var(--ease-out),box-shadow var(--duration-fast) var(--ease-out);
+}
+.card:active{transform:scale(.98)}
+
+/* Glass variant */
+.glass{
+  background:rgba(30,34,48,.6);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+/* Gradient text */
+.gradient-text{
+  background:var(--glow-pink);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--space-sm);
+  padding:12px 24px;border-radius:var(--radius-full);font-weight:600;font-size:var(--font-base);
+  transition:all var(--duration-fast) var(--ease-out);
+}
+.btn-primary{background:var(--glow-pink);color:#fff;box-shadow:0 4px 16px rgba(255,126,182,.3)}
+.btn-primary:active{transform:scale(.95);box-shadow:0 2px 8px rgba(255,126,182,.2)}
+.btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text-secondary)}
+.btn-ghost:active{background:var(--card)}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-full);
+  padding:12px 24px;font-size:var(--font-sm);color:var(--text);opacity:0;
+  transition:all var(--duration-normal) var(--ease-out);z-index:9999;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}

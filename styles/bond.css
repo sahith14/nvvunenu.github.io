@@ -1,0 +1,71 @@
+/* NUVVU NENU — Bond Page */
+.bond-page{display:flex;flex-direction:column;gap:var(--space-lg)}
+
+/* Relationship pulse */
+.pulse-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);
+  padding:var(--space-xl);text-align:center;position:relative;overflow:hidden;
+}
+.pulse-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 80%,rgba(255,126,182,.08),transparent 60%);
+}
+.pulse-orb{
+  width:100px;height:100px;border-radius:50%;margin:0 auto var(--space-md);
+  background:radial-gradient(circle,rgba(255,126,182,.5),rgba(155,140,255,.2));
+  animation:breathe 4s var(--ease-out) infinite,glow-pulse 4s var(--ease-out) infinite;
+  position:relative;z-index:1;
+}
+.pulse-label{font-size:var(--font-sm);color:var(--muted);position:relative;z-index:1}
+.pulse-score{font-size:var(--font-2xl);font-weight:800;background:var(--glow-pink);-webkit-background-clip:text;background-clip:text;color:transparent;position:relative;z-index:1}
+
+/* Love languages */
+.love-langs{display:flex;flex-direction:column;gap:var(--space-sm)}
+.love-langs h3{font-size:var(--font-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.lang-item{
+  display:flex;align-items:center;gap:var(--space-md);
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px var(--space-md);
+}
+.lang-item .emoji{font-size:20px}
+.lang-item .info{flex:1}
+.lang-item .name{font-size:var(--font-sm);font-weight:500}
+.lang-bar{height:4px;background:var(--surface);border-radius:var(--radius-full);margin-top:4px;overflow:hidden}
+.lang-bar .fill{height:100%;border-radius:var(--radius-full);transition:width .6s var(--ease-out)}
+.lang-bar .fill.words{background:var(--pink)}
+.lang-bar .fill.time{background:var(--violet)}
+.lang-bar .fill.gifts{background:var(--warm)}
+.lang-bar .fill.touch{background:var(--blue)}
+.lang-bar .fill.support{background:var(--green)}
+
+/* Shared goals */
+.goals-section{display:flex;flex-direction:column;gap:var(--space-sm)}
+.goals-section h3{font-size:var(--font-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.goal-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:var(--space-md);display:flex;align-items:center;gap:var(--space-md);
+}
+.goal-card .icon{font-size:24px}
+.goal-card .info{flex:1}
+.goal-card .title{font-size:var(--font-sm);font-weight:600}
+.goal-card .progress{font-size:var(--font-xs);color:var(--muted);margin-top:2px}
+.goal-bar{height:4px;background:var(--surface);border-radius:var(--radius-full);margin-top:6px;overflow:hidden}
+.goal-bar .fill{height:100%;background:var(--glow-violet);border-radius:var(--radius-full)}
+
+/* Calendar / countdowns */
+.countdowns{display:flex;flex-direction:column;gap:var(--space-sm)}
+.countdown-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:var(--space-md);display:flex;align-items:center;justify-content:space-between;
+}
+.countdown-card .event{font-size:var(--font-sm);font-weight:500}
+.countdown-card .days{font-size:var(--font-lg);font-weight:700;color:var(--pink)}
+
+/* Fight recovery */
+.recovery-card{
+  background:linear-gradient(135deg,rgba(255,184,140,.08),rgba(255,126,182,.05));
+  border:1px solid rgba(255,184,140,.15);border-radius:var(--radius-lg);
+  padding:var(--space-lg);text-align:center;
+}
+.recovery-card h3{font-size:var(--font-base);font-weight:600;color:var(--warm)}
+.recovery-card p{font-size:var(--font-sm);color:var(--muted);margin-top:4px}
+.recovery-card .btn{margin-top:var(--space-md)}

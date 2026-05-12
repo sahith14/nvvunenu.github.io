@@ -1,0 +1,244 @@
+rules_version = '2';
+
+// =====================================================================
+// BondSync / Nuvvu Nenu — Firestore Security Rules
+//
+// Data model (aligned with frontend):
+//   users/{uid}
+//   chats/{coupleId}                  (coupleId = [uidA,uidB].sort().join("_"))
+//   chats/{coupleId}/messages/{mid}
+//   calls/{coupleId}/signaling/{sid}
+//   memories/{coupleId}/entries/{eid}
+//   gifts/{docId}                     (flat collection, has from/to fields)
+//   lovenotes/{docId}                 (flat collection, has from/to fields)
+//   letters/{coupleId}/entries/{eid}
+//   dateideas/{coupleId}/saved/{eid}
+//   events/{coupleId}/entries/{eid}
+//   pets/{coupleId}
+//   checkins/{uid}_{YYYY-MM-DD}
+//   streaks/{uid}
+//   spaces/{spaceId}
+//   spaces/{spaceId}/members/{uid}
+//   spaces/{spaceId}/messages/{mid}
+//   reports/{docId}
+//
+// Contract:
+//   - Every user doc is readable by any signed-in user (needed for search +
+//     partner lookup). Writable only by owner.
+//   - Every couple-scoped document is R/W only by the two uids in the coupleId.
+//   - Per-user documents (checkins, streaks) writable only by that user.
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function isOwner(u) { return signedIn() && uid() == u; }
+
+    // coupleId has form "<uid1>_<uid2>" with uid1 < uid2 lexicographically.
+    function inCouple(coupleId) {
+      let parts = coupleId.split("_");
+      return signedIn()
+        && parts.size() == 2
+        && (uid() == parts[0] || uid() == parts[1]);
+    }
+
+    // ---------- users ----------
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId)
+        // Partner can update ONLY partner-request fields on the other side.
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['partnerRequestFrom','partnerRequestTo','partnerRequestAt','partnerID','relationshipStatus','matchedAt']))
+        // Any signed-in user can update ONLY follower/following arrays (for follow/unfollow).
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['followers','following']));
+      allow delete: if isOwner(userId);
+    }
+
+    // ---------- couple-scoped: chats ----------
+    match /chats/{coupleId} {
+      allow read, write: if inCouple(coupleId);
+
+      match /messages/{msgId} {
+        allow read: if inCouple(coupleId);
+        allow create: if inCouple(coupleId)
+          && request.resource.data.sender == uid();
+        allow update: if inCouple(coupleId)
+          // deliveredAt/seenAt/reactions writable by the non-sender too
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['deliveredAt','seenAt','status','reactions']);
+        allow delete: if inCouple(coupleId)
+          && resource.data.sender == uid();
+      }
+    }
+
+    // ---------- couple-scoped: calls signaling ----------
+    // `coupleId` here is the same format as chatId, i.e. "uidA_uidB" sorted.
+    match /calls/{coupleId}/signaling/{sigId} {
+      allow read, create: if inCouple(coupleId);
+      allow delete: if inCouple(coupleId);
+    }
+
+    // ---------- couple-scoped: memories ----------
+    match /memories/{coupleId}/entries/{entryId} {
+      allow read: if inCouple(coupleId);
+      allow create: if inCouple(coupleId)
+        && request.resource.data.createdBy == uid();
+      allow update, delete: if inCouple(coupleId);
+    }
+
+    // ---------- couple-scoped: letters ----------
+    match /letters/{coupleId}/entries/{entryId} {
+      allow read: if inCouple(coupleId);
+      allow create: if inCouple(coupleId)
+        && request.resource.data.writtenBy == uid();
+      allow delete: if inCouple(coupleId);
+    }
+
+    // ---------- couple-scoped: date ideas ----------
+    match /dateideas/{coupleId}/saved/{entryId} {
+      allow read: if inCouple(coupleId);
+      allow create: if inCouple(coupleId)
+        && request.resource.data.savedBy == uid();
+      allow delete: if inCouple(coupleId);
+    }
+
+    // ---------- couple-scoped: calendar events ----------
+    match /events/{coupleId}/entries/{entryId} {
+      allow read: if inCouple(coupleId);
+      allow create: if inCouple(coupleId)
+        && request.resource.data.createdBy == uid();
+      allow update, delete: if inCouple(coupleId);
+    }
+
+    // ---------- couple-scoped: pet ----------
+    match /pets/{coupleId} {
+      allow read, write: if inCouple(coupleId);
+    }
+
+    // ---------- gifts (flat collection, has from/to) ----------
+    match /gifts/{docId} {
+      allow read: if signedIn()
+        && (resource.data.from == uid() || resource.data.to == uid());
+      allow create: if signedIn()
+        && request.resource.data.from == uid()
+        && request.resource.data.to is string
+        && request.resource.data.to != uid();
+      allow update: if signedIn()
+        && resource.data.to == uid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen']);
+      allow delete: if signedIn()
+        && (resource.data.from == uid() || resource.data.to == uid());
+    }
+
+    // ---------- love notes (flat, has from/to) ----------
+    match /lovenotes/{docId} {
+      allow read: if signedIn()
+        && (resource.data.from == uid() || resource.data.to == uid());
+      allow create: if signedIn()
+        && request.resource.data.from == uid();
+      allow update: if signedIn()
+        && resource.data.to == uid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen','unlocked']);
+      allow delete: if signedIn()
+        && (resource.data.from == uid() || resource.data.to == uid());
+    }
+
+    // ---------- per-user: check-ins (id = `${uid}_${YYYY-MM-DD}`) ----------
+    match /checkins/{checkinId} {
+      allow read: if signedIn();          // partner can read partner's check-in
+      allow create, update, delete: if signedIn()
+        && checkinId.matches(uid() + "_.*");
+    }
+
+    // ---------- per-user: streaks ----------
+    match /streaks/{userId} {
+      allow read: if signedIn();
+      allow write: if isOwner(userId);
+    }
+
+    // ---------- posts (feed) ----------
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.owner == uid();
+      // Owner can freely update/delete. Anyone signed-in may toggle likes or bump commentCount.
+      allow update: if (signedIn() && resource.data.owner == uid())
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['likes','commentCount']));
+      allow delete: if signedIn() && resource.data.owner == uid();
+
+      // Comments subcollection.
+      match /comments/{cid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.author == uid();
+        allow update, delete: if signedIn() && resource.data.author == uid();
+      }
+    }
+
+    // ---------- Couple Space rooms ----------
+    match /spaces/{spaceId} {
+      allow read: if signedIn();          // anyone signed in can read (they use Room ID)
+      allow create: if signedIn() && request.resource.data.hostId == uid();
+      allow update, delete: if signedIn() && resource.data.hostId == uid();
+
+      match /members/{memberId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isOwner(memberId) ||
+          (signedIn() && get(/databases/$(database)/documents/spaces/$(spaceId)).data.hostId == uid());
+      }
+
+      match /messages/{msgId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && (request.resource.data.sender == uid() || request.resource.data.sender == 'system');
+      }
+
+      match /signaling/{sigId} {
+        allow read, create, delete: if signedIn();
+      }
+    }
+
+    // ---------- reports (write-only for users, read by admins via console) ----------
+    match /reports/{reportId} {
+      allow create: if signedIn() && request.resource.data.reporterId == uid();
+      allow read, update, delete: if false;
+    }
+
+    // ---------- subscription (per-user plan + usage counters) ----------
+    match /users/{userId}/subscription/{subDoc} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ---------- couples (meta, stats, pokes) ----------
+    match /couples/{coupleId} {
+      allow read, write: if inCouple(coupleId);
+
+      // Meta/stats: startedAt, bondScore, moods, lastPokeAt
+      match /meta/{metaId} {
+        allow read: if inCouple(coupleId);
+        allow create, update: if inCouple(coupleId);
+        allow delete: if inCouple(coupleId);
+      }
+
+      // Thinking-of-you pokes
+      match /pokes/{pokeId} {
+        allow read: if inCouple(coupleId);
+        allow create: if inCouple(coupleId)
+          && request.resource.data.from == uid();
+        allow delete: if inCouple(coupleId);
+      }
+    }
+
+    // ---------- default deny ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
