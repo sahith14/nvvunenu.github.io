@@ -5,14 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
   <meta name="theme-color" content="#0F1117">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Nuvvu Nenu">
-  <link rel="manifest" href="manifest.json">
   <title>Nuvvu Nenu</title>
-  <meta name="description" content="Nuvvu Nenu — The emotional operating system for your relationship.">
-
-  <!-- Styles -->
+  <link rel="manifest" href="manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/core.css">
   <link rel="stylesheet" href="styles/theme.css">
   <link rel="stylesheet" href="styles/motion.css">
@@ -23,45 +18,244 @@
   <link rel="stylesheet" href="styles/bond.css">
   <link rel="stylesheet" href="styles/profile.css">
   <link rel="stylesheet" href="styles/premium.css">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="app">
-    <div class="app-shell">
-      <div id="page"></div>
-    </div>
-
-    <!-- Bottom Navigation -->
-    <nav class="bottom-nav" id="bottomNav">
-      <button data-page="home" onclick="loadPage('home')">
-        <span class="nav-icon">🏠</span>
-        <span class="nav-label">Home</span>
-      </button>
-      <button data-page="space" onclick="loadPage('space')">
-        <span class="nav-icon">✨</span>
-        <span class="nav-label">Space</span>
-      </button>
-      <button data-page="moments" onclick="loadPage('moments')">
-        <span class="nav-icon">💜</span>
-        <span class="nav-label">Moments</span>
-      </button>
-      <button data-page="bond" onclick="loadPage('bond')">
-        <span class="nav-icon">💫</span>
-        <span class="nav-label">Bond</span>
-      </button>
-      <button data-page="profile" onclick="loadPage('profile')">
-        <span class="nav-icon">🫧</span>
-        <span class="nav-label">You</span>
-      </button>
+    <div class="app-shell"><div id="page"></div></div>
+    <nav class="bottom-nav" id="nav">
+      <button data-page="home" onclick="loadPage('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+      <button data-page="space" onclick="loadPage('space')"><span class="nav-icon">✨</span><span class="nav-label">Space</span></button>
+      <button data-page="moments" onclick="loadPage('moments')"><span class="nav-icon">💜</span><span class="nav-label">Moments</span></button>
+      <button data-page="bond" onclick="loadPage('bond')"><span class="nav-icon">💫</span><span class="nav-label">Bond</span></button>
+      <button data-page="profile" onclick="loadPage('profile')"><span class="nav-icon">🫧</span><span class="nav-label">You</span></button>
     </nav>
-
-    <!-- Toast -->
     <div id="toast" class="toast"></div>
   </div>
 
-  <script type="module" src="firebase.js"></script>
-  <script type="module" src="app.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const app = initializeApp({apiKey:"AIzaSyCfoaPyX6nxJm9I28oTWm4MxhNDHkZWmMo",authDomain:"nuvvunenu-cf326.firebaseapp.com",projectId:"nuvvunenu-cf326",storageBucket:"nuvvunenu-cf326.firebasestorage.app",messagingSenderId:"178972908907",appId:"1:178972908907:web:475180e1fb38599cae802e"});
+    const auth = getAuth(app), db = getFirestore(app);
+    let user = null;
+
+    onAuthStateChanged(auth, u => {
+      if(!u){window.location.href='login.html';return;}
+      user = u; loadPage('home');
+    });
+
+    function greeting(){const h=new Date().getHours();if(h<5)return'Good night';if(h<12)return'Good morning';if(h<17)return'Good afternoon';if(h<21)return'Good evening';return'Good night';}
+
+    function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+    window.loadPage = function(page){
+      document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+      const el=document.getElementById('page');
+      el.className='page-enter';
+      if(page==='home') renderHome(el);
+      else if(page==='space') renderSpace(el);
+      else if(page==='moments') renderMoments(el);
+      else if(page==='bond') renderBond(el);
+      else if(page==='profile') renderProfile(el);
+      else if(page==='subscription') renderSubscription(el);
+    };
+
+    // ===== HOME =====
+    function renderHome(el){
+      const name = user.displayName?.split(' ')[0]||'You';
+      el.innerHTML=`<div class="home-page stagger">
+        <div class="home-hero"><h1 class="home-greeting">${greeting()}, ${name} 💜<span id="partnerAct"></span></h1></div>
+        <div class="presence-card"><div class="presence-avatar">💜<div class="orb presence-orb online"></div></div><div class="presence-info"><div class="presence-name" id="pName">Your partner</div><div class="presence-status" id="pStatus">Connect to see presence</div></div></div>
+        <div class="checkin-section"><h3>Today's Check-in</h3><div class="checkin-card" onclick="openCheckin()"><div class="checkin-mood" id="myMood">🙂</div><div class="checkin-details"><div class="label">How are you feeling?</div><div class="value" id="myNeed">Tap to check in</div><div class="love-battery"><div class="fill" id="batFill" style="width:50%"></div></div></div></div></div>
+        <div class="today-stats"><div class="stat-card"><div class="num" id="streak">0</div><div class="label">Day streak</div></div><div class="stat-card"><div class="num" id="days">0</div><div class="label">Days together</div></div><div class="stat-card"><div class="num" id="memories">0</div><div class="label">Memories</div></div><div class="stat-card"><div class="num" id="pulse">75%</div><div class="label">Bond pulse</div></div></div>
+        <div class="quick-actions">
+          <button class="quick-action" onclick="sendKiss()"><span class="icon">💋</span><span class="label">Send Kiss</span></button>
+          <button class="quick-action" onclick="loadPage('space')"><span class="icon">🌙</span><span class="label">Sleep Call</span></button>
+          <button class="quick-action" onclick="loadPage('moments')"><span class="icon">📸</span><span class="label">Add Memory</span></button>
+          <button class="quick-action" onclick="sendNote()"><span class="icon">💌</span><span class="label">Love Note</span></button>
+          <button class="quick-action" onclick="loadPage('space')"><span class="icon">🎮</span><span class="label">Play Game</span></button>
+          <button class="quick-action" onclick="loadPage('bond')"><span class="icon">💫</span><span class="label">Our Bond</span></button>
+        </div>
+      </div>`;
+      loadHomeData();
+    }
+
+    async function loadHomeData(){
+      const snap=await getDoc(doc(db,'users',user.uid)).catch(()=>null);
+      if(!snap?.exists())return;
+      const d=snap.data();
+      if(d.partnerId){
+        const p=await getDoc(doc(db,'users',d.partnerId)).catch(()=>null);
+        if(p?.exists()){document.getElementById('pName').textContent=p.data().displayName||'Partner';document.getElementById('pStatus').textContent=p.data().presenceStatus||'Online';}
+      }
+      if(d.togetherSince){const days=Math.floor((Date.now()-d.togetherSince.toMillis())/86400000);document.getElementById('days').textContent=days;}
+      if(d.streak)document.getElementById('streak').textContent=d.streak;
+      const chk=await getDoc(doc(db,'checkins',user.uid)).catch(()=>null);
+      if(chk?.exists()){const c=chk.data();if(c.mood)document.getElementById('myMood').textContent=c.mood;if(c.need)document.getElementById('myNeed').textContent='Need: '+c.need;if(c.battery)document.getElementById('batFill').style.width=c.battery+'%';}
+    }
+
+    window.sendKiss=function(){toast('💋 Kiss sent!');};
+    window.sendNote=function(){const n=prompt('Write a love note 💜');if(n)toast('💌 Note sent!');};
+    window.openCheckin=function(){
+      const mood=prompt('How are you feeling? (emoji)');if(!mood)return;
+      const need=prompt('What do you need? (Attention/Space/Comfort/Fun/Talk)');
+      const bat=prompt('Love battery 0-100?');
+      setDoc(doc(db,'checkins',user.uid),{mood,need:need||'',battery:parseInt(bat)||50,timestamp:serverTimestamp()}).then(()=>{toast('Check-in saved 💜');loadPage('home');});
+    };
+
+    // ===== SPACE =====
+    function renderSpace(el){
+      el.innerHTML=`<div class="space-page stagger">
+        <div class="live-room"><div class="breathing-orb"></div><div class="room-avatars"><div class="room-avatar you">🫧</div><div class="room-avatar partner">💜</div></div><div class="room-status">Your private space together</div></div>
+        <div class="space-activities">
+          <button class="activity-card" onclick="startSleep()"><span class="icon">🌙</span><span class="name">Sleep Together</span><span class="desc">Ambient comfort</span></button>
+          <button class="activity-card" onclick="startBreathing()"><span class="icon">🫁</span><span class="name">Breathing Sync</span><span class="desc">Calm together</span></button>
+          <button class="activity-card" onclick="showGames()"><span class="icon">🎮</span><span class="name">Couple Games</span><span class="desc">Play together</span></button>
+          <button class="activity-card" onclick="toast('🎬 Watch party coming soon!')"><span class="icon">🎬</span><span class="name">Watch Together</span><span class="desc">Synced viewing</span></button>
+        </div>
+        <div class="touch-zone" id="touchZone" onmousedown="startTouch()" onmouseup="endTouch()" ontouchstart="startTouch()" ontouchend="endTouch()"><div class="hint">Hold to send your touch</div><div class="fingerprint">👆</div></div>
+        <div class="games-grid hidden" id="games">
+          <button class="game-card" onclick="playGame('truth')"><span class="icon">🎯</span><span class="name">Truth</span></button>
+          <button class="game-card" onclick="playGame('compat')"><span class="icon">💕</span><span class="name">Compatibility</span></button>
+          <button class="game-card" onclick="playGame('memory')"><span class="icon">🧠</span><span class="name">Memory Quiz</span></button>
+          <button class="game-card" onclick="playGame('tarot')"><span class="icon">🔮</span><span class="name">Love Tarot</span></button>
+          <button class="game-card" onclick="playGame('guess')"><span class="icon">🤔</span><span class="name">Guess Answer</span></button>
+          <button class="game-card" onclick="playGame('date')"><span class="icon">🎲</span><span class="name">Date Roulette</span></button>
+        </div>
+      </div>`;
+    }
+
+    let touchTimer=null;
+    window.startTouch=function(){document.getElementById('touchZone').classList.add('active');touchTimer=setTimeout(()=>{if(navigator.vibrate)navigator.vibrate([50,30,50]);toast('Touch sent 💜');},800);};
+    window.endTouch=function(){document.getElementById('touchZone').classList.remove('active');clearTimeout(touchTimer);};
+    window.startSleep=function(){toast('🌙 Sleep mode — goodnight 💜');document.body.style.background='#060810';};
+    window.startBreathing=function(){
+      const room=document.querySelector('.live-room');
+      room.innerHTML='<div class="breathing-orb" style="width:150px;height:150px;filter:blur(15px)"></div><p style="position:relative;z-index:1;font-size:1.25rem;font-weight:600;color:var(--violet)" id="bText">Breathe in…</p>';
+      let inhale=true;setInterval(()=>{document.getElementById('bText').textContent=inhale?'Breathe out…':'Breathe in…';inhale=!inhale;},4000);
+    };
+    window.showGames=function(){document.getElementById('games').classList.toggle('hidden');};
+    window.playGame=function(type){
+      const g={truth:['What do you love most about me?','When did you first know?','Favorite memory of us?','What scares you about our future?'],compat:['Dream vacation?','City or countryside?','Morning or night?','How many kids?'],memory:['Where was our first date?','What was I wearing when we met?','My comfort food?'],tarot:['💜 The Lovers — Deep connection ahead','⭐ The Star — Hope and renewal','🌙 The Moon — Trust your intuition','☀️ The Sun — Joy surrounds you'],guess:['Beach or mountains?','My biggest fear?','What makes me happiest?'],date:['Cook dinner together 🍳','Stargazing night 🌟','Movie marathon 🎬','Write letters to each other 💌','Take a walk and talk 🚶']};
+      const pick=g[type][Math.floor(Math.random()*g[type].length)];
+      type==='tarot'?toast(pick):alert('🎮 '+pick);
+    };
+
+    // ===== MOMENTS =====
+    function renderMoments(el){
+      el.innerHTML=`<div class="moments-page stagger">
+        <div class="moments-header"><h2>Moments 💜</h2><button class="add-btn" onclick="addMemory()">+</button></div>
+        <div class="recap-card"><h3>✨ Your Month Together</h3><p>Memories beautifully collected</p><button class="btn btn-ghost" onclick="loadPage('subscription')">View Recap</button></div>
+        <div class="memory-timeline" id="timeline"><div style="text-align:center;padding:32px;color:var(--muted)">Loading…</div></div>
+      </div>`;
+      loadMemories();
+    }
+
+    async function loadMemories(){
+      const snap=await getDoc(doc(db,'users',user.uid)).catch(()=>null);
+      if(!snap?.exists()||!snap.data().partnerId){document.getElementById('timeline').innerHTML='<div style="text-align:center;padding:32px;color:var(--muted)">Connect with partner to share memories 💜</div>';return;}
+      const cid=[user.uid,snap.data().partnerId].sort().join('_');
+      const q2=query(collection(db,'memories',cid,'items'),orderBy('timestamp','desc'),limit(20));
+      const docs=await getDocs(q2).catch(()=>null);
+      const tl=document.getElementById('timeline');
+      if(!docs||docs.empty){tl.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted)">No memories yet. Tap + to add your first 💜</div>';return;}
+      tl.innerHTML='';
+      docs.forEach(d=>{const m=d.data();const date=m.timestamp?.toDate?.()||new Date();
+        tl.innerHTML+=`<div class="memory-card"><div class="title">${m.title||'A moment'}</div><div class="meta"><span>📅 ${date.toLocaleDateString()}</span>${m.location?`<span>📍 ${m.location}</span>`:''}${m.weather?`<span>${m.weather}</span>`:''}</div>${m.emotion?`<span class="emotion-tag">${m.emotion}</span>`:''}</div>`;
+      });
+    }
+
+    window.addMemory=function(){
+      const title=prompt('Name this moment 💜');if(!title)return;
+      const emotion=prompt('How did it feel? (emoji + word)');
+      const location=prompt('Where? (optional)');
+      getDoc(doc(db,'users',user.uid)).then(async s=>{
+        if(!s.exists()||!s.data().partnerId){toast('Connect with partner first');return;}
+        const cid=[user.uid,s.data().partnerId].sort().join('_');
+        await addDoc(collection(db,'memories',cid,'items'),{title,emotion:emotion||'',location:location||'',addedBy:user.uid,timestamp:serverTimestamp()});
+        toast('Memory saved 💜');loadMemories();
+      });
+    };
+
+    // ===== BOND =====
+    function renderBond(el){
+      el.innerHTML=`<div class="bond-page stagger">
+        <div class="pulse-card"><div class="pulse-orb"></div><div class="pulse-label">Relationship Pulse</div><div class="pulse-score">75%</div></div>
+        <div class="love-langs"><h3>Love Languages</h3>
+          <div class="lang-item"><span class="emoji">💬</span><div class="info"><div class="name">Words</div><div class="lang-bar"><div class="fill words" style="width:60%"></div></div></div></div>
+          <div class="lang-item"><span class="emoji">⏰</span><div class="info"><div class="name">Quality Time</div><div class="lang-bar"><div class="fill time" style="width:80%"></div></div></div></div>
+          <div class="lang-item"><span class="emoji">🎁</span><div class="info"><div class="name">Gifts</div><div class="lang-bar"><div class="fill gifts" style="width:40%"></div></div></div></div>
+          <div class="lang-item"><span class="emoji">🤗</span><div class="info"><div class="name">Touch</div><div class="lang-bar"><div class="fill touch" style="width:70%"></div></div></div></div>
+          <div class="lang-item"><span class="emoji">🛠️</span><div class="info"><div class="name">Service</div><div class="lang-bar"><div class="fill support" style="width:55%"></div></div></div></div>
+        </div>
+        <div class="goals-section"><h3>Shared Goals</h3>
+          <div class="goal-card"><span class="icon">✈️</span><div class="info"><div class="title">Save for a trip</div><div class="progress">In progress</div></div></div>
+          <div class="goal-card"><span class="icon">🎬</span><div class="info"><div class="title">Watch 100 movies</div><div class="progress">12/100</div></div></div>
+          <button class="btn btn-ghost" onclick="addGoal()" style="width:100%;margin-top:8px">+ Add Goal</button>
+        </div>
+        <div class="countdowns"><h3 style="font-size:var(--font-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:500;margin-bottom:8px">Coming Up</h3>
+          <button class="btn btn-ghost" onclick="addCountdown()" style="width:100%">+ Add Event</button>
+        </div>
+      </div>`;
+    }
+    window.addGoal=function(){const t=prompt('Goal name?');if(t)toast('Goal added: '+t+' 💫');};
+    window.addCountdown=function(){const t=prompt('Event name?');if(t)toast('Event added: '+t+' 📅');};
+
+    // ===== PROFILE =====
+    function renderProfile(el){
+      const name=user.displayName||'You';
+      el.innerHTML=`<div class="profile-page stagger">
+        <div class="couple-header"><div class="couple-avatars"><div class="couple-avatar">🫧</div><span class="couple-heart">♡</span><div class="couple-avatar">💜</div></div><div class="couple-names">${name}</div><div class="couple-days" id="cDays">Loading…</div></div>
+        <div class="identity-section"><h3>Your Emotional Identity</h3>
+          <div class="identity-card" onclick="editField('loveStyle')"><span class="icon">💜</span><div class="info"><div class="label">Love Style</div><div class="value" id="fLoveStyle">Tap to set</div></div></div>
+          <div class="identity-card" onclick="editField('comfortSong')"><span class="icon">🎵</span><div class="info"><div class="label">Comfort Song</div><div class="value" id="fComfortSong">Not set</div></div></div>
+          <div class="identity-card" onclick="editField('currentMood')"><span class="icon">🌙</span><div class="info"><div class="label">Current Mood</div><div class="value" id="fCurrentMood">—</div></div></div>
+        </div>
+        <div class="identity-section"><h3>Settings</h3><div class="settings-list">
+          <button class="settings-item" onclick="managePartner()"><span class="icon">💜</span><span class="label">Link Partner</span><span class="arrow">›</span></button>
+          <button class="settings-item" onclick="loadPage('subscription')"><span class="icon">⭐</span><span class="label">Premium</span><span class="arrow">›</span></button>
+          <button class="settings-item" onclick="copyUID()"><span class="icon">🔗</span><span class="label">My Invite Code</span><span class="arrow">›</span></button>
+          <button class="settings-item" onclick="doLogout()"><span class="icon">👋</span><span class="label">Log Out</span><span class="arrow">›</span></button>
+        </div></div>
+      </div>`;
+      loadProfile();
+    }
+
+    async function loadProfile(){
+      const s=await getDoc(doc(db,'users',user.uid)).catch(()=>null);
+      if(!s?.exists())return;const d=s.data();
+      if(d.togetherSince){const days=Math.floor((Date.now()-d.togetherSince.toMillis())/86400000);document.getElementById('cDays').textContent='Together for '+days+' days 💜';}
+      if(d.loveStyle)document.getElementById('fLoveStyle').textContent=d.loveStyle;
+      if(d.comfortSong)document.getElementById('fComfortSong').textContent=d.comfortSong;
+      if(d.currentMood)document.getElementById('fCurrentMood').textContent=d.currentMood;
+      if(d.partnerId){const p=await getDoc(doc(db,'users',d.partnerId)).catch(()=>null);if(p?.exists())document.querySelector('.couple-names').textContent=d.displayName?.split(' ')[0]+' ♡ '+(p.data().displayName?.split(' ')[0]||'Partner');}
+    }
+
+    window.editField=function(field){
+      const val=prompt('Set your '+field.replace(/([A-Z])/g,' $1').toLowerCase()+':');
+      if(!val)return;
+      updateDoc(doc(db,'users',user.uid),{[field]:val}).then(()=>{toast('Updated 💜');loadPage('profile');});
+    };
+    window.managePartner=function(){const code=prompt("Enter partner's invite code (their UID):");if(!code)return;updateDoc(doc(db,'users',user.uid),{partnerId:code}).then(()=>toast('Partner linked! 💜'));};
+    window.copyUID=function(){navigator.clipboard?.writeText(user.uid);toast('Copied: '+user.uid);alert('Your invite code:\n'+user.uid+'\n\nShare this with your partner!');};
+    window.doLogout=function(){if(confirm('Log out?'))signOut(auth).then(()=>window.location.href='login.html');};
+
+    // ===== SUBSCRIPTION =====
+    function renderSubscription(el){
+      const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'';
+      let c='$',p=7,u=19;
+      if(tz.includes('Kolkata')||tz.includes('Calcutta')){c='₹';p=149;u=499;}
+      else if(tz.includes('London')){c='£';p=5;u=15;}
+      else if(tz.includes('Tokyo')){c='¥';p=980;u=2800;}
+      el.innerHTML=`<div class="premium-page stagger">
+        <div class="premium-header"><h2>Nuvvu Nenu Premium</h2><p>Unlock the full emotional experience</p></div>
+        <div class="free-tier"><h3>Free — Always</h3><p>Essentials for staying connected</p><ul><li>Couple room & presence</li><li>Mood check-ins</li><li>5 memories/month</li><li>Basic games</li><li>Touch system</li></ul></div>
+        <div class="plan-card featured"><span class="plan-badge">Most Popular</span><div class="plan-name">Premium</div><div class="plan-price">${c}${p}<span>/month</span></div><ul class="plan-features"><li>Sleep together mode</li><li>Unlimited memories</li><li>Monthly recaps</li><li>Custom themes</li><li>Advanced games</li><li>Voice journals</li><li>Relationship insights</li><li>HD video calls</li></ul><button class="btn btn-primary" onclick="toast('✨ Coming to App Store soon!')">Get Premium</button></div>
+        <div class="plan-card"><div class="plan-name">Ultra</div><div class="plan-price">${c}${u}<span>/month</span></div><ul class="plan-features"><li>Everything in Premium</li><li>Cinematic memory movies</li><li>Emotion sync</li><li>Couple widgets</li><li>Relationship coach</li><li>Priority support</li></ul><button class="btn btn-ghost" onclick="toast('✨ Coming to App Store soon!')">Get Ultra</button></div>
+      </div>`;
+    }
+  </script>
 </body>
 </html>
