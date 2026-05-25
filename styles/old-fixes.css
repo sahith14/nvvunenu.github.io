@@ -1,0 +1,167 @@
+/* =====================================================================
+   styles/old-fixes.css — neutralizes the known-bad global selectors in
+   styles/old.css. Loaded LAST so it always wins.
+
+   Background: old.css is a concatenation of multiple older revisions and
+   contains:
+     • input { display:block; width:250px; … }   ← breaks every input
+     • button { width:250px; background:black }  ← breaks every button
+     • video { width:100%; height:100% }         ← breaks chat thumbnails
+     • multiple conflicting body { background } rules — last one wins,
+       which happened to be a near-black (#0b0e14) palette, so the
+       purple gradient the user wanted got hidden.
+
+   This file scopes those rules where they belong (auth pages) and locks
+   in the visual identity from the user's earliest old version.
+   ===================================================================== */
+
+/* ----- 1. Body background: lock in the purple gradient the user wants ----- */
+html, body {
+  background: linear-gradient(180deg, #b7a9ff 0%, #d4c8ff 100%) fixed !important;
+  color: #2a235a !important;
+  min-height: 100dvh;
+}
+body.theme-dark {
+  background: linear-gradient(180deg, #1a1424 0%, #0f0a1a 100%) fixed !important;
+  color: #f6f0ff !important;
+}
+
+/* ----- 2. Reset old.css's unscoped global selectors ----- */
+/* These rules in old.css blow up every button/input outside auth pages.
+   We re-claim sane defaults here for everywhere except .auth-body. */
+body:not(.auth-body) input,
+body:not(.auth-body) textarea,
+body:not(.auth-body) select {
+  display: revert;
+  width: auto;
+  padding: revert;
+  margin: revert;
+  border-radius: revert;
+  border: revert;
+  background: revert;
+  color: revert;
+}
+body:not(.auth-body) button {
+  width: auto !important;
+  padding: revert;
+  margin-top: revert;
+  background: transparent;
+  color: inherit;
+  font-weight: inherit;
+  border-radius: revert;
+}
+body:not(.auth-body) video {
+  width: auto;
+  height: auto;
+}
+
+/* ----- 3. Re-establish the bottom-nav buttons as round icon pills ----- */
+/* old.css overrides them, but its own .bottom-nav button block is what we
+   want — let's make sure that wins over our reset above. */
+.bottom-nav button {
+  width: 45px !important;
+  height: 45px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 15px !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+  color: #333 !important;
+  font-size: 1.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.bottom-nav button.active {
+  background: linear-gradient(135deg, #8f74ff, #bda6ff) !important;
+  color: #fff !important;
+  transform: scale(1.12) !important;
+}
+
+/* ----- 4. Side-nav (desktop) — re-establish the 240px glass rail ----- */
+.desktop-nav.side-nav {
+  width: 240px !important;
+  padding: 20px 15px !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 0 !important;
+}
+.desktop-nav.side-nav button {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 12px 15px !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: #2a235a !important;
+  font-weight: 600 !important;
+  text-align: left !important;
+  height: auto !important;
+}
+.desktop-nav.side-nav button:hover {
+  background: rgba(255, 255, 255, 0.5) !important;
+  transform: translateX(4px) !important;
+}
+.desktop-nav.side-nav button.active {
+  background: linear-gradient(135deg, #8f74ff, #bda6ff) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px rgba(143, 116, 255, 0.35) !important;
+}
+
+/* When the desktop side-nav is showing, push the page content right. */
+@media (min-width: 901px) {
+  .app-shell { padding-left: 256px !important; }
+  #page { max-width: 720px !important; padding: 24px 24px 24px 8px !important; }
+}
+@media (max-width: 900px) {
+  .app-shell { padding-left: 0 !important; padding-bottom: 92px !important; }
+}
+
+/* ----- 5. Headings + page padding sanity ----- */
+h1, h2, h3, h4, h5 { color: inherit; }
+
+/* ----- 6. Make sure the cute hearts BG actually appears behind everything ----- */
+#cuteHeartsBg { z-index: 0 !important; }
+#app          { position: relative; z-index: 1; }
+
+/* ----- 7. Glass cards: visible against the purple bg ----- */
+.glass, .auth-card, .post-card.glass, .partner-box, .room-header, .composer-card {
+  /* Slightly more opaque on the purple bg than the cute version */
+  background: rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+}
+body.theme-dark .glass {
+  background: rgba(40, 30, 60, 0.5) !important;
+}
+
+/* ----- 8. Inputs/textareas inside non-auth pages should have visible style ----- */
+body:not(.auth-body) input[type="text"],
+body:not(.auth-body) input[type="email"],
+body:not(.auth-body) input[type="password"],
+body:not(.auth-body) input[type="search"],
+body:not(.auth-body) input[type="url"],
+body:not(.auth-body) input[type="date"],
+body:not(.auth-body) textarea {
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(167, 139, 250, 0.3) !important;
+  border-radius: 14px !important;
+  padding: 11px 14px !important;
+  color: #2a235a !important;
+  font-family: inherit;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+body:not(.auth-body) input:focus,
+body:not(.auth-body) textarea:focus {
+  border-color: #8f74ff !important;
+  box-shadow: 0 0 0 3px rgba(143, 116, 255, 0.18) !important;
+}
+
+/* ----- 9. Toast positioning (don't get hidden behind side-nav) ----- */
+@media (min-width: 901px) {
+  #toast.toast {
+    left: calc(50% + 128px) !important;
+  }
+}
