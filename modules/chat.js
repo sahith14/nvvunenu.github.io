@@ -168,7 +168,7 @@ function paintShell() {
     <div class="chat-page">
       <header class="chat-header">
         <div class="chat-peer">
-          <div class="chat-peer-avatar">${avatar}</div>
+          <button class="chat-peer-avatar" id="chatPeerAvatar" type="button" title="Peek at profile" aria-label="Peek at profile">${avatar}</button>
           <div class="chat-peer-info">
             <div class="chat-peer-name">${escapeHtml(_partnerName)}</div>
             <div class="chat-peer-status" id="chatPeerStatus">…</div>
@@ -531,6 +531,13 @@ function attachHandlers() {
     paintMuteBtn(muteBtn);
     toast(muted ? "Chat unmuted" : "Chat muted for 1 hour");
   };
+
+  // Tap partner avatar → mini profile peek
+  const peerAv = _container.querySelector("#chatPeerAvatar");
+  peerAv?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showPartnerPeek(peerAv);
+  });
   if (_themeOutsideHandler) document.removeEventListener('click', _themeOutsideHandler, true);
   _themeOutsideHandler = (ev) => {
     if (!_container || !themePop) return;
@@ -1726,4 +1733,135 @@ function paintMuteBtn(btn) {
   btn.textContent = muted ? "🔕" : "🔔";
   btn.title = muted ? "Tap to unmute" : "Mute chat for 1h";
   btn.classList.toggle("is-muted", muted);
+}
+
+
+// =====================================================================
+// Partner profile peek — small popover anchored to the peer avatar in
+// the chat header. Shows live presence + mood + custom status, with a
+// 'Open profile' button to jump to the partner's full profile view.
+// =====================================================================
+function showPartnerPeek(anchor) {
+  document.querySelectorAll(".chat-peek").forEach((p) => p.remove());
+
+  const s = getState();
+  const partner = s.partner || {};
+  const photo = partner.photoURL;
+  const initial = (partner.displayName || partner.username || "?").trim().charAt(0).toUpperCase();
+  const av = photo
+    ? `<img src="${escapeAttr(photo)}" alt="" referrerpolicy="no-referrer">`
+    : `<span class="chat-peek__init">${escapeHtml(initial)}</span>`;
+  const name = partner.displayName || partner.username || "Partner";
+  const handle = partner.username ? `@${partner.username}` : "";
+  const online = partner.status?.online;
+  const presenceTxt = online
+    ? "Online now"
+    : (() => {
+        const ms = partner.status?.lastSeen?.toMillis?.() ?? +new Date(partner.status?.lastSeen || 0);
+        return ms ? `Last seen ${relativeTime(ms)}` : "Offline";
+      })();
+  const mood = partner.currentMood || "";
+  const status = partner.customStatus || "";
+
+  const pop = document.createElement("div");
+  pop.className = "chat-peek";
+  pop.innerHTML = `
+    <div class="chat-peek__avatar">${av}</div>
+    <div class="chat-peek__name">${escapeHtml(name)}</div>
+    ${handle ? `<div class="chat-peek__handle">${escapeHtml(handle)}</div>` : ""}
+    <div class="chat-peek__presence ${online ? "is-online" : ""}">${escapeHtml(presenceTxt)}</div>
+    ${mood   ? `<div class="chat-peek__row"><span>🌙</span><span>${escapeHtml(mood)}</span></div>` : ""}
+    ${status ? `<div class="chat-peek__row"><span>✨</span><span>${escapeHtml(status)}</span></div>` : ""}
+    <button class="btn btn-primary chat-peek__btn" type="button">Open profile</button>
+  `;
+  document.body.appendChild(pop);
+
+  // Position below the avatar, centered horizontally
+  const r = anchor.getBoundingClientRect();
+  const w = pop.offsetWidth;
+  let left = r.left + window.scrollX + (r.width / 2) - (w / 2);
+  left = Math.max(8, Math.min(window.innerWidth - w - 8, left));
+  pop.style.top  = `${r.bottom + window.scrollY + 8}px`;
+  pop.style.left = `${left}px`;
+  requestAnimationFrame(() => pop.classList.add("is-open"));
+
+  if (!document.getElementById("chat-peek-style")) {
+    const st = document.createElement("style");
+    st.id = "chat-peek-style";
+    st.textContent = `
+      .chat-peek {
+        position: absolute; z-index: 9999;
+        width: 240px; padding: 16px;
+        background: #fff;
+        border: 1px solid rgba(155,140,255,.25);
+        border-radius: 18px;
+        box-shadow: 0 14px 32px rgba(143,116,255,.35);
+        text-align: center;
+        opacity: 0; transform: translateY(-6px) scale(.96);
+        transition: opacity .18s, transform .18s var(--ease-out, cubic-bezier(.22,1,.36,1));
+      }
+      .chat-peek.is-open { opacity: 1; transform: translateY(0) scale(1); }
+      .chat-peek__avatar {
+        width: 64px; height: 64px; margin: 0 auto 10px;
+        border-radius: 50%; overflow: hidden;
+        background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+        display: grid; place-items: center;
+        box-shadow: 0 6px 16px rgba(155,140,255,.3);
+      }
+      .chat-peek__avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .chat-peek__init { color: #fff; font-weight: 800; font-size: 24px; }
+      .chat-peek__name { font-weight: 800; font-size: 1rem; color: #1a1235; }
+      .chat-peek__handle { font-size: .8125rem; color: #6b5b9b; margin-top: 2px; }
+      .chat-peek__presence {
+        margin-top: 6px;
+        font-size: .75rem; font-weight: 700;
+        color: #6b5b9b;
+        padding: 2px 10px; border-radius: 999px;
+        display: inline-block;
+        background: rgba(155,140,255,.10);
+      }
+      .chat-peek__presence.is-online {
+        background: linear-gradient(135deg, rgba(126,255,194,.18), rgba(155,140,255,.18));
+        color: #2a9d70;
+      }
+      .chat-peek__row {
+        display: flex; align-items: center; gap: 6px; justify-content: center;
+        margin-top: 8px;
+        font-size: .8125rem; color: #1a1235;
+      }
+      .chat-peek__btn {
+        margin-top: 14px; width: 100%;
+        padding: 9px 18px !important;
+        border-radius: 999px !important;
+        background: linear-gradient(135deg,#ff7eb6,#9b8cff) !important;
+        color: #fff !important; border: 0 !important;
+        font-weight: 700 !important;
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  pop.querySelector(".chat-peek__btn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (_partnerId) {
+      window.__viewUserUid = _partnerId;
+      window.loadPage?.("profileView");
+    }
+    pop.remove();
+    cleanup();
+  });
+
+  function close() { try { pop.remove(); } catch {} cleanup(); }
+  function cleanup() {
+    document.removeEventListener("click", onOutside, true);
+    document.removeEventListener("scroll", close, true);
+    document.removeEventListener("keydown", onEsc, true);
+  }
+  function onOutside(ev) { if (!pop.contains(ev.target) && ev.target !== anchor) close(); }
+  function onEsc(ev) { if (ev.key === "Escape") close(); }
+  setTimeout(() => {
+    document.addEventListener("click", onOutside, true);
+    document.addEventListener("scroll", close, true);
+    document.addEventListener("keydown", onEsc, true);
+  }, 0);
 }
