@@ -622,3 +622,55 @@
 
 /* Pin pill in long-press picker */
 .chat-rxn-picker__btn--pin { font-size: 17px; }
+
+
+
+/* In-chat search bar */
+.chat-search {
+  display: grid; grid-template-columns: 24px 1fr auto auto auto auto; gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255,255,255,.95);
+  border-bottom: 1px solid rgba(155,140,255,.18);
+}
+.chat-search__icon { font-size: 16px; color: var(--muted, #6b5b9b); text-align: center; }
+.chat-search__input {
+  width: 100%; height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(155,140,255,.25);
+  border-radius: 999px;
+  font-family: inherit; font-size: .9375rem;
+  background: rgba(255,255,255,.95);
+  color: var(--text, #1a1235);
+}
+.chat-search__input:focus {
+  outline: none;
+  border-color: #9b8cff;
+  box-shadow: 0 0 0 3px rgba(155,140,255,.2);
+}
+.chat-search__count {
+  font-size: .75rem; font-weight: 700; color: var(--muted, #6b5b9b);
+  font-variant-numeric: tabular-nums;
+  min-width: 38px; text-align: right;
+}
+.chat-search__nav,
+.chat-search__close {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(155,140,255,.2);
+  background: rgba(255,255,255,.95);
+  color: var(--muted, #6b5b9b);
+  font-size: 13px; font-family: inherit; cursor: pointer;
+  transition: all .15s;
+}
+.chat-search__nav:hover  { background: rgba(155,140,255,.12); color: #4f3d80; border-color: #9b8cff; }
+.chat-search__close:hover { background: #ff7e8e; color: #fff; border-color: transparent; }
+
+/* Highlight matched + current bubbles */
+.chat-row.is-search-match .chat-bubble {
+  outline: 2px solid rgba(255,196,80,.65);
+  outline-offset: 1px;
+}
+.chat-row.is-search-current .chat-bubble {
+  outline: 3px solid #ffb347;
+  box-shadow: 0 0 0 6px rgba(255,196,80,.25);
+}

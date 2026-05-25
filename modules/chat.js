@@ -181,6 +181,7 @@ function paintShell() {
           </div>
         </div>
         <div class="chat-actions">
+          <button class="chat-action" id="btnChatSearch" title="Search messages">🔍</button>
           <button class="chat-action" id="btnChatTheme" title="Chat theme">🎨</button>
           <button class="chat-action" id="btnAudioCall" title="Voice call">📞</button>
           <button class="chat-action" id="btnVideoCall" title="Video call">📹</button>
@@ -207,6 +208,15 @@ function paintShell() {
       </div>
 
       <div class="chat-pinned" id="chatPinned" hidden></div>
+
+      <div class="chat-search" id="chatSearch" hidden>
+        <span class="chat-search__icon">🔍</span>
+        <input class="chat-search__input" id="chatSearchInput" type="text" placeholder="Search messages…" autocomplete="off">
+        <span class="chat-search__count" id="chatSearchCount"></span>
+        <button class="chat-search__nav" id="chatSearchPrev" title="Previous match" aria-label="Previous match">↑</button>
+        <button class="chat-search__nav" id="chatSearchNext" title="Next match" aria-label="Next match">↓</button>
+        <button class="chat-search__close" id="chatSearchClose" aria-label="Close search">✕</button>
+      </div>
 
       <div class="chat-stream" id="chatStream">${skeletonList(4, "msg")}</div>
 
@@ -315,6 +325,13 @@ function renderMessages(msgs) {
   stream.innerHTML = html;
   stream.scrollTop = stream.scrollHeight;
 
+  // If chat search is active, re-apply highlights after re-render
+  const searchInput = _container?.querySelector('#chatSearchInput');
+  const searchSlot  = _container?.querySelector('#chatSearch');
+  if (searchInput && searchSlot && !searchSlot.hidden && searchInput.value) {
+    runSearch(searchInput.value);
+  }
+
   // Double-tap = quick ❤️ shortcut. Long-press / right-click opens the picker.
   stream.querySelectorAll('.chat-row').forEach((row) => {
     row.addEventListener('dblclick', () => {
@@ -406,7 +423,30 @@ function attachHandlers() {
   themeBtn.onclick = (e) => {
     e.stopPropagation();
     themePop.hidden = !themePop.hidden;
+    if (!themePop.hidden) closeSearch();
   };
+
+  // Chat search toggle
+  const searchBtn   = _container.querySelector('#btnChatSearch');
+  const searchSlot  = _container.querySelector('#chatSearch');
+  const searchInput = _container.querySelector('#chatSearchInput');
+  const searchClose = _container.querySelector('#chatSearchClose');
+  searchBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (searchSlot.hidden) openSearch();
+    else closeSearch();
+  };
+  searchClose.onclick = (e) => { e.preventDefault(); closeSearch(); };
+  searchInput.addEventListener('input', () => runSearch(searchInput.value));
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape')      { e.preventDefault(); closeSearch(); }
+    else if (e.key === 'Enter')  {
+      e.preventDefault();
+      gotoSearchMatch(e.shiftKey ? -1 : +1);
+    }
+  });
+  _container.querySelector('#chatSearchPrev').onclick = () => gotoSearchMatch(-1);
+  _container.querySelector('#chatSearchNext').onclick = () => gotoSearchMatch(+1);
   if (_themeOutsideHandler) document.removeEventListener('click', _themeOutsideHandler, true);
   _themeOutsideHandler = (ev) => {
     if (!_container || !themePop) return;
@@ -1179,4 +1219,96 @@ function paintPinnedBar(pinnedMsgs) {
       }
     });
   });
+}
+
+
+// =====================================================================
+// In-chat search — filters _lastMsgs against the query, highlights the
+// matching bubbles, lets you cycle through with ↑/↓ or Enter/Shift+Enter.
+// =====================================================================
+let _searchMatches = [];   // ordered array of message ids
+let _searchPos     = -1;
+
+function openSearch() {
+  const slot  = _container?.querySelector('#chatSearch');
+  const input = _container?.querySelector('#chatSearchInput');
+  if (!slot || !input) return;
+  slot.hidden = false;
+  input.value = "";
+  runSearch("");
+  setTimeout(() => input.focus(), 30);
+}
+function closeSearch() {
+  const slot = _container?.querySelector('#chatSearch');
+  if (!slot) return;
+  slot.hidden = true;
+  clearSearchHighlights();
+  _searchMatches = []; _searchPos = -1;
+}
+
+function runSearch(qRaw) {
+  const q = String(qRaw || "").trim().toLowerCase();
+  const stream = _container?.querySelector('#chatStream');
+  const countEl = _container?.querySelector('#chatSearchCount');
+  if (!stream) return;
+  clearSearchHighlights();
+  if (!q) {
+    _searchMatches = []; _searchPos = -1;
+    if (countEl) countEl.textContent = "";
+    return;
+  }
+  // Match against rendered messages by id; scan _lastMsgs for searchable text
+  const ids = [];
+  for (const m of _lastMsgs) {
+    const hay = matchableText(m).toLowerCase();
+    if (hay.includes(q)) ids.push(m.id);
+  }
+  _searchMatches = ids;
+  _searchPos = ids.length ? 0 : -1;
+
+  // Highlight all matching rows
+  for (const id of ids) {
+    const row = stream.querySelector(`.chat-row[data-id="${CSS.escape(id)}"]`);
+    if (row) row.classList.add("is-search-match");
+  }
+  if (countEl) countEl.textContent = ids.length ? `${_searchPos + 1} / ${ids.length}` : "0 / 0";
+  if (_searchPos >= 0) scrollToMatch(_searchPos);
+}
+
+function matchableText(m) {
+  if (!m) return "";
+  if (m.kind === "poll") {
+    return [m.question || "", ...(m.choices || [])].join(" ");
+  }
+  if (m.replyTo?.text) return `${m.text || ""} ${m.replyTo.text}`;
+  return m.text || "";
+}
+
+function gotoSearchMatch(dir) {
+  if (!_searchMatches.length) return;
+  _searchPos = (_searchPos + dir + _searchMatches.length) % _searchMatches.length;
+  const countEl = _container?.querySelector('#chatSearchCount');
+  if (countEl) countEl.textContent = `${_searchPos + 1} / ${_searchMatches.length}`;
+  scrollToMatch(_searchPos);
+}
+
+function scrollToMatch(pos) {
+  const id = _searchMatches[pos];
+  const stream = _container?.querySelector('#chatStream');
+  const target = stream?.querySelector(`.chat-row[data-id="${CSS.escape(id)}"]`);
+  if (!target) return;
+  // Clear previous "current" mark, set new one
+  stream.querySelectorAll(".chat-row.is-search-current").forEach((r) =>
+    r.classList.remove("is-search-current"));
+  target.classList.add("is-search-current");
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function clearSearchHighlights() {
+  const stream = _container?.querySelector('#chatStream');
+  if (!stream) return;
+  stream.querySelectorAll(".chat-row.is-search-match")
+        .forEach((r) => r.classList.remove("is-search-match"));
+  stream.querySelectorAll(".chat-row.is-search-current")
+        .forEach((r) => r.classList.remove("is-search-current"));
 }
