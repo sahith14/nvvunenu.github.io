@@ -37,6 +37,8 @@ import './services/chatBadge.js';
 import './services/memoriesBadge.js';
 // Side-effect: paints a pulsing purple dot on /together nav when partner is in a sub-view
 import './services/togetherBadge.js';
+// Side-effect: paints a pink dot on /bond nav when partner logs kindness / dates / qotw
+import './services/bondBadge.js';
 
 // Background services
 import { startIncomingCallListener, stopIncomingCallListener } from './modules/incomingCall.js';
