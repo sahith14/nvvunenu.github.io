@@ -234,3 +234,22 @@
   40%  { transform: scale(1.18); box-shadow: 0 0 0 12px rgba(255,126,182,0); }
   100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(255,126,182,0); }
 }
+
+
+/* Chat header mood widget */
+.chat-mood-widget {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 4px; padding: 2px 10px;
+  background: linear-gradient(135deg, rgba(255,126,182,.18), rgba(155,140,255,.18));
+  border: 1px solid rgba(155,140,255,.25);
+  border-radius: 999px;
+  font-size: .75rem; color: var(--muted, #6b5b9b);
+  width: fit-content;
+}
+.chat-mood-pair { font-size: 1rem; line-height: 1; }
+.chat-mood-label { font-size: .6875rem; font-weight: 600; }
+.chat-page[data-chat-theme="midnight"] .chat-mood-widget {
+  background: rgba(255,255,255,.10);
+  color: #c8baff;
+  border-color: rgba(255,255,255,.18);
+}

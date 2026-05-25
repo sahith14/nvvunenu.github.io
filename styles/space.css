@@ -373,3 +373,118 @@
   color: var(--text-secondary, #4f3d80);
   font-size: .9375rem; text-align: center; margin: 8px 0 0;
 }
+
+
+
+/* =====================================================================
+   Room theme picker + per-scene overlays + floating particles
+   ===================================================================== */
+
+.room-themes {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 8px 2px; margin: -2px 0 8px;
+  scrollbar-width: none;
+}
+.room-themes::-webkit-scrollbar { display: none; }
+.room-theme-btn {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; border-radius: 999px;
+  border: 1px solid rgba(155,140,255,.25);
+  background: rgba(255,255,255,.85);
+  color: #4f3d80; font-weight: 600;
+  font-size: .8125rem; font-family: inherit;
+  cursor: pointer; transition: all .15s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.room-theme-btn:hover { transform: translateY(-1px); border-color: #9b8cff; }
+.room-theme-btn.is-active {
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  color: #fff; border-color: transparent;
+  box-shadow: 0 6px 14px rgba(155,140,255,.35);
+}
+.room-theme-btn__icon { font-size: 14px; }
+.room-theme-btn__label { font-size: .75rem; }
+
+/* Particle layer — sits behind orb but above room background */
+.room-particles {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+}
+.room-particle {
+  position: absolute; top: -12%;
+  display: inline-block; line-height: 1;
+  text-shadow: 0 0 10px currentColor;
+}
+.room-particle.is-fall    { animation: rp-fall 8s linear infinite; }
+.room-particle.is-twinkle { animation: rp-twinkle 4s ease-in-out infinite; top: auto; }
+.room-particle.is-drift   { animation: rp-drift 10s linear infinite; top: auto; bottom: -12%; }
+.room-particle.is-rise    { animation: rp-rise 7s linear infinite; top: auto; bottom: -12%; }
+.room-particle.is-ribbon  { animation: rp-ribbon 9s ease-in-out infinite; top: 30%; font-size: 80px !important; opacity: .25 !important; }
+
+@keyframes rp-fall {
+  0%   { transform: translateY(0) translateX(0) rotate(0); }
+  100% { transform: translateY(420px) translateX(40px) rotate(180deg); }
+}
+@keyframes rp-twinkle {
+  0%, 100% { transform: scale(.8); opacity: .3; }
+  50%      { transform: scale(1.2); opacity: 1; }
+}
+@keyframes rp-drift {
+  0%   { transform: translateX(-20px) translateY(0); }
+  100% { transform: translateX(120vw) translateY(-30px); }
+}
+@keyframes rp-rise {
+  0%   { transform: translateY(0)      scale(.8); opacity: 0; }
+  20%  { opacity: .8; }
+  100% { transform: translateY(-300px) scale(1.1); opacity: 0; }
+}
+@keyframes rp-ribbon {
+  0%, 100% { transform: translateX(-10%) skewY(-8deg); }
+  50%      { transform: translateX(110%) skewY(-8deg); }
+}
+
+/* Per-scene tints for the live-room background (animation only via overlays) */
+.live-room[data-room-theme="sakura"] {
+  background: linear-gradient(180deg, #ffe4f1 0%, #ffd1e7 100%);
+}
+.live-room[data-room-theme="moonlit"] {
+  background: radial-gradient(circle at 50% 30%, #2a2055 0%, #1a1235 60%, #0f0925 100%);
+  color: #fff;
+}
+.live-room[data-room-theme="moonlit"] .room-status,
+.live-room[data-room-theme="moonlit"] .room-avatar { color: #fff; }
+.live-room[data-room-theme="moonlit"] .room-particle.is-twinkle {
+  color: rgba(255,255,255,.95);
+}
+.live-room[data-room-theme="beach"] {
+  background: linear-gradient(180deg, #c9eaff 0%, #ffe9c4 70%, #ffd6a0 100%);
+}
+.live-room[data-room-theme="library"] {
+  background: linear-gradient(180deg, #f4e3c1 0%, #d8b986 100%);
+  color: #4a2f0e;
+}
+.live-room[data-room-theme="library"] .room-particle.is-drift {
+  color: rgba(255,235,170,.85);
+  filter: drop-shadow(0 0 8px rgba(255,200,100,.6));
+}
+.live-room[data-room-theme="aurora"] {
+  background: radial-gradient(ellipse at 50% 100%, #1a1235 0%, #0f0a26 80%);
+  color: #fff;
+}
+.live-room[data-room-theme="aurora"] .room-particle.is-ribbon {
+  color: #7effc2;
+  background: linear-gradient(135deg, #7effc2, #5ec5ff, #ff7eb6);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.live-room[data-room-theme="aurora"] .room-status { color: #fff; }
+.live-room[data-room-theme="cafe"] {
+  background: linear-gradient(180deg, #4a2f0e 0%, #6b4423 100%);
+  color: #ffd6a0;
+}
+.live-room[data-room-theme="cafe"] .room-status,
+.live-room[data-room-theme="cafe"] .room-avatar { color: #ffd6a0; }
+.live-room[data-room-theme="cafe"] .room-particle.is-rise {
+  color: rgba(255,235,200,.65);
+}
+
+/* Bring the breathing orb down a touch when a theme is active so it doesn't fight particles */
+.live-room[data-room-theme]:not([data-room-theme="default"]) .breathing-orb { opacity: .7; }

@@ -1,0 +1,117 @@
+/* ====================================================================
+   Widget gallery — iOS frosted glass + Android Material You previews
+   ==================================================================== */
+
+.wg-page { display: flex; flex-direction: column; gap: 22px; }
+.wg-loading { padding: 16px; }
+
+.wg-hero {
+  background: linear-gradient(135deg, rgba(255,126,182,.12), rgba(155,140,255,.12));
+  border: 1px solid rgba(155,140,255,.25);
+  border-radius: 18px; padding: 22px;
+}
+.wg-hero__title {
+  margin: 0;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-weight: 800; font-size: 1.5rem;
+}
+.wg-hero__sub {
+  margin: 8px 0 0; color: var(--muted, #6b5b9b); font-size: .9375rem; line-height: 1.5;
+}
+
+.wg-section { display: flex; flex-direction: column; gap: 12px; }
+.wg-section__head { display: flex; align-items: center; gap: 10px; }
+.wg-section__head h3 { margin: 0; font-size: 1.0625rem; color: var(--nn-text, #1a1235); font-weight: 700; }
+.wg-os {
+  display: inline-flex; align-items: center; padding: 4px 10px;
+  background: #1a1235; color: #fff;
+  border-radius: 999px; font-size: .6875rem; font-weight: 800;
+  letter-spacing: .4px; text-transform: uppercase;
+}
+.wg-os--md {
+  background: linear-gradient(135deg, #4cd9a8, #3a86ff);
+  color: #fff;
+}
+
+/* iOS grid — narrow rectangles, like a stacked widget */
+.wg-grid--ios {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* iOS card — frosted, soft shadow, San Francisco-ish weight */
+.wg-card--ios {
+  position: relative;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(155,140,255,.18);
+  box-shadow: 0 14px 28px rgba(143,116,255,.18);
+  min-height: 110px;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.wg-card__top {
+  display: flex; align-items: center; gap: 6px;
+  font-size: .8125rem; color: var(--muted, #6b5b9b); font-weight: 600;
+}
+.wg-card__icon  { font-size: 14px; }
+.wg-card__title { letter-spacing: .2px; }
+.wg-card__primary {
+  font-size: 1.5rem; font-weight: 800;
+  color: var(--nn-text, #1a1235);
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  line-height: 1.1; margin-top: 4px;
+}
+.wg-card__secondary {
+  font-size: .8125rem; color: var(--muted, #6b5b9b); margin-top: 2px;
+}
+
+/* Material You grid — bigger square tiles */
+.wg-grid--md {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Material You card — rounded square, big emoji, layered surface */
+.wg-card--md {
+  background: linear-gradient(135deg,
+    rgba(255,126,182,.18) 0%,
+    rgba(155,140,255,.20) 50%,
+    rgba(126,215,255,.18) 100%);
+  border: 1px solid rgba(155,140,255,.18);
+  border-radius: 26px;
+  padding: 18px;
+  min-height: 150px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  box-shadow: 0 4px 14px rgba(155,140,255,.10);
+}
+.wg-card__icon-md {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 12px;
+  background: rgba(255,255,255,.7);
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(155,140,255,.18);
+}
+.wg-card__title-md {
+  margin-top: 10px; font-size: .8125rem;
+  color: var(--muted, #4f3d80); font-weight: 700; letter-spacing: .2px;
+  text-transform: uppercase;
+}
+.wg-card__primary-md {
+  font-size: 1.375rem; font-weight: 800; color: var(--nn-text, #1a1235);
+  margin-top: 4px; line-height: 1.2;
+}
+.wg-card__secondary-md {
+  font-size: .8125rem; color: var(--muted, #6b5b9b); margin-top: 2px;
+}
+
+.wg-hint {
+  margin: 4px 0 0;
+  color: var(--muted, #6b5b9b); font-size: .8125rem; text-align: center; line-height: 1.5;
+}
+
+@media (min-width: 720px) {
+  .wg-grid--ios, .wg-grid--md { grid-template-columns: repeat(3, 1fr); }
+}

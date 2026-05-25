@@ -19,6 +19,7 @@ import { renderSearch }       from './modules/search.js';
 import { renderProfileView }  from './modules/profileView.js';
 import { renderTogether }     from './modules/together.js';
 import { renderMemories }     from './modules/memories.js';
+import { renderWidgets }      from './modules/widgets.js';
 import { applyTheme, getStoredTheme } from './modules/settings.js';
 // Side-effect: registers window.avatarFor / window.initialAvatar globals
 import './modules/avatar.js';
@@ -47,7 +48,8 @@ const pages = {
   subscription: renderSubscription,
   settings:     renderSettings,
   search:       renderSearch,
-  profileView:  renderProfileView
+  profileView:  renderProfileView,
+  widgets:      renderWidgets
 };
 
 // Pages whose entry exposes a teardownXxx() instead of returning a cleanup fn.

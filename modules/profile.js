@@ -123,6 +123,8 @@ function paint(s) {
         <ul class="settings-list">
           <li><button class="settings-item" data-act="bond">
             <span class="icon">💞</span><span class="label">Bond / Pairing</span><span class="arrow">›</span></button></li>
+          <li><button class="settings-item" data-act="widgets">
+            <span class="icon">📱</span><span class="label">Lock-screen widgets</span><span class="arrow">›</span></button></li>
           <li><button class="settings-item" data-act="copyCode">
             <span class="icon">🔗</span><span class="label">Copy invite code</span><span class="arrow">›</span></button></li>
           <li><button class="settings-item" data-act="settings">
@@ -190,6 +192,7 @@ function onAction(act) {
     case "viewPublic":  return viewMyPublic();
     case "upgrade":     return window.loadPage?.("subscription");
     case "bond":        return window.loadPage?.("bond");
+    case "widgets":     return window.loadPage?.("widgets");
     case "settings":    return window.loadPage?.("settings");
     case "copyCode":    return copyInviteCode();
     case "signOut":     return openSignOutModal();

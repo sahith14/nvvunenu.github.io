@@ -9,8 +9,9 @@ import { toast, toastSuccess, toastWarn, safe } from "../utils/toast.js";
 import { gateSleepTogether } from "../services/featureGate.js";
 import { startVideoCall, startAudioCall } from "./callView.js";
 import { mountGame } from "./spaceGames.js";
+import { coupleMetaPath } from "../services/coupleService.js";
 import {
-  doc, setDoc, updateDoc, serverTimestamp, Timestamp
+  doc, setDoc, updateDoc, onSnapshot, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let _container = null;
@@ -19,6 +20,19 @@ let _touchTimeout = null;
 let _breathInterval = null;
 let _breathOriginalHTML = null;
 let _gameInstance = null;
+let _unsubMeta = null;
+let _currentTheme = "default";
+
+// Room scenes — each adds floating particles and tints the live-room.
+const ROOM_THEMES = [
+  { key: "default",  icon: "🫧", label: "Default" },
+  { key: "sakura",   icon: "🌸", label: "Sakura" },
+  { key: "moonlit",  icon: "🌙", label: "Moonlit" },
+  { key: "beach",    icon: "🏖", label: "Beach" },
+  { key: "library",  icon: "📚", label: "Library" },
+  { key: "aurora",   icon: "🌌", label: "Aurora" },
+  { key: "cafe",     icon: "☕", label: "Café" },
+];
 
 // Catalog of real games (delegated to spaceGames.js).
 const REAL_GAMES = [
@@ -39,13 +53,23 @@ export function renderSpace(container) {
   _container = container;
   _container.innerHTML = `
     <div class="space-page stagger">
-      <div class="live-room" id="liveRoom">
+      <div class="live-room" id="liveRoom" data-room-theme="default">
+        <div class="room-particles" id="roomParticles" aria-hidden="true"></div>
         <div class="breathing-orb"></div>
         <div class="room-avatars">
           <div class="room-avatar you">🫧</div>
           <div class="room-avatar partner">💜</div>
         </div>
         <div class="room-status" id="roomStatus">Your private space together</div>
+      </div>
+
+      <div class="room-themes" id="roomThemes">
+        ${ROOM_THEMES.map(t => `
+          <button class="room-theme-btn" data-theme="${t.key}" title="${t.label}">
+            <span class="room-theme-btn__icon">${t.icon}</span>
+            <span class="room-theme-btn__label">${t.label}</span>
+          </button>
+        `).join("")}
       </div>
 
       <div class="space-activities" id="spaceActivities">
@@ -104,15 +128,19 @@ export function renderSpace(container) {
 
   attachActivityHandlers();
   attachGameHandlers();
+  attachThemeHandlers();
   setupTouch();
 
-  // Mark presence when state ready
+  // Mark presence + subscribe to couple meta (room theme syncs across both)
   _offState = onAppState((s) => {
     if (!s.ready) return;
     if (s.user?.uid) {
       safe(() => updateDoc(doc(db, "users", s.user.uid), {
         inSpace: true, lastSpaceVisit: serverTimestamp()
       }), null);
+    }
+    if (s.coupleId && !_unsubMeta) {
+      attachMetaSubscription(s.coupleId);
     }
   });
 
@@ -121,12 +149,15 @@ export function renderSpace(container) {
 
 function cleanup() {
   try { _offState?.(); } catch {}
+  try { _unsubMeta?.(); } catch {}
   clearTimeout(_touchTimeout);
   clearInterval(_breathInterval);
   try { _gameInstance?.destroy(); } catch {}
-  _offState = null; _touchTimeout = null; _breathInterval = null;
+  _offState = null; _unsubMeta = null;
+  _touchTimeout = null; _breathInterval = null;
   _gameInstance = null; _breathOriginalHTML = null;
   _container = null;
+  _currentTheme = "default";
 }
 
 // ---------- Activity handlers ----------
@@ -307,4 +338,73 @@ function playQuick(type) {
   if (!options.length) return;
   const pick = options[Math.floor(Math.random() * options.length)];
   toast(`🎮 ${pick}`, { duration: 4500 });
+}
+
+
+
+// =====================================================================
+// Room theme: pick scene → persist to couples/{cid}/meta + subscribe so
+// either partner can change the room and both see it instantly.
+// =====================================================================
+function attachThemeHandlers() {
+  _container.querySelectorAll(".room-theme-btn").forEach((b) => {
+    b.addEventListener("click", () => {
+      const key = b.dataset.theme;
+      applyRoomTheme(key);             // optimistic local apply
+      const s = getState();
+      if (!s.coupleId) return;
+      safe(() => setDoc(coupleMetaPath(s.coupleId), {
+        roomTheme: key, updatedAt: serverTimestamp()
+      }, { merge: true }), "Couldn't save room theme");
+    });
+  });
+}
+
+function attachMetaSubscription(coupleId) {
+  _unsubMeta = onSnapshot(coupleMetaPath(coupleId), (snap) => {
+    const data = snap.data() || {};
+    const incoming = data.roomTheme || "default";
+    if (incoming !== _currentTheme) applyRoomTheme(incoming);
+  });
+}
+
+function applyRoomTheme(key) {
+  if (!_container) return;
+  _currentTheme = key;
+  const room = _container.querySelector("#liveRoom");
+  if (room) room.setAttribute("data-room-theme", key);
+  // Highlight active button
+  _container.querySelectorAll(".room-theme-btn").forEach((b) =>
+    b.classList.toggle("is-active", b.dataset.theme === key)
+  );
+  paintParticles(key);
+}
+
+function paintParticles(key) {
+  const layer = _container.querySelector("#roomParticles");
+  if (!layer) return;
+  layer.innerHTML = "";
+  if (key === "default") return;
+
+  const config = {
+    sakura:  { glyphs: ["🌸","🌸","🌸","🌺"],     count: 16, kind: "fall"   },
+    moonlit: { glyphs: ["✦","✧","⋆","✩","·"],   count: 22, kind: "twinkle"},
+    beach:   { glyphs: ["🌊","🐚","☀"],            count: 10, kind: "drift"  },
+    library: { glyphs: ["·","·","·","✦"],         count: 18, kind: "drift"  },
+    aurora:  { glyphs: ["~","~","~"],             count: 5,  kind: "ribbon" },
+    cafe:    { glyphs: ["·","∙","∘"],             count: 14, kind: "rise"   },
+  }[key] || null;
+  if (!config) return;
+
+  for (let i = 0; i < config.count; i++) {
+    const span = document.createElement("span");
+    span.className = `room-particle is-${config.kind}`;
+    span.textContent = config.glyphs[i % config.glyphs.length];
+    span.style.left = `${Math.random() * 100}%`;
+    span.style.animationDelay = `-${Math.random() * 8}s`;
+    span.style.animationDuration = `${5 + Math.random() * 8}s`;
+    span.style.fontSize = `${10 + Math.random() * 14}px`;
+    span.style.opacity = `${0.5 + Math.random() * 0.5}`;
+    layer.appendChild(span);
+  }
 }

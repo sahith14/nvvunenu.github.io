@@ -15,14 +15,17 @@ import {
 import { rememberMessage, suggestReplies } from '../services/aiReply.js';
 import { gateVoiceNote } from '../services/featureGate.js';
 import { startVideoCall, startAudioCall } from './callView.js';
+import { subscribeCoupleMeta } from '../services/coupleService.js';
 
 let _container       = null;
 let _offState        = null;
 let _unsubMessages   = null;
 let _unsubMeta       = null;
+let _unsubCoupleMeta = null;
 let _typingDebounce  = null;
 let _suggestDebounce = null;
 let _chatId          = null;
+let _coupleId        = null;
 let _myUid           = null;
 let _partnerId       = null;
 let _partnerName     = "Partner";
@@ -51,13 +54,15 @@ function cleanup() {
   try { _offState?.(); } catch {}
   try { _unsubMessages?.(); } catch {}
   try { _unsubMeta?.(); } catch {}
+  try { _unsubCoupleMeta?.(); } catch {}
   if (_themeOutsideHandler) {
     try { document.removeEventListener('click', _themeOutsideHandler, true); } catch {}
     _themeOutsideHandler = null;
   }
   clearTimeout(_typingDebounce);
   clearTimeout(_suggestDebounce);
-  _offState = _unsubMessages = _unsubMeta = null;
+  _offState = _unsubMessages = _unsubMeta = _unsubCoupleMeta = null;
+  _coupleId = null;
   _typingDebounce = _suggestDebounce = null;
   _container = null;
   _chatId = _myUid = _partnerId = null;
@@ -75,6 +80,17 @@ async function onState(s) {
   _partnerId = s.partnerId || null;
   _partnerName  = s.partner?.displayName?.split(' ')[0] || s.partner?.username || "Partner";
   _partnerPhoto = s.partner?.photoURL || null;
+
+  // (Re)subscribe to couple meta when coupleId changes — drives the mood widget.
+  if (s.coupleId && s.coupleId !== _coupleId) {
+    _coupleId = s.coupleId;
+    try { _unsubCoupleMeta?.(); } catch {}
+    _unsubCoupleMeta = subscribeCoupleMeta(_coupleId, (meta) => paintMoodWidget(meta));
+  } else if (!s.coupleId && _coupleId) {
+    _coupleId = null;
+    try { _unsubCoupleMeta?.(); } catch {}
+    _unsubCoupleMeta = null;
+  }
 
   if (!_partnerId || !_myUid) {
     paintEmpty();
@@ -149,6 +165,10 @@ function paintShell() {
           <div class="chat-peer-info">
             <div class="chat-peer-name">${escapeHtml(_partnerName)}</div>
             <div class="chat-peer-status" id="chatPeerStatus">…</div>
+            <div class="chat-mood-widget" id="chatMoodWidget" hidden>
+              <span class="chat-mood-pair" id="chatMoodPair" aria-hidden="true"></span>
+              <span class="chat-mood-label" id="chatMoodLabel">Moods syncing…</span>
+            </div>
           </div>
         </div>
         <div class="chat-actions">
@@ -528,4 +548,27 @@ export function chatSendPulse() {
   void send.offsetWidth;
   send.classList.add("is-pulsing");
   setTimeout(() => send?.classList.remove("is-pulsing"), 500);
+}
+
+
+// =====================================================================
+// Mood widget in chat header — shows both partners' current moods
+// from the couple meta moods map.
+// =====================================================================
+function paintMoodWidget(meta) {
+  const w  = _container?.querySelector('#chatMoodWidget');
+  if (!w) return;
+  const moods = meta?.moods || {};
+  const my   = moods[_myUid]?.emoji || null;
+  const yrs  = moods[_partnerId]?.emoji || null;
+  if (!my && !yrs) { w.hidden = true; return; }
+  w.hidden = false;
+  const pair = _container.querySelector('#chatMoodPair');
+  const lab  = _container.querySelector('#chatMoodLabel');
+  if (pair) pair.textContent = `${my || "·"} · ${yrs || "·"}`;
+  if (lab) {
+    if (my && yrs)      lab.textContent = "Both feeling shared today";
+    else if (my)        lab.textContent = "You shared your mood";
+    else                lab.textContent = `${_partnerName} shared their mood`;
+  }
 }
