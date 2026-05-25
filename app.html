@@ -75,6 +75,11 @@
        input{width:250px}, video{...}) and lock-in for the purple body bg. -->
   <link rel="stylesheet" href="styles/old-fixes.css">
 
+  <!-- DEFINITIVE BLUR KILL — loaded last. Strips backdrop-filter from
+       everything except the floating nav rails so pages render crisp on
+       top of the cute hearts background instead of being foggy. -->
+  <link rel="stylesheet" href="styles/no-blur.css">
+
   <!-- Final inline override for the bottom-nav (loaded LAST so it wins
        any cascade fight). Uses very high specificity (html body) to beat
        earlier `body:not(.auth-body) button` rules. -->

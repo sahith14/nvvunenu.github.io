@@ -1,0 +1,139 @@
+/* =====================================================================
+   styles/no-blur.css — definitive blur kill switch.
+   Loaded ABSOLUTELY LAST in app.html so it dominates the cascade.
+
+   The cute + ig + premium-glass + old.css layers stack 110+ backdrop-filter
+   rules. Cumulatively that turns every card, glass, drawer, modal, and
+   composer into a frosted overlay, which made the whole UI read as
+   "blurred". Pages must be on top of the blur, not behind it.
+
+   Strategy:
+     • strip backdrop-filter and filter from every element
+     • give cards solid (mostly opaque) white-ish backgrounds so they
+       still look glassy on the purple body, but DON'T require blur
+     • keep ONE place with subtle backdrop-filter: the floating nav rails
+     • cute hearts BG stays strictly behind (#cuteHeartsBg z-index:0,
+       pointer-events:none) and is the ONLY blurred-ish layer (still no
+       blur on it — its blur came from drop-shadow-on-hearts, not bg)
+   ===================================================================== */
+
+/* 1. Universal reset for blur/filter — wipes the slate clean. */
+*, *::before, *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Prevent anything from filter-blurring page content */
+html, body, #app, .app-shell, #page,
+section, article, header, footer, main, nav, div {
+  filter: none !important;
+}
+
+/* 2. Make the page itself crisp and on top of the background */
+html, body {
+  background: linear-gradient(180deg, #b7a9ff 0%, #d4c8ff 100%) fixed !important;
+  color: #2a235a !important;
+  filter: none !important;
+}
+body.theme-dark {
+  background: linear-gradient(180deg, #1a1424 0%, #0f0a1a 100%) fixed !important;
+  color: #f6f0ff !important;
+}
+
+/* 3. Cards / glass elements: solid translucent white, NO blur. */
+.glass, .glass-premium, .auth-card,
+.post-card, .ig-post, .feed-post,
+.dm-item, .profile-header, .room-header, .partner-box,
+.search-result, .user-card, .user-item,
+.vision-header, .space-card, .activity-card, .composer-card,
+.feature-drawer, .drawer-content, .drawer-item,
+.checkin-card, .presence-card, .quick-action,
+.identity-card, .identity-row, .settings-item,
+.plan-card, .pulse-card, .goal-card, .countdown-card,
+.recovery-card, .live-room, .touch-zone, .game-card,
+.recap-card, .moments-empty, .memory-card,
+.bond-modal__panel, .cute-modal-card,
+.comment-sheet-inner, .ig-explore-tile,
+.pv-card, .sub-card, .ch-card,
+.couple-hero, .bond-card, .stat-card,
+.profile-avatar-wrap, .profile-section,
+.feed-composer, .feed-post-skeleton {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 4. Card backgrounds — solid translucent, looks like glass on purple
+      WITHOUT actually being a backdrop-filter. */
+.glass, .glass-premium, .auth-card,
+.partner-box, .room-header, .composer-card,
+.checkin-card, .presence-card, .identity-card, .activity-card,
+.plan-card, .game-card, .live-room, .touch-zone,
+.pulse-card, .goal-card, .countdown-card, .recovery-card,
+.bond-modal__panel, .cute-modal-card, .ch-card,
+.feed-composer {
+  background: rgba(255, 255, 255, 0.78) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 8px 28px rgba(143, 116, 255, 0.12),
+              0 2px 6px rgba(255, 143, 177, 0.08) !important;
+}
+
+body.theme-dark .glass, body.theme-dark .glass-premium,
+body.theme-dark .auth-card, body.theme-dark .partner-box,
+body.theme-dark .checkin-card, body.theme-dark .presence-card,
+body.theme-dark .activity-card, body.theme-dark .plan-card,
+body.theme-dark .game-card, body.theme-dark .live-room,
+body.theme-dark .pulse-card, body.theme-dark .goal-card,
+body.theme-dark .countdown-card, body.theme-dark .recovery-card,
+body.theme-dark .bond-modal__panel, body.theme-dark .cute-modal-card,
+body.theme-dark .ch-card, body.theme-dark .feed-composer {
+  background: rgba(40, 30, 60, 0.82) !important;
+  border: 1px solid rgba(167, 139, 250, 0.35) !important;
+}
+
+/* 5. Two exceptions: the floating nav rails KEEP a subtle blur for that
+      "iOS frosted" pill feel — but only those two elements. */
+.bottom-nav,
+.desktop-nav,
+.desktop-nav.side-nav {
+  backdrop-filter: blur(14px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+}
+
+/* 6. Cute hearts BG strictly in the background, never blurs the page. */
+#cuteHeartsBg {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+.cute-heart {
+  filter: none !important;            /* no per-heart drop-shadow blur */
+  text-shadow: 0 2px 6px rgba(255, 143, 177, 0.4);
+}
+
+/* 7. App content sits on top, fully sharp */
+#app, .app-shell, #page {
+  position: relative;
+  z-index: 1;
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 8. Restore page-content text rendering quality */
+body, .page-enter, #page, #page * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 9. Auth pages keep their inline styling (login/signup), but nuke any
+      stray blur there too. */
+body.auth-body, body.auth-body * {
+  filter: none !important;
+}
+body.auth-body { backdrop-filter: none !important; }
+body.auth-body .auth-card {
+  backdrop-filter: blur(14px) !important;   /* tasteful card blur OK */
+  -webkit-backdrop-filter: blur(14px) !important;
+}
