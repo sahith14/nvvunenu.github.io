@@ -11,7 +11,8 @@ import { db } from "../firebase.js";
 import {
   collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { onAppState } from "../state/appState.js";
+import { onAppState, getState } from "../state/appState.js";
+import { spawnHeartBurst } from "../services/notifyService.js";
 import { toast, toastSuccess, toastWarn, safe } from "../utils/toast.js";
 import { skeletonList } from "../utils/skeleton.js";
 
@@ -149,6 +150,7 @@ function paint() {
 
   const favs = IDEAS.filter((it) => _picks[it.id]?.savedAt);
   const done = IDEAS.filter((it) => _picks[it.id]?.completedAt);
+  maybeCelebrateFirstDate(done.length);
 
   _container.innerHTML = `
     <div class="di-page stagger">
@@ -327,4 +329,26 @@ function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[c]));
+}
+
+
+
+// =====================================================================
+// First-date celebration — fires once per couple when their dates
+// completed-count transitions from 0 to 1+.
+// =====================================================================
+function maybeCelebrateFirstDate(total) {
+  if (!total) return;
+  const cid = getState()?.coupleId;
+  if (!cid) return;
+  const key = `nvvunenu.firstDate.${cid}`;
+  let already = false;
+  try { already = localStorage.getItem(key) === "1"; } catch {}
+  if (already) return;
+  try { localStorage.setItem(key, "1"); } catch {}
+
+  setTimeout(() => {
+    try { spawnHeartBurst(); } catch {}
+    toastSuccess("First date checked off 🌹 — keep collecting them");
+  }, 500);
 }
