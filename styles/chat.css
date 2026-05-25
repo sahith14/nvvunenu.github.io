@@ -390,3 +390,41 @@
   background: rgba(155,140,255,.10);
 }
 .chat-rxn-picker__btn:active { transform: scale(.95); }
+
+
+
+/* Emoji grid popover (composer) */
+.chat-emoji-grid {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(8, 36px);
+  gap: 2px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid rgba(155,140,255,.25);
+  border-radius: 16px;
+  box-shadow: 0 14px 32px rgba(143,116,255,.35);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(8px) scale(.92);
+  transform-origin: 50% 100%;
+  transition: opacity .18s, transform .18s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.chat-emoji-grid.is-open { opacity: 1; transform: translateY(0) scale(1); }
+.chat-emoji-grid__btn {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border: 0; background: transparent;
+  font-size: 22px; line-height: 1;
+  border-radius: 10px;
+  cursor: pointer; font-family: inherit;
+  transition: transform .12s, background .12s;
+}
+.chat-emoji-grid__btn:hover {
+  transform: scale(1.18);
+  background: rgba(155,140,255,.10);
+}
+.chat-emoji-grid__btn:active { transform: scale(.95); }
+@media (max-width: 380px) {
+  .chat-emoji-grid { grid-template-columns: repeat(6, 36px); }
+}

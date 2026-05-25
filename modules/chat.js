@@ -431,10 +431,9 @@ function attachHandlers() {
   send.onclick = doSend;
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doSend(); } });
 
-  emoji.onclick = () => {
-    const palette = ['💜','😘','🥰','😍','😂','🥺','🫶','💋','🌙','✨','🥹','🫨'];
-    input.value += palette[Math.floor(Math.random() * palette.length)];
-    input.focus();
+  emoji.onclick = (e) => {
+    e.stopPropagation();
+    showEmojiGrid(emoji, input);
   };
 
   // Poll composer
@@ -792,4 +791,81 @@ function showReactionPicker(row) {
     document.addEventListener("scroll", close, true);
     document.addEventListener("keydown", onEsc, true);
   }, 0);
+}
+
+
+// =====================================================================
+// Emoji grid composer — 24 hearts/moods/scenes split into 3 rows.
+// =====================================================================
+const EMOJI_GRID = [
+  // Hearts row
+  "💜","💖","🥰","😘","😍","😻","🫶","💋",
+  // Moods row
+  "🥺","😭","🥹","🤗","😴","🌙","✨","🔥",
+  // Vibes / scenes row
+  "🌸","🌹","☕","🍷","🌧","🌅","🎵","🎬",
+];
+
+function showEmojiGrid(anchorBtn, input) {
+  document.querySelectorAll(".chat-emoji-grid").forEach((el) => el.remove());
+
+  const grid = document.createElement("div");
+  grid.className = "chat-emoji-grid";
+  grid.innerHTML = EMOJI_GRID.map(e => `
+    <button class="chat-emoji-grid__btn" data-e="${e}" type="button" aria-label="${e}">${e}</button>
+  `).join("");
+  document.body.appendChild(grid);
+
+  // Position above the anchor button, centered horizontally
+  const r = anchorBtn.getBoundingClientRect();
+  const gw = grid.offsetWidth;
+  const gh = grid.offsetHeight;
+  let top = r.top + window.scrollY - gh - 10;
+  if (top < window.scrollY + 8) top = r.bottom + window.scrollY + 10;
+  let left = r.left + window.scrollX + (r.width / 2) - (gw / 2);
+  left = Math.max(8, Math.min(window.innerWidth - gw - 8, left));
+  grid.style.top  = `${top}px`;
+  grid.style.left = `${left}px`;
+
+  requestAnimationFrame(() => grid.classList.add("is-open"));
+
+  // Tap an emoji to insert at cursor (or append). Keeps grid open if Shift held
+  // — quick way to type a string of emojis.
+  grid.querySelectorAll(".chat-emoji-grid__btn").forEach((b) => {
+    b.addEventListener("click", (ev) => {
+      const e = b.dataset.e;
+      insertAtCursor(input, e);
+      input.focus();
+      if (!ev.shiftKey) close();
+    });
+  });
+
+  // Outside click / scroll / Escape
+  function close() { try { grid.remove(); } catch {} cleanup(); }
+  function cleanup() {
+    document.removeEventListener("click", onOutside, true);
+    document.removeEventListener("scroll", close, true);
+    document.removeEventListener("keydown", onEsc, true);
+  }
+  function onOutside(ev) {
+    if (grid.contains(ev.target) || anchorBtn.contains(ev.target)) return;
+    close();
+  }
+  function onEsc(ev) { if (ev.key === "Escape") close(); }
+  setTimeout(() => {
+    document.addEventListener("click", onOutside, true);
+    document.addEventListener("scroll", close, true);
+    document.addEventListener("keydown", onEsc, true);
+  }, 0);
+}
+
+function insertAtCursor(input, text) {
+  if (typeof input.selectionStart === "number") {
+    const start = input.selectionStart;
+    const end   = input.selectionEnd;
+    input.value = input.value.slice(0, start) + text + input.value.slice(end);
+    input.selectionStart = input.selectionEnd = start + text.length;
+  } else {
+    input.value += text;
+  }
 }
