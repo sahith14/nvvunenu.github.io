@@ -4,10 +4,11 @@
 // sharing your invite code (UID) with your partner.
 // =====================================================================
 import {
-  doc, getDoc, updateDoc, serverTimestamp
+  doc, getDoc, updateDoc, serverTimestamp,
+  collection, query, orderBy, startAt, endAt, limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from "../firebase.js";
-import { getUserCached, reportFirestoreError } from "../utils/firestoreSafe.js";
+import { getUserCached, reportFirestoreError, safeGetDocs } from "../utils/firestoreSafe.js";
 
 // Cached, deduped, quota-aware user fetch.
 export async function getUser(uid) {
@@ -23,6 +24,25 @@ export async function lookupByInviteCode(code) {
   const cleaned = (code || "").trim();
   if (!cleaned) return null;
   return getUser(cleaned);
+}
+
+/**
+ * Prefix-search users by username. Used by the public Feed module's
+ * search bar. Couple pairing does NOT use this.
+ */
+export async function searchUsersByUsername(text, opts = { limit: 10 }) {
+  const cleaned = (text || "").trim().toLowerCase();
+  if (!cleaned) return [];
+  const q = query(
+    collection(db, "users"),
+    orderBy("username"),
+    startAt(cleaned),
+    endAt(cleaned + "\uf8ff"),
+    limit(opts.limit || 10)
+  );
+  const snap = await safeGetDocs(q, { ctx: "searchUsersByUsername" });
+  if (!snap) return [];
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid);
 }
 
 export async function sendRequest(fromUid, toUid) {

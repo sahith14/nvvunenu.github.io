@@ -13,14 +13,17 @@ import { renderBond }         from './modules/bond.js';
 import { renderProfile }      from './modules/profile.js';
 import { renderSubscription } from './modules/subscription.js';
 import { renderChat, teardownChat } from './modules/chat.js';
+import { renderFeed, teardownFeed } from './modules/feed.js';
 
 // Background services
 import { startIncomingCallListener, stopIncomingCallListener } from './modules/incomingCall.js';
 import { startPresence, stopPresence } from './services/presenceService.js';
 import { initAppState, teardownAppState } from './state/appState.js';
+import { ensureUsername } from './services/feedService.js';
 
 const pages = {
   home:         renderHome,
+  feed:         renderFeed,
   space:        renderSpace,
   chat:         renderChat,
   moments:      renderMoments,
@@ -48,6 +51,8 @@ onAuthStateChanged(auth, (user) => {
   initAppState(user);
   startPresence();
   startIncomingCallListener();
+  // ensure the user has a username for search/discoverability (idempotent)
+  ensureUsername(user).catch(() => {});
 
   loadPage('home');
 });
@@ -61,6 +66,9 @@ window.loadPage = function (page) {
   // teardown the previous page (chat keeps live listeners)
   if (currentPage === 'chat' && page !== 'chat') {
     try { teardownChat(); } catch {}
+  }
+  if (currentPage === 'feed' && page !== 'feed') {
+    try { teardownFeed(); } catch {}
   }
   if (typeof lastTeardown === 'function') {
     try { lastTeardown(); } catch {}

@@ -49,8 +49,23 @@ service cloud.firestore {
         // Partner can update ONLY partner-request / pairing fields on the other side.
         || (signedIn()
             && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['partnerRequestFrom','partnerRequestTo','partnerRequestAt','partnerID','relationshipStatus','matchedAt']));
+               .hasOnly(['partnerRequestFrom','partnerRequestTo','partnerRequestAt','partnerID','relationshipStatus','matchedAt']))
+        // Any signed-in user may toggle ONLY follower/following arrays on another user
+        // (used for follow/unfollow on the public Feed).
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['followers','following','followerCount','followingCount']));
       allow delete: if isOwner(userId);
+    }
+
+    // ---------- usernames namespace (unique-name reservation) ----------
+    // Each doc id is the lowercase username; doc body has { uid }.
+    match /usernames/{uname} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == uid();
+      allow delete: if signedIn() && resource.data.uid == uid();
+      // No updates — to change username, delete the old doc and create a new one.
+      allow update: if false;
     }
 
     // ---------- couple-scoped: chats ----------
@@ -233,6 +248,25 @@ service cloud.firestore {
       // Shared memories within couple
       match /memories/{memId} {
         allow read, write: if inCouple(coupleId);
+      }
+    }
+
+    // ---------- public feed: posts + comments + likes ----------
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.owner == uid();
+      // Owner can freely update/delete; anyone signed-in may toggle likes
+      // or bump the comment counter.
+      allow update: if (signedIn() && resource.data.owner == uid())
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['likes','likeCount','commentCount']));
+      allow delete: if signedIn() && resource.data.owner == uid();
+
+      match /comments/{cid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.author == uid();
+        allow update, delete: if signedIn() && resource.data.author == uid();
       }
     }
 
