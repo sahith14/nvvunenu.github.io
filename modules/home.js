@@ -361,6 +361,8 @@ function wirePresenceCard() {
     }
   });
 
+  attachPresenceQuickActions(card);
+
   _container.querySelector("#pokeBtn").addEventListener("click", async (e) => {
     e.stopPropagation();
     const s = getState();
@@ -1004,4 +1006,118 @@ function paintGreetingSub(s) {
   if (!lines.length) { sub.hidden = true; sub.textContent = ""; return; }
   sub.hidden = false;
   sub.textContent = lines.join(" · ");
+}
+
+
+// =====================================================================
+// Long-press presence card → quick action sheet (kiss / poke / chat /
+// sleep). Same long-press shape as the rest of the app.
+// =====================================================================
+function attachPresenceQuickActions(card) {
+  if (!card) return;
+  let timer = null, suppressClick = false;
+  const start = () => {
+    if (!card.dataset.paired) return;     // unpaired → just navigate to bond
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null; suppressClick = true;
+      showPresenceQuickActions(card);
+    }, 480);
+  };
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  card.addEventListener("touchstart",  start, { passive: true });
+  card.addEventListener("touchend",    cancel);
+  card.addEventListener("touchmove",   cancel);
+  card.addEventListener("mousedown",   (e) => { if (e.button === 0) start(); });
+  card.addEventListener("mouseup",     cancel);
+  card.addEventListener("mouseleave",  cancel);
+  card.addEventListener("contextmenu", (e) => { e.preventDefault(); if (card.dataset.paired) showPresenceQuickActions(card); });
+  card.addEventListener("click", (e) => {
+    if (suppressClick) { suppressClick = false; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+}
+
+function showPresenceQuickActions(card) {
+  document.querySelectorAll(".pq-sheet").forEach((p) => p.remove());
+
+  const sheet = document.createElement("div");
+  sheet.className = "pq-sheet";
+  sheet.innerHTML = `
+    <button class="pq-sheet__btn" data-act="kiss">
+      <span class="pq-sheet__emoji">💋</span><span class="pq-sheet__label">Kiss</span>
+    </button>
+    <button class="pq-sheet__btn" data-act="poke">
+      <span class="pq-sheet__emoji">💭</span><span class="pq-sheet__label">Thinking</span>
+    </button>
+    <button class="pq-sheet__btn" data-act="chat">
+      <span class="pq-sheet__emoji">💬</span><span class="pq-sheet__label">Chat</span>
+    </button>
+    <button class="pq-sheet__btn" data-act="sleep">
+      <span class="pq-sheet__emoji">🌙</span><span class="pq-sheet__label">Sleep</span>
+    </button>
+  `;
+  document.body.appendChild(sheet);
+
+  // Position centered below the card
+  const r = card.getBoundingClientRect();
+  const w = sheet.offsetWidth;
+  const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + window.scrollX + r.width / 2 - w / 2));
+  sheet.style.top = `${r.bottom + window.scrollY + 8}px`;
+  sheet.style.left = `${left}px`;
+  requestAnimationFrame(() => sheet.classList.add("is-open"));
+
+  if (!document.getElementById("pq-sheet-style")) {
+    const s = document.createElement("style");
+    s.id = "pq-sheet-style";
+    s.textContent = `
+      .pq-sheet {
+        position: absolute; z-index: 9999;
+        display: flex; gap: 6px;
+        padding: 8px;
+        background: #fff;
+        border: 1px solid rgba(155,140,255,.25);
+        border-radius: 16px;
+        box-shadow: 0 14px 32px rgba(143,116,255,.32);
+        opacity: 0; transform: translateY(-6px) scale(.96);
+        transition: opacity .18s, transform .18s var(--ease-out, cubic-bezier(.22,1,.36,1));
+      }
+      .pq-sheet.is-open { opacity: 1; transform: translateY(0) scale(1); }
+      .pq-sheet__btn {
+        display: flex; flex-direction: column; align-items: center; gap: 2px;
+        padding: 8px 10px; border-radius: 10px;
+        border: 0; background: transparent; cursor: pointer; font-family: inherit;
+        transition: transform .12s, background .12s;
+      }
+      .pq-sheet__btn:hover { background: rgba(155,140,255,.10); transform: translateY(-1px); }
+      .pq-sheet__emoji { font-size: 20px; line-height: 1; }
+      .pq-sheet__label { font-size: .6875rem; font-weight: 800; color: #4f3d80; letter-spacing: .3px; text-transform: uppercase; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  function close() { try { sheet.remove(); } catch {} cleanup(); }
+  function cleanup() {
+    document.removeEventListener("click", onOutside, true);
+    document.removeEventListener("scroll", close, true);
+    document.removeEventListener("keydown", onEsc, true);
+  }
+  function onOutside(ev) { if (!sheet.contains(ev.target)) close(); }
+  function onEsc(ev) { if (ev.key === "Escape") close(); }
+  setTimeout(() => {
+    document.addEventListener("click", onOutside, true);
+    document.addEventListener("scroll", close, true);
+    document.addEventListener("keydown", onEsc, true);
+  }, 0);
+
+  sheet.querySelectorAll(".pq-sheet__btn").forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const act = b.dataset.act;
+      close();
+      if (act === "kiss")  sendKiss();
+      if (act === "poke")  document.getElementById("pokeBtn")?.click();
+      if (act === "chat")  window.loadPage?.("chat");
+      if (act === "sleep") window.loadPage?.("together");
+    });
+  });
 }
