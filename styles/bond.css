@@ -472,3 +472,54 @@
   text-transform: uppercase; letter-spacing: .3px; font-weight: 700;
 }
 .bd-heatmap__legend .bd-heat-cell { width: 12px; height: 12px; }
+
+
+
+/* =====================================================================
+   Coach card — small AI prompt card on Bond
+   ===================================================================== */
+.bd-coach {
+  background: linear-gradient(135deg, rgba(255,196,80,.12), rgba(255,126,182,.10), rgba(155,140,255,.12));
+  border: 1px solid rgba(155,140,255,.25);
+  border-radius: 18px; padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.bd-coach__head { display: flex; align-items: center; gap: 8px; }
+.bd-coach__head h3 { margin: 0; font-size: 1rem; color: var(--text, #1a1235); }
+.bd-coach__icon { font-size: 18px; }
+.bd-coach__sub {
+  margin: 0;
+  font-size: .8125rem; color: var(--muted, #6b5b9b); line-height: 1.4;
+}
+.bd-coach__row {
+  display: grid; grid-template-columns: 1fr auto; gap: 8px;
+}
+.bd-coach__row input {
+  height: 40px; padding: 0 14px;
+  border: 1px solid rgba(155,140,255,.3);
+  border-radius: 999px;
+  font-family: inherit; font-size: .9375rem;
+  background: rgba(255,255,255,.95);
+  color: var(--text, #1a1235);
+}
+.bd-coach__row input:focus {
+  outline: none;
+  border-color: #9b8cff;
+  box-shadow: 0 0 0 3px rgba(155,140,255,.18);
+}
+.bd-coach__row .btn { padding: 0 18px; height: 40px; border-radius: 999px; }
+.bd-coach__out {
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(155,140,255,.18);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: .9375rem; line-height: 1.5;
+  color: var(--text, #1a1235);
+  font-style: italic;
+  animation: bd-coach-in .25s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+@keyframes bd-coach-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.bd-coach__out.is-loading { color: var(--muted, #6b5b9b); }

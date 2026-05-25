@@ -22,6 +22,7 @@ import {
   onSnapshot, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { computePulse, PULSE_LABELS } from "../services/bondPulseService.js";
+import { aiCall } from "../services/aiProvider.js";
 
 let _container = null;
 let _offState  = null;
@@ -408,6 +409,19 @@ function paintPaired(s) {
         <button class="btn btn-primary bd-qotw__btn" id="bdQotwBtn">Answer this week</button>
       </div>
 
+      <div class="bd-coach">
+        <div class="bd-coach__head">
+          <span class="bd-coach__icon">🪄</span>
+          <h3>Ask for a small idea</h3>
+        </div>
+        <p class="bd-coach__sub">Stuck on what to say or do? Type a sentence and we'll suggest one gentle next step.</p>
+        <div class="bd-coach__row">
+          <input id="bdCoachIn" type="text" maxlength="240" placeholder="e.g. they had a hard day, what should I do tonight?" autocomplete="off">
+          <button class="btn btn-primary" id="bdCoachAsk">Ask</button>
+        </div>
+        <div class="bd-coach__out" id="bdCoachOut" hidden></div>
+      </div>
+
       <div class="bd-kindness">
         <div class="bd-kindness__head">
           <span class="bd-kindness__icon">💛</span>
@@ -475,6 +489,7 @@ function paintPaired(s) {
   paintAnniversaryTimeline(me);
   loadQotw(coupleId, me.uid, partnerName, s.partnerId);
   loadKindness(coupleId, me.uid);
+  wireCoach();
 
   // Goal / Countdown forms
   _container.querySelector("#btnAddGoal").addEventListener("click", () => openGoalForm(coupleId, me.uid));
@@ -1177,4 +1192,42 @@ function levelFor(score) {
 function dayKeyIsFuture(key) {
   const today = todayKeyLocal();
   return key > today;     // string compare works because YYYY-MM-DD
+}
+
+
+// =====================================================================
+// Coach card — single-shot prompt → aiCall('coachAdvice', text).
+// Falls back to a friendly nudge when no provider is plugged in.
+// =====================================================================
+function wireCoach() {
+  const input  = _container?.querySelector('#bdCoachIn');
+  const button = _container?.querySelector('#bdCoachAsk');
+  const out    = _container?.querySelector('#bdCoachOut');
+  if (!input || !button || !out) return;
+
+  const ask = async () => {
+    const prompt = input.value.trim();
+    if (!prompt) { toastWarn("Type a quick prompt"); return; }
+    button.disabled = true;
+    button.textContent = "Thinking…";
+    out.hidden = false;
+    out.textContent = "Listening for a soft idea…";
+    out.classList.add('is-loading');
+
+    const text = await aiCall("coachAdvice", prompt);
+    out.classList.remove('is-loading');
+    if (typeof text === "string" && text.trim()) {
+      out.textContent = text.trim();
+    } else {
+      out.textContent =
+        "Coach mode lights up once an AI provider is plugged in. Until then, try AI demo mode in Settings to see what it'll feel like.";
+    }
+    button.disabled = false;
+    button.textContent = "Ask";
+  };
+
+  button.addEventListener('click', ask);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); ask(); }
+  });
 }
