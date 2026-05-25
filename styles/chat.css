@@ -358,3 +358,35 @@
   border-color: rgba(126,255,194,.45);
   color: #f4efff;
 }
+
+
+
+/* Long-press reaction picker (floats over the bubble) */
+.chat-rxn-picker {
+  position: absolute;
+  display: flex; gap: 4px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid rgba(155,140,255,.25);
+  border-radius: 999px;
+  box-shadow: 0 14px 32px rgba(143,116,255,.35);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(8px) scale(.92);
+  transform-origin: 50% 100%;
+  transition: opacity .18s, transform .18s var(--ease-out, cubic-bezier(.22,1,.36,1));
+  pointer-events: auto;
+}
+.chat-rxn-picker.is-open { opacity: 1; transform: translateY(0) scale(1); }
+.chat-rxn-picker__btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 0; background: transparent;
+  font-size: 22px; line-height: 1;
+  cursor: pointer; font-family: inherit;
+  transition: transform .12s ease-out, background .12s;
+}
+.chat-rxn-picker__btn:hover {
+  transform: translateY(-2px) scale(1.18);
+  background: rgba(155,140,255,.10);
+}
+.chat-rxn-picker__btn:active { transform: scale(.95); }

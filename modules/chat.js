@@ -299,12 +299,13 @@ function renderMessages(msgs) {
   stream.innerHTML = html;
   stream.scrollTop = stream.scrollHeight;
 
-  // double-tap to react with ❤️
+  // Double-tap = quick ❤️ shortcut. Long-press / right-click opens the picker.
   stream.querySelectorAll('.chat-row').forEach((row) => {
     row.addEventListener('dblclick', () => {
       const id = row.dataset.id;
       toggleReaction(_chatId, id, '❤️').catch(() => {});
     });
+    attachLongPressPicker(row);
   });
 
   // Poll vote clicks
@@ -692,4 +693,103 @@ function openPollComposer() {
     close();
   });
   wrap.querySelector("#pollQ")?.focus();
+}
+
+
+// =====================================================================
+// Long-press reaction picker — 6 emojis above the bubble.
+// =====================================================================
+const REACTION_PALETTE = ["❤️", "🥰", "😂", "😮", "😢", "🔥"];
+const LONG_PRESS_MS = 420;
+
+function attachLongPressPicker(row) {
+  let timer = null;
+  let suppressClick = false;
+
+  const start = (e) => {
+    if (e.target.closest(".chat-poll__choice")) return; // don't intercept poll votes
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      suppressClick = true;
+      showReactionPicker(row);
+    }, LONG_PRESS_MS);
+  };
+  const cancel = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+  };
+
+  row.addEventListener("touchstart", start, { passive: true });
+  row.addEventListener("touchend",   cancel);
+  row.addEventListener("touchcancel",cancel);
+  row.addEventListener("touchmove",  cancel);
+
+  row.addEventListener("mousedown",  (e) => { if (e.button === 0) start(e); });
+  row.addEventListener("mouseup",    cancel);
+  row.addEventListener("mouseleave", cancel);
+
+  // Right-click also opens the picker (desktop convenience)
+  row.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    showReactionPicker(row);
+  });
+
+  // Swallow the synthetic click that follows a long-press on touch
+  row.addEventListener("click", (e) => {
+    if (suppressClick) { suppressClick = false; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+}
+
+function showReactionPicker(row) {
+  // Remove any existing picker
+  document.querySelectorAll(".chat-rxn-picker").forEach((el) => el.remove());
+
+  const id = row?.dataset.id;
+  if (!id) return;
+  const bubble = row.querySelector(".chat-bubble");
+  const rect = (bubble || row).getBoundingClientRect();
+
+  const picker = document.createElement("div");
+  picker.className = "chat-rxn-picker";
+  picker.innerHTML = REACTION_PALETTE.map(e => `
+    <button class="chat-rxn-picker__btn" data-e="${e}" type="button" aria-label="${e}">${e}</button>
+  `).join("");
+  document.body.appendChild(picker);
+
+  // Position above the bubble (or below if there's no room above)
+  const ph = picker.offsetHeight || 50;
+  let top = rect.top + window.scrollY - ph - 10;
+  if (top < window.scrollY + 8) top = rect.bottom + window.scrollY + 10;
+  let left = rect.left + window.scrollX + (rect.width / 2) - (picker.offsetWidth / 2);
+  left = Math.max(8, Math.min(window.innerWidth - picker.offsetWidth - 8, left));
+  picker.style.top  = `${top}px`;
+  picker.style.left = `${left}px`;
+
+  // Animate in
+  requestAnimationFrame(() => picker.classList.add("is-open"));
+
+  // Tap an emoji → toggle reaction
+  picker.querySelectorAll(".chat-rxn-picker__btn").forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const emoji = b.dataset.e;
+      toggleReaction(_chatId, id, emoji).catch(() => {});
+      picker.remove();
+    });
+  });
+
+  // Close on outside click / scroll / escape
+  const close = () => { try { picker.remove(); } catch {} cleanup(); };
+  function cleanup() {
+    document.removeEventListener("click", onOutside, true);
+    document.removeEventListener("scroll", close, true);
+    document.removeEventListener("keydown", onEsc, true);
+  }
+  function onOutside(ev) { if (!picker.contains(ev.target)) close(); }
+  function onEsc(ev)     { if (ev.key === "Escape") close(); }
+  setTimeout(() => {
+    document.addEventListener("click", onOutside, true);
+    document.addEventListener("scroll", close, true);
+    document.addEventListener("keydown", onEsc, true);
+  }, 0);
 }
