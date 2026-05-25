@@ -13,6 +13,13 @@ import {
 } from "./subscriptionService.js";
 import { toast, toastWarn } from "../utils/toast.js";
 
+// =====================================================================
+// MASTER SWITCH — when true, every gate returns { allowed: true } so all
+// premium features are usable for free. Flip to false to re-enable
+// subscription gating across the app (chat voice notes, sleep mode, etc.).
+// =====================================================================
+const ALL_FEATURES_UNLOCKED = true;
+
 // ---------- helpers ----------
 function uid() {
   try { return window.appState?.user?.uid || null; } catch { return null; }
@@ -29,6 +36,8 @@ function isPartner(otherUid) {
  * @param {number} amount       how much to track on success
  */
 export async function trackAndCheck(action, featureKey, amount = 1) {
+  if (ALL_FEATURES_UNLOCKED) return { allowed: true, remaining: -1 };
+
   const u = uid();
   if (!u) return { allowed: true, remaining: -1, reason: "no_user" };
 
@@ -49,6 +58,8 @@ export async function trackAndCheck(action, featureKey, amount = 1) {
 
 /** Boolean-feature gate (no counter). */
 export async function requireFeature(featureKey) {
+  if (ALL_FEATURES_UNLOCKED) return { allowed: true };
+
   const u = uid();
   if (!u) return { allowed: true };
   const sub = await getSubscription(u);
@@ -86,6 +97,7 @@ export async function gateCoupleInsights() {
 }
 
 export async function gateAddMemory() {
+  if (ALL_FEATURES_UNLOCKED) return { allowed: true, remaining: -1 };
   const u = uid();
   if (!u) return { allowed: true };
   const sub = await getSubscription(u);
