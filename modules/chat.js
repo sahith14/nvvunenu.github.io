@@ -330,6 +330,7 @@ function renderMessages(msgs) {
       </div>`;
   }
   stream.innerHTML = html;
+  paintSeenAvatar(msgs);
   stream.scrollTop = stream.scrollHeight;
 
   // If chat search is active, re-apply highlights after re-render
@@ -1543,4 +1544,44 @@ async function uploadAndSendImage(file) {
     [`typing.${_myUid}`]:     false,
   });
   await batch.commit();
+}
+
+
+// =====================================================================
+// Read-receipt avatar — find the most recent "mine" message that has
+// been seen, drop a small partner avatar below its bubble. Works for
+// any message kind (text, image, voice, poll, reply).
+// =====================================================================
+function paintSeenAvatar(msgs) {
+  const stream = _container?.querySelector('#chatStream');
+  if (!stream) return;
+
+  // Remove any prior receipt
+  stream.querySelectorAll('.chat-receipt').forEach((n) => n.remove());
+
+  if (!msgs || !_partnerId) return;
+
+  // Walk backward to find the latest mine + seenAt
+  let target = null;
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (m.sender !== _myUid) continue;
+    const seen = m.seenAt;
+    if (seen) { target = m; break; }
+  }
+  if (!target) return;
+
+  const row = stream.querySelector(`.chat-row[data-id="${CSS.escape(target.id)}"]`);
+  if (!row) return;
+
+  const initial = (_partnerName || "·").trim().charAt(0).toUpperCase();
+  const photo   = _partnerPhoto;
+  const receipt = document.createElement("div");
+  receipt.className = "chat-receipt";
+  receipt.title = "Seen";
+  receipt.innerHTML = photo
+    ? `<img class="chat-receipt__img" src="${escapeAttr(photo)}" alt="" referrerpolicy="no-referrer">`
+    : `<span class="chat-receipt__init">${escapeHtml(initial)}</span>`;
+  // Insert right after the message row
+  row.insertAdjacentElement("afterend", receipt);
 }
