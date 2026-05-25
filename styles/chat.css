@@ -696,3 +696,65 @@
 .chat-rxn-picker__btn--edit { font-size: 16px; }
 .chat-rxn-picker__btn--del  { font-size: 16px; }
 .chat-rxn-picker__btn--del:hover { background: rgba(255,99,99,.12); }
+
+
+
+/* =====================================================================
+   Per-theme message bubble shapes — each chat theme gets a distinct
+   silhouette so the conversation feels different in each.
+   ===================================================================== */
+
+/* AURORA — soft 22px rounded corners + pillowy bottom on sender side */
+.chat-page[data-chat-theme="aurora"] .chat-bubble {
+  border-radius: 22px;
+  padding: 12px 16px 8px;
+}
+.chat-page[data-chat-theme="aurora"] .chat-row.mine .chat-bubble   { border-bottom-right-radius: 8px; }
+.chat-page[data-chat-theme="aurora"] .chat-row.theirs .chat-bubble { border-bottom-left-radius:  8px; }
+
+/* SUNSET — asymmetric "blob" — different radius on every corner */
+.chat-page[data-chat-theme="sunset"] .chat-row.mine .chat-bubble {
+  border-radius: 20px 28px 20px 8px;
+}
+.chat-page[data-chat-theme="sunset"] .chat-row.theirs .chat-bubble {
+  border-radius: 28px 20px 8px 20px;
+}
+
+/* OCEAN — calmer, near-square corners (8px) */
+.chat-page[data-chat-theme="ocean"] .chat-bubble {
+  border-radius: 10px;
+  padding: 11px 14px 7px;
+}
+.chat-page[data-chat-theme="ocean"] .chat-row.mine .chat-bubble   { border-bottom-right-radius: 4px; }
+.chat-page[data-chat-theme="ocean"] .chat-row.theirs .chat-bubble { border-bottom-left-radius:  4px; }
+
+/* FOREST — pill shape; full rounding so single-line bubbles read like leaves */
+.chat-page[data-chat-theme="forest"] .chat-bubble {
+  border-radius: 999px;
+  padding: 10px 18px 6px;
+}
+.chat-page[data-chat-theme="forest"] .chat-row.mine .chat-bubble,
+.chat-page[data-chat-theme="forest"] .chat-row.theirs .chat-bubble {
+  /* Multi-line content needs a slightly relaxed radius so the corners don't
+     clip the text. CSS clamp keeps it round when small, soft when large. */
+  border-radius: clamp(20px, 50%, 999px);
+}
+
+/* MIDNIGHT — sharp 4px corners with a 10px tail to feel like neon panels */
+.chat-page[data-chat-theme="midnight"] .chat-bubble {
+  border-radius: 6px;
+  padding: 11px 14px 7px;
+}
+.chat-page[data-chat-theme="midnight"] .chat-row.mine .chat-bubble {
+  border-bottom-right-radius: 12px;
+}
+.chat-page[data-chat-theme="midnight"] .chat-row.theirs .chat-bubble {
+  border-bottom-left-radius: 12px;
+}
+
+/* DEFAULT keeps the original 18px / 6px corners — explicit no-op so theme
+   transitions return to a clean baseline if the user picks Default after
+   playing with another theme. */
+.chat-page[data-chat-theme="default"] .chat-bubble { border-radius: 18px; }
+.chat-page[data-chat-theme="default"] .chat-row.mine .chat-bubble   { border-bottom-right-radius: 6px; }
+.chat-page[data-chat-theme="default"] .chat-row.theirs .chat-bubble { border-bottom-left-radius:  6px; }
