@@ -11,6 +11,7 @@ import { toast, toastSuccess, toastWarn, toastError, safe } from "../utils/toast
 import { addMemory, subscribeRecent, deleteMemory, toggleFavoriteMemory } from "../services/memoryService.js";
 import { sendMemory, chatIdFor } from "../services/chatService.js";
 import { aiCall } from "../services/aiProvider.js";
+import { spawnHeartBurst } from "../services/notifyService.js";
 
 let _container       = null;
 let _offState        = null;
@@ -40,6 +41,7 @@ export function renderMemories(container) {
         _unsub = subscribeRecent(s.coupleId, (rows) => {
           _allMemories = rows || [];
           applyFilter();
+          maybeCelebrateFirstMemory(_allMemories.length);
         }, 60);
       }
     }
@@ -947,4 +949,25 @@ function renderFavorites(host) {
     ${favs.map((m) => renderCard(m)).join("")}
   </div>`;
   wireCards(host);
+}
+
+
+// =====================================================================
+// First-memory celebration — fires once per couple when their memory
+// collection transitions from 0 to 1+.
+// =====================================================================
+function maybeCelebrateFirstMemory(total) {
+  if (!total) return;
+  const cid = getState()?.coupleId;
+  if (!cid) return;
+  const key = `nvvunenu.firstMemory.${cid}`;
+  let already = false;
+  try { already = localStorage.getItem(key) === "1"; } catch {}
+  if (already) return;
+  try { localStorage.setItem(key, "1"); } catch {}
+
+  setTimeout(() => {
+    try { spawnHeartBurst(); } catch {}
+    toastSuccess("First memory saved 📷 — small joys, kept");
+  }, 500);
 }
