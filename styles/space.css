@@ -38,6 +38,11 @@
   text-align:center;transition:all var(--duration-fast) var(--ease-out);
 }
 .activity-card:active{transform:scale(.95)}
+.activity-card.primary{
+  background:linear-gradient(135deg,rgba(255,126,182,.18),rgba(155,140,255,.18));
+  border:1px solid rgba(155,140,255,.35);
+  box-shadow:0 4px 20px rgba(155,140,255,.12);
+}
 .activity-card .icon{font-size:32px}
 .activity-card .name{font-size:var(--font-sm);font-weight:600}
 .activity-card .desc{font-size:var(--font-xs);color:var(--muted)}

@@ -1,6 +1,8 @@
 // NUVVU NENU — Space Page (Private Relationship Room)
 import { db, auth } from '../firebase.js';
 import { doc, getDoc, setDoc, onSnapshot, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { startVideoCall, startAudioCall } from './callView.js';
+import { getPartnerId } from '../utils/coupleId.js';
 
 let touchTimeout = null;
 let breathingInterval = null;
@@ -20,6 +22,16 @@ export function renderSpace(container) {
 
       <!-- Activities -->
       <div class="space-activities">
+        <button class="activity-card primary" onclick="startCallFromSpace('video')">
+          <span class="icon">📹</span>
+          <span class="name">Video Call</span>
+          <span class="desc">Face to face</span>
+        </button>
+        <button class="activity-card primary" onclick="startCallFromSpace('audio')">
+          <span class="icon">📞</span>
+          <span class="name">Voice Call</span>
+          <span class="desc">Just hear them</span>
+        </button>
         <button class="activity-card" onclick="startSleepMode()">
           <span class="icon">🌙</span>
           <span class="name">Sleep Together</span>
@@ -104,8 +116,9 @@ function sendTouch() {
   if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
   window.showToast('Touch sent 💜');
   getDoc(doc(db, 'users', uid)).then(snap => {
-    if (!snap.exists() || !snap.data().partnerId) return;
-    setDoc(doc(db, 'touches', snap.data().partnerId), {
+    const partnerId = getPartnerId(snap.data());
+    if (!snap.exists() || !partnerId) return;
+    setDoc(doc(db, 'touches', partnerId), {
       from: uid, timestamp: new Date(), type: 'hold'
     });
   }).catch(() => {});
@@ -169,8 +182,9 @@ window.startWatchTogether = function() {
   if (!url) return;
   const uid = auth.currentUser?.uid;
   getDoc(doc(db, 'users', uid)).then(snap => {
-    if (!snap.exists() || !snap.data().partnerId) return;
-    const coupleId = [uid, snap.data().partnerId].sort().join('_');
+    const partnerId = getPartnerId(snap.data());
+    if (!snap.exists() || !partnerId) return;
+    const coupleId = [uid, partnerId].sort().join('_');
     setDoc(doc(db, 'watchSessions', coupleId), {
       url, startedBy: uid, timestamp: new Date(), playing: true
     });
@@ -200,4 +214,21 @@ window.playGame = function(type) {
   } else {
     alert(`🎮 ${pick}`);
   }
+};
+
+// Video / audio call from Space page
+window.startCallFromSpace = async function(callType = 'video') {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
+  const snap = await getDoc(doc(db, 'users', uid)).catch(() => null);
+  const partnerId = getPartnerId(snap?.data());
+  if (!partnerId) {
+    window.showToast('Link your partner first 💜');
+    window.loadPage?.('profile');
+    return;
+  }
+  const pSnap = await getDoc(doc(db, 'users', partnerId)).catch(() => null);
+  const name  = pSnap?.data()?.displayName?.split(' ')[0] || 'Partner';
+  if (callType === 'video') startVideoCall(partnerId, name);
+  else startAudioCall(partnerId, name);
 };

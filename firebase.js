@@ -17,6 +17,8 @@ import {
   persistentMultipleTabManager
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyCfoaPyX6nxJm9I28oTWm4MxhNDHkZWmMo",
   authDomain: "nuvvunenu-cf326.firebaseapp.com",
@@ -35,6 +37,9 @@ export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
 });
+
+// Storage for voice notes / shared media
+export const storage = getStorage(app);
 
 // SINGLE clean provider
 export const googleProvider = new GoogleAuthProvider();
@@ -56,5 +61,3 @@ export function signupEmail(email, pass) {
 window.googleLogin = googleLogin;
 window.loginEmail = loginEmail;
 window.signupEmail = signupEmail;
-
-

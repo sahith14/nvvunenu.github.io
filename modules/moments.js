@@ -1,6 +1,7 @@
 // NUVVU NENU — Moments Page (Private Memory Timeline)
 import { db, auth } from '../firebase.js';
 import { collection, query, orderBy, limit, getDocs, addDoc, doc, getDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getPartnerId } from '../utils/coupleId.js';
 
 export function renderMoments(container) {
   container.innerHTML = `
@@ -34,7 +35,7 @@ async function loadMemories() {
   // Get couple ID
   const userSnap = await getDoc(doc(db, 'users', uid)).catch(() => null);
   if (!userSnap?.exists()) return;
-  const partnerId = userSnap.data().partnerId;
+  const partnerId = getPartnerId(userSnap.data());
   if (!partnerId) {
     document.getElementById('memoryTimeline').innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted)">Connect with your partner to start saving memories together 💜</div>`;
     return;
@@ -88,11 +89,12 @@ window.addMemory = function() {
   if (!uid) return;
 
   getDoc(doc(db, 'users', uid)).then(async snap => {
-    if (!snap.exists() || !snap.data().partnerId) {
+    const partnerId = getPartnerId(snap.data());
+    if (!snap.exists() || !partnerId) {
       window.showToast('Connect with partner first');
       return;
     }
-    const coupleId = [uid, snap.data().partnerId].sort().join('_');
+    const coupleId = [uid, partnerId].sort().join('_');
     await addDoc(collection(db, 'memories', coupleId, 'items'), {
       title,
       emotion: emotion || '',
@@ -109,5 +111,5 @@ window.addMemory = function() {
 
 window.viewRecap = function() {
   window.showToast('✨ Monthly recaps coming with Premium');
-  loadPage('subscription');
+  window.loadPage?.('subscription');
 };

@@ -9,12 +9,12 @@
 }
 .bottom-nav button{
   display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:8px 12px;border-radius:var(--radius-md);
+  padding:6px 6px;border-radius:var(--radius-md);
   transition:all var(--duration-fast) var(--ease-out);
-  position:relative;
+  position:relative;flex:1;min-width:0;
 }
-.bottom-nav button .nav-icon{font-size:22px;opacity:.5;transition:opacity .2s}
-.bottom-nav button .nav-label{font-size:10px;color:var(--muted);font-weight:500;opacity:.5;transition:opacity .2s}
+.bottom-nav button .nav-icon{font-size:20px;opacity:.5;transition:opacity .2s}
+.bottom-nav button .nav-label{font-size:10px;color:var(--muted);font-weight:500;opacity:.5;transition:opacity .2s;white-space:nowrap}
 .bottom-nav button.active .nav-icon{opacity:1}
 .bottom-nav button.active .nav-label{opacity:1;color:var(--violet)}
 .bottom-nav button.active::after{

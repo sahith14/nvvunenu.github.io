@@ -8,3 +8,10 @@ export function makeCoupleId(uid1, uid2) {
 export function coupleIdOrSolo(uid, partnerId) {
   return partnerId ? makeCoupleId(uid, partnerId) : uid;
 }
+
+// Tolerates both `partnerID` (capital D, written by partnerService) and
+// the legacy `partnerId` field used by older modules.
+export function getPartnerId(userData) {
+  if (!userData) return null;
+  return userData.partnerID || userData.partnerId || null;
+}

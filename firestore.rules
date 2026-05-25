@@ -1,12 +1,13 @@
 rules_version = '2';
 
 // =====================================================================
-// BondSync / Nuvvu Nenu — Firestore Security Rules
+// Nuvvu Nenu — Firestore Security Rules (Couple-Only)
 //
-// Data model (aligned with frontend):
+// Data model:
 //   users/{uid}
 //   chats/{coupleId}                  (coupleId = [uidA,uidB].sort().join("_"))
 //   chats/{coupleId}/messages/{mid}
+//   calls/{coupleId}                  (status doc for ringing/active/ended)
 //   calls/{coupleId}/signaling/{sid}
 //   memories/{coupleId}/entries/{eid}
 //   gifts/{docId}                     (flat collection, has from/to fields)
@@ -17,16 +18,11 @@ rules_version = '2';
 //   pets/{coupleId}
 //   checkins/{uid}_{YYYY-MM-DD}
 //   streaks/{uid}
-//   spaces/{spaceId}
-//   spaces/{spaceId}/members/{uid}
-//   spaces/{spaceId}/messages/{mid}
+//   couples/{coupleId}
 //   reports/{docId}
 //
-// Contract:
-//   - Every user doc is readable by any signed-in user (needed for search +
-//     partner lookup). Writable only by owner.
-//   - Every couple-scoped document is R/W only by the two uids in the coupleId.
-//   - Per-user documents (checkins, streaks) writable only by that user.
+// NOTE: This is a couple app. There is intentionally NO public feed
+// (posts/comments) and NO follower/following graph.
 // =====================================================================
 
 service cloud.firestore {
@@ -50,14 +46,10 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if isOwner(userId);
       allow update: if isOwner(userId)
-        // Partner can update ONLY partner-request fields on the other side.
+        // Partner can update ONLY partner-request / pairing fields on the other side.
         || (signedIn()
             && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['partnerRequestFrom','partnerRequestTo','partnerRequestAt','partnerID','relationshipStatus','matchedAt']))
-        // Any signed-in user can update ONLY follower/following arrays (for follow/unfollow).
-        || (signedIn()
-            && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['followers','following']));
+               .hasOnly(['partnerRequestFrom','partnerRequestTo','partnerRequestAt','partnerID','relationshipStatus','matchedAt']));
       allow delete: if isOwner(userId);
     }
 
@@ -78,18 +70,30 @@ service cloud.firestore {
       }
     }
 
-    // ---------- couple-scoped: calls signaling ----------
-    // `coupleId` here is the same format as chatId, i.e. "uidA_uidB" sorted.
-    match /calls/{coupleId}/signaling/{sigId} {
-      allow read, create: if inCouple(coupleId);
-      allow delete: if inCouple(coupleId);
+    // ---------- couple-scoped: calls (status doc + signaling) ----------
+    match /calls/{coupleId} {
+      allow read, write: if inCouple(coupleId);
+
+      match /signaling/{sigId} {
+        allow read, create: if inCouple(coupleId);
+        allow delete:       if inCouple(coupleId);
+      }
     }
 
     // ---------- couple-scoped: memories ----------
     match /memories/{coupleId}/entries/{entryId} {
       allow read: if inCouple(coupleId);
       allow create: if inCouple(coupleId)
-        && request.resource.data.createdBy == uid();
+        && (request.resource.data.createdBy == uid()
+            || request.resource.data.addedBy == uid());
+      allow update, delete: if inCouple(coupleId);
+    }
+    // Legacy structure used by frontend: memories/{coupleId}/items/{itemId}
+    match /memories/{coupleId}/items/{itemId} {
+      allow read: if inCouple(coupleId);
+      allow create: if inCouple(coupleId)
+        && (request.resource.data.addedBy == uid()
+            || request.resource.data.createdBy == uid());
       allow update, delete: if inCouple(coupleId);
     }
 
@@ -150,11 +154,11 @@ service cloud.firestore {
         && (resource.data.from == uid() || resource.data.to == uid());
     }
 
-    // ---------- per-user: check-ins (id = `${uid}_${YYYY-MM-DD}`) ----------
+    // ---------- per-user: check-ins ----------
     match /checkins/{checkinId} {
       allow read: if signedIn();          // partner can read partner's check-in
       allow create, update, delete: if signedIn()
-        && checkinId.matches(uid() + "_.*");
+        && (checkinId == uid() || checkinId.matches(uid() + "_.*"));
     }
 
     // ---------- per-user: streaks ----------
@@ -163,56 +167,48 @@ service cloud.firestore {
       allow write: if isOwner(userId);
     }
 
-    // ---------- posts (feed) ----------
-    match /posts/{postId} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.owner == uid();
-      // Owner can freely update/delete. Anyone signed-in may toggle likes or bump commentCount.
-      allow update: if (signedIn() && resource.data.owner == uid())
-        || (signedIn()
-            && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['likes','commentCount']));
-      allow delete: if signedIn() && resource.data.owner == uid();
+    // ---------- per-user: notifications + surprises (kiss / love note feed) ----------
+    match /notifications/{userId} {
+      allow read:   if isOwner(userId);
+      // anyone signed in (i.e. their partner) can post a notification to a target user
+      allow create, update: if signedIn();
+      allow delete: if isOwner(userId);
+    }
 
-      // Comments subcollection.
-      match /comments/{cid} {
-        allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.author == uid();
-        allow update, delete: if signedIn() && resource.data.author == uid();
+    match /surprises/{docId} {
+      allow read: if signedIn()
+        && (resource.data.from == uid() || resource.data.to == uid());
+      allow create: if signedIn() && request.resource.data.from == uid();
+      allow update: if signedIn() && resource.data.to == uid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opened','seen']);
+      allow delete: if signedIn()
+        && (resource.data.from == uid() || resource.data.to == uid());
+    }
+
+    match /touches/{userId} {
+      allow read:   if isOwner(userId);
+      allow create, update: if signedIn();
+      allow delete: if isOwner(userId);
+    }
+
+    // ---------- watch sessions (couple-scoped) ----------
+    match /watchSessions/{coupleId} {
+      allow read, write: if inCouple(coupleId);
+    }
+
+    // ---------- bonds (couple-scoped) ----------
+    match /bonds/{coupleId} {
+      allow read, write: if inCouple(coupleId);
+      match /goals/{goalId} {
+        allow read, write: if inCouple(coupleId);
+      }
+      match /events/{eventId} {
+        allow read, write: if inCouple(coupleId);
       }
     }
 
-    // ---------- Couple Space rooms ----------
-    match /spaces/{spaceId} {
-      allow read: if signedIn();          // anyone signed in can read (they use Room ID)
-      allow create: if signedIn() && request.resource.data.hostId == uid();
-      allow update, delete: if signedIn() && resource.data.hostId == uid();
-
-      match /members/{memberId} {
-        allow read: if signedIn();
-        allow create, update, delete: if isOwner(memberId) ||
-          (signedIn() && get(/databases/$(database)/documents/spaces/$(spaceId)).data.hostId == uid());
-      }
-
-      match /messages/{msgId} {
-        allow read: if signedIn();
-        allow create: if signedIn()
-          && (request.resource.data.sender == uid() || request.resource.data.sender == 'system');
-      }
-
-      match /signaling/{sigId} {
-        allow read, create, delete: if signedIn();
-      }
-    }
-
-    // ---------- reports (write-only for users, read by admins via console) ----------
-    match /reports/{reportId} {
-      allow create: if signedIn() && request.resource.data.reporterId == uid();
-      allow read, update, delete: if false;
-    }
-
-    // ---------- subscription (per-user plan + usage counters) ----------
-    match /users/{userId}/subscription/{subDoc} {
+    // ---------- subscriptions (per user) ----------
+    match /subscriptions/{userId} {
       allow read, write: if isOwner(userId);
     }
 
@@ -223,8 +219,7 @@ service cloud.firestore {
       // Meta/stats: startedAt, bondScore, moods, lastPokeAt
       match /meta/{metaId} {
         allow read: if inCouple(coupleId);
-        allow create, update: if inCouple(coupleId);
-        allow delete: if inCouple(coupleId);
+        allow create, update, delete: if inCouple(coupleId);
       }
 
       // Thinking-of-you pokes
@@ -234,6 +229,22 @@ service cloud.firestore {
           && request.resource.data.from == uid();
         allow delete: if inCouple(coupleId);
       }
+
+      // Shared memories within couple
+      match /memories/{memId} {
+        allow read, write: if inCouple(coupleId);
+      }
+    }
+
+    // ---------- reports (write-only for users) ----------
+    match /reports/{reportId} {
+      allow create: if signedIn() && request.resource.data.reporterId == uid();
+      allow read, update, delete: if false;
+    }
+
+    // ---------- subscription (per-user plan + usage counters) ----------
+    match /users/{userId}/subscription/{subDoc} {
+      allow read, write: if isOwner(userId);
     }
 
     // ---------- default deny ----------

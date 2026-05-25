@@ -131,6 +131,30 @@ export function createCall({ iceServers = DEFAULT_ICE, sendSignal, onStream, onS
     t.enabled = !t.enabled; return !t.enabled;
   }
 
+  // Switch front/back camera (mobile). Falls back gracefully on desktop.
+  let currentFacing = "user";
+  async function flipCamera() {
+    if (!localStream) return false;
+    currentFacing = currentFacing === "user" ? "environment" : "user";
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: currentFacing }, audio: false
+      });
+      const newTrack = newStream.getVideoTracks()[0];
+      const sender = pc?.getSenders().find(s => s.track?.kind === "video");
+      if (sender && newTrack) await sender.replaceTrack(newTrack);
+      // swap local preview
+      const oldTrack = localStream.getVideoTracks()[0];
+      if (oldTrack) { localStream.removeTrack(oldTrack); try { oldTrack.stop(); } catch {} }
+      localStream.addTrack(newTrack);
+      onStream?.({ kind: "local", stream: localStream });
+      return true;
+    } catch (e) {
+      console.warn("[call] flipCamera failed", e);
+      return false;
+    }
+  }
+
   function endCall() {
     started = false;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch {}
@@ -144,7 +168,7 @@ export function createCall({ iceServers = DEFAULT_ICE, sendSignal, onStream, onS
   return {
     startCall, acceptCall, endCall,
     startScreenShare, stopScreenShare,
-    toggleMute, toggleCamera,
+    toggleMute, toggleCamera, flipCamera,
     onSignalReceived,
     get isStarted() { return started; },
     get localStream()  { return localStream; },

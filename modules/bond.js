@@ -1,6 +1,7 @@
 // NUVVU NENU — Bond Page (Relationship Health)
 import { db, auth } from '../firebase.js';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getPartnerId } from '../utils/coupleId.js';
 
 export function renderBond(container) {
   container.innerHTML = `
@@ -57,7 +58,7 @@ async function loadBondData() {
 
   const userSnap = await getDoc(doc(db, 'users', uid)).catch(() => null);
   if (!userSnap?.exists()) return;
-  const partnerId = userSnap.data().partnerId;
+  const partnerId = getPartnerId(userSnap.data());
   if (!partnerId) return;
 
   const coupleId = [uid, partnerId].sort().join('_');
@@ -99,8 +100,9 @@ window.addGoal = function() {
   if (!title) return;
   const uid = auth.currentUser?.uid;
   getDoc(doc(db, 'users', uid)).then(async snap => {
-    if (!snap.exists() || !snap.data().partnerId) return;
-    const coupleId = [uid, snap.data().partnerId].sort().join('_');
+    const partnerId = getPartnerId(snap.data());
+    if (!snap.exists() || !partnerId) return;
+    const coupleId = [uid, partnerId].sort().join('_');
     await addDoc(collection(db, 'bonds', coupleId, 'goals'), {
       title, progress: 0, createdBy: uid, timestamp: serverTimestamp()
     });
@@ -118,8 +120,9 @@ window.addCountdown = function() {
 
   const uid = auth.currentUser?.uid;
   getDoc(doc(db, 'users', uid)).then(async snap => {
-    if (!snap.exists() || !snap.data().partnerId) return;
-    const coupleId = [uid, snap.data().partnerId].sort().join('_');
+    const partnerId = getPartnerId(snap.data());
+    if (!snap.exists() || !partnerId) return;
+    const coupleId = [uid, partnerId].sort().join('_');
     await addDoc(collection(db, 'bonds', coupleId, 'events'), {
       title, date, createdBy: uid
     });
@@ -131,8 +134,9 @@ window.addCountdown = function() {
 window.startRecovery = function() {
   const uid = auth.currentUser?.uid;
   getDoc(doc(db, 'users', uid)).then(snap => {
-    if (!snap.exists() || !snap.data().partnerId) return;
-    setDoc(doc(db, 'notifications', snap.data().partnerId), {
+    const partnerId = getPartnerId(snap.data());
+    if (!snap.exists() || !partnerId) return;
+    setDoc(doc(db, 'notifications', partnerId), {
       type: 'olive_branch', from: uid, timestamp: new Date(), message: 'I want to reconnect 💜'
     }, { merge: true });
     window.showToast('🕊️ Olive branch sent');

@@ -1,0 +1,98 @@
+/* NUVVU NENU — Video Call Overlay */
+html.call-active{overflow:hidden}
+html.call-active body{overflow:hidden}
+
+.call-overlay{
+  position:fixed;inset:0;z-index:9000;
+  background:#05060b;color:#fff;
+  display:flex;align-items:stretch;justify-content:center;
+  animation:callIn .35s cubic-bezier(.22,1,.36,1);
+}
+.call-overlay.hidden{display:none}
+
+.call-stage{
+  position:relative;width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+
+/* Video tiles */
+.call-remote{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  background:#0c0e16;
+}
+.call-local{
+  position:absolute;right:14px;top:14px;
+  width:110px;height:160px;object-fit:cover;
+  border-radius:18px;border:2px solid rgba(255,255,255,.15);
+  background:#0c0e16;z-index:3;box-shadow:0 8px 24px rgba(0,0,0,.5);
+}
+@media (min-width:520px){
+  .call-local{width:160px;height:230px}
+}
+
+/* Top bar */
+.call-topbar{
+  position:absolute;top:0;left:0;right:0;z-index:4;
+  padding:18px 20px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.call-peer-name{font-size:1.25rem;font-weight:700;letter-spacing:.2px}
+.call-peer-status{font-size:.8125rem;color:rgba(255,255,255,.78);margin-top:2px}
+.call-timer{font-size:.8125rem;color:rgba(255,255,255,.6);margin-top:4px;font-variant-numeric:tabular-nums}
+
+/* Poster (pre-connect) */
+.call-poster{
+  position:absolute;inset:0;z-index:2;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;text-align:center;padding:32px;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 40%,rgba(155,140,255,.18),transparent 60%);
+}
+.call-poster.hidden{display:none}
+.call-orb{
+  width:140px;height:140px;border-radius:50%;
+  background:radial-gradient(circle,rgba(155,140,255,.55),rgba(255,126,182,.25));
+  filter:blur(4px);animation:breathe 3s ease-in-out infinite;
+  box-shadow:0 0 60px rgba(155,140,255,.4);
+}
+.call-orb.pulse{animation:pulseOrb 1.3s ease-in-out infinite}
+.call-poster-name{font-size:1.4rem;font-weight:700}
+.call-poster-sub{font-size:.875rem;color:rgba(255,255,255,.6)}
+
+/* Bottom controls */
+.call-controls{
+  position:absolute;left:0;right:0;bottom:0;z-index:5;
+  padding:20px 20px calc(28px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+  background:linear-gradient(to top,rgba(0,0,0,.6),transparent);
+}
+.call-btn{
+  width:58px;height:58px;border-radius:50%;
+  background:rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;color:#fff;backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.08);
+  transition:transform .15s ease, background .2s ease;
+}
+.call-btn:active{transform:scale(.92)}
+.call-btn.on{background:#fff;color:#111}
+.call-btn.call-end{background:#FF3B5C;color:#fff;border-color:transparent}
+.call-btn.call-end:hover{background:#ff5070}
+.call-btn.call-accept{background:#23c46d;color:#fff;border-color:transparent;width:auto;padding:0 24px;border-radius:99px}
+.call-btn.call-decline{background:#FF3B5C;color:#fff;border-color:transparent;width:auto;padding:0 24px;border-radius:99px}
+
+/* Incoming card */
+.call-incoming{
+  position:absolute;inset:0;z-index:6;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:18px;background:rgba(5,6,11,.92);text-align:center;padding:24px;
+}
+.call-incoming.hidden{display:none}
+.call-incoming-name{font-size:1.4rem;font-weight:700}
+.call-incoming-sub{color:rgba(255,255,255,.6);font-size:.9rem}
+.call-incoming-actions{
+  display:flex;gap:14px;margin-top:10px;
+}
+
+@keyframes callIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+@keyframes pulseOrb{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.12);opacity:1}}

@@ -1,5 +1,6 @@
 /**
- * BondSync Subscription Service
+ * Nuvvu Nenu Subscription Service
+ * Couple-only plans. No public posts / non-partner messaging.
  * Plans: free, together_plus, forever
  * Tracks daily usage counters, feature availability, and resets.
  */
@@ -15,13 +16,13 @@ export const PLANS = {
     priceMonthly: 0,
     features: {
       unlimitedPartnerMessages: true,
-      nonPartnerMessagesPerDay: 20,
-      postsPerDay: 3,
-      videoCallsToNonPartner: false,
-      storyUpload: false,
+      voiceNotesPerDay: 10,
+      videoCallsHd: false,
+      sleepTogetherMode: false,
       premiumThemes: false,
       coupleInsights: false,
-      memoriesMax: 10,
+      memoriesMax: 30,
+      monthlyRecap: false,
       customAvatarFrames: false,
       prioritySupport: false
     }
@@ -32,13 +33,13 @@ export const PLANS = {
     priceMonthly: 4.99,
     features: {
       unlimitedPartnerMessages: true,
-      nonPartnerMessagesPerDay: 100,
-      postsPerDay: 10,
-      videoCallsToNonPartner: true,
-      storyUpload: true,
+      voiceNotesPerDay: -1,
+      videoCallsHd: true,
+      sleepTogetherMode: true,
       premiumThemes: true,
       coupleInsights: true,
-      memoriesMax: 50,
+      memoriesMax: -1,
+      monthlyRecap: true,
       customAvatarFrames: false,
       prioritySupport: false
     }
@@ -49,15 +50,17 @@ export const PLANS = {
     priceMonthly: 12.99,
     features: {
       unlimitedPartnerMessages: true,
-      nonPartnerMessagesPerDay: -1, // unlimited
-      postsPerDay: -1,
-      videoCallsToNonPartner: true,
-      storyUpload: true,
+      voiceNotesPerDay: -1,
+      videoCallsHd: true,
+      sleepTogetherMode: true,
       premiumThemes: true,
       coupleInsights: true,
       memoriesMax: -1,
+      monthlyRecap: true,
       customAvatarFrames: true,
-      prioritySupport: true
+      prioritySupport: true,
+      cinematicRecaps: true,
+      relationshipCoach: true
     }
   }
 };

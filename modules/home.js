@@ -1,6 +1,7 @@
 // NUVVU NENU — Home Page
 import { db, auth } from '../firebase.js';
 import { doc, getDoc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getPartnerId } from '../utils/coupleId.js';
 
 export function renderHome(container) {
   const user = window.currentUser;
@@ -69,7 +70,7 @@ function loadPartnerPresence() {
   getDoc(coupleRef).then(snap => {
     if (!snap.exists()) return;
     const data = snap.data();
-    const partnerId = data.partnerId;
+    const partnerId = getPartnerId(data);
     if (!partnerId) return;
     onSnapshot(doc(db, 'users', partnerId), pSnap => {
       if (!pSnap.exists()) return;
@@ -123,8 +124,9 @@ window.sendKiss = function() {
   const uid = auth.currentUser?.uid;
   if (!uid) return;
   getDoc(doc(db, 'users', uid)).then(snap => {
-    if (!snap.exists() || !snap.data().partnerId) return;
-    setDoc(doc(db, 'notifications', snap.data().partnerId), {
+    const partnerId = getPartnerId(snap.data());
+    if (!snap.exists() || !partnerId) return;
+    setDoc(doc(db, 'notifications', partnerId), {
       type: 'kiss', from: uid, timestamp: new Date(), read: false
     }, { merge: true });
   }).catch(() => {});
@@ -136,9 +138,10 @@ window.sendNote = function() {
   const uid = auth.currentUser?.uid;
   if (!uid) return;
   getDoc(doc(db, 'users', uid)).then(snap => {
-    if (!snap.exists() || !snap.data().partnerId) return;
+    const partnerId = getPartnerId(snap.data());
+    if (!snap.exists() || !partnerId) return;
     setDoc(doc(db, 'surprises', `${uid}_${Date.now()}`), {
-      from: uid, to: snap.data().partnerId, note, timestamp: new Date(), opened: false
+      from: uid, to: partnerId, note, timestamp: new Date(), opened: false
     });
     window.showToast('💌 Note sent!');
   }).catch(() => {});
