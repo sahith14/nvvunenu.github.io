@@ -35,6 +35,8 @@ import './services/aiProviderMock.js';
 import './services/chatBadge.js';
 // Side-effect: paints a gold dot on /memories nav when partner adds a memory
 import './services/memoriesBadge.js';
+// Side-effect: paints a pulsing purple dot on /together nav when partner is in a sub-view
+import './services/togetherBadge.js';
 
 // Background services
 import { startIncomingCallListener, stopIncomingCallListener } from './modules/incomingCall.js';
