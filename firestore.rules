@@ -247,6 +247,19 @@ service cloud.firestore {
         allow delete: if inCouple(coupleId)
           && resource.data.by == uid();
       }
+      match /timecapsule/{letterId} {
+        allow read:   if inCouple(coupleId);
+        allow create: if inCouple(coupleId)
+          && request.resource.data.from == uid();
+        // Either partner can mark a letter as opened (set opened/openedAt).
+        allow update: if inCouple(coupleId);
+        // Only the author can discard a sealed letter.
+        allow delete: if inCouple(coupleId)
+          && resource.data.from == uid();
+      }
+      match /dates/{ideaId} {
+        allow read, write: if inCouple(coupleId);
+      }
     }
 
     // ---------- subscriptions (per user) ----------

@@ -127,6 +127,10 @@ function paint(s) {
         <ul class="settings-list">
           <li><button class="settings-item" data-act="bond">
             <span class="icon">💞</span><span class="label">Bond / Pairing</span><span class="arrow">›</span></button></li>
+          <li><button class="settings-item" data-act="timecapsule">
+            <span class="icon">📜</span><span class="label">Time-capsule letters</span><span class="arrow">›</span></button></li>
+          <li><button class="settings-item" data-act="dates">
+            <span class="icon">🌹</span><span class="label">Date-night planner</span><span class="arrow">›</span></button></li>
           <li><button class="settings-item" data-act="widgets">
             <span class="icon">📱</span><span class="label">Lock-screen widgets</span><span class="arrow">›</span></button></li>
           <li><button class="settings-item" data-act="copyCode">
@@ -197,6 +201,8 @@ function onAction(act) {
     case "upgrade":     return window.loadPage?.("subscription");
     case "bond":        return window.loadPage?.("bond");
     case "widgets":     return window.loadPage?.("widgets");
+    case "timecapsule": return window.loadPage?.("timecapsule");
+    case "dates":       return window.loadPage?.("dates");
     case "settings":    return window.loadPage?.("settings");
     case "copyCode":    return copyInviteCode();
     case "signOut":     return openSignOutModal();
