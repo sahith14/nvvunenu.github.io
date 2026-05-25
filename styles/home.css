@@ -415,3 +415,18 @@
   border-radius: 999px !important;
   box-shadow: 0 8px 18px rgba(155,140,255,.32);
 }
+
+
+
+/* Mood-share streak chip — shown next to the day-streak number */
+.mood-streak {
+  display: inline-block;
+  margin-left: 4px;
+  vertical-align: middle;
+  font-size: .625rem; font-weight: 800;
+  letter-spacing: .3px;
+  padding: 2px 8px; border-radius: 999px;
+  background: linear-gradient(135deg, rgba(126,215,255,.22), rgba(155,140,255,.22));
+  color: #4f3d80;
+  border: 1px solid rgba(155,140,255,.35);
+}

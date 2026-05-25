@@ -264,10 +264,15 @@ function paintMeta(meta, s) {
   // Streak — sourced from the user doc (streakService maintains it)
   const streakNow  = Number(s?.user?.streak     ?? meta?.streak ?? 0);
   const streakBest = Number(s?.user?.streakBest ?? streakNow);
+  const moodStreak = computeMoodStreak(s?.user?.moodLog || {});
   if (streakEl) {
     streakEl.innerHTML = `${streakNow}${
       streakBest > 0 && streakBest >= streakNow
         ? ` <span class="streak-best ${streakNow > 0 && streakNow === streakBest ? "is-record" : ""}">${streakNow > 0 && streakNow === streakBest ? "🏆" : "best " + streakBest}</span>`
+        : ""
+    }${
+      moodStreak > 0
+        ? ` <span class="mood-streak" title="Consecutive mood-share days">🌙 ${moodStreak}</span>`
         : ""
     }`;
   }
@@ -746,4 +751,29 @@ function initWelcomeTour() {
   };
   _container.querySelector("#welcomeTourClose").addEventListener("click", dismiss);
   _container.querySelector("#welcomeTourCta").addEventListener("click", dismiss);
+}
+
+
+// =====================================================================
+// Mood-share streak — consecutive days ending today (or yesterday) with
+// a moodLog entry. Counts back day by day until a gap is found.
+// =====================================================================
+function computeMoodStreak(moodLog) {
+  if (!moodLog || typeof moodLog !== "object") return 0;
+  let streak = 0;
+  const cursor = new Date();
+  // If today isn't filled yet, start from yesterday so the chip stays
+  // accurate during the day before they share.
+  if (!moodLog[ymd(cursor)]) cursor.setDate(cursor.getDate() - 1);
+  while (moodLog[ymd(cursor)]) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+function ymd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
