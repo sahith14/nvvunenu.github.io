@@ -12,6 +12,7 @@ import { onAppState, getState } from "../state/appState.js";
 import { toast, toastSuccess } from "../utils/toast.js";
 import { isNotifPrefOn, getNotifyEnabled } from "../modules/settings.js";
 import { coupleMetaPath } from "./coupleService.js";
+import { chatIdFor } from "./chatService.js";
 
 let _myUid       = null;
 let _coupleId    = null;
@@ -87,6 +88,7 @@ function reattachAll() {
       return { type: "info", text: `💞 ${_partnerName} answered this week's question` };
     }),
     listenMetaMoods(),
+    listenChatMessages(),
   );
 }
 
@@ -325,4 +327,46 @@ function fireNative(title, body) {
     };
     setTimeout(() => { try { n.close(); } catch {} }, 7000);
   } catch { /* non-fatal */ }
+}
+
+
+// =====================================================================
+// Chat message listener — toast on inbound messages but skip when the
+// user is already on /chat (they'll see the bubble appear).
+// =====================================================================
+function listenChatMessages() {
+  if (!_myUid || !_partnerId) return () => {};
+  const chatId = chatIdFor(_myUid, _partnerId);
+  let firstSnap = true;
+  const q = query(
+    collection(db, "chats", chatId, "messages"),
+    orderBy("time", "desc"),
+    limit(8)
+  );
+  return onSnapshot(q, (snap) => {
+    if (firstSnap) { firstSnap = false; return; }
+    if (!getNotifyEnabled()) return;
+    if (!isNotifPrefOn(getCurrentPrefs(), "messages")) return;
+
+    // Don't toast when the user is already looking at /chat.
+    const onChatPage = location.hash === "#chat" || /\/chat$/.test(location.hash);
+    if (!document.hidden && onChatPage) return;
+
+    snap.docChanges().forEach((change) => {
+      if (change.type !== "added") return;
+      const m = change.doc.data() || {};
+      if (!m.sender || m.sender === _myUid) return;
+      let preview;
+      if (m.kind === "poll")        preview = `📊 ${m.question || "Poll"}`;
+      else if (m.kind === "memory") preview = `📷 ${m.memory?.title || "Memory"}`;
+      else if (m.audio)             preview = "🎙 Voice note";
+      else if (m.image)             preview = "📷 Photo";
+      else                          preview = String(m.text || "").slice(0, 80);
+      const txt = `💬 ${_partnerName}: ${preview}`;
+      playChime();
+      pingTabTitle();
+      fireNative("Nuvvu Nenu", txt);
+      toast(txt);
+    });
+  });
 }
