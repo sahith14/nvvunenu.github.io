@@ -396,13 +396,44 @@ function renderMessages(msgs) {
       }
     });
   });
+
+  // Reaction-chip toggle (tap to add/remove your reaction)
+  stream.querySelectorAll('[data-act="rxn-toggle"]').forEach((chip) => {
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = chip.closest('.chat-row');
+      const id = row?.dataset.id;
+      const emoji = chip.dataset.emoji;
+      if (!id || !emoji) return;
+      toggleReaction(_chatId, id, emoji).catch(() => {});
+    });
+  });
 }
 
+function renderReactions(msg) {
 function renderReactions(msg) {
   const r = msg.reactions || {};
   const entries = Object.entries(r);
   if (!entries.length) return '';
-  return `<div class="chat-reactions">${entries.map(([_, e]) => `<span>${e}</span>`).join('')}</div>`;
+  // Tally counts per emoji and detect whether *I* reacted with each.
+  const counts = new Map();
+  for (const [uid, emoji] of entries) {
+    if (!emoji) continue;
+    const cur = counts.get(emoji) || { n: 0, mine: false };
+    cur.n += 1;
+    if (uid === _myUid) cur.mine = true;
+    counts.set(emoji, cur);
+  }
+  const chips = [];
+  for (const [emoji, { n, mine }] of counts.entries()) {
+    chips.push(
+      `<button class="chat-rxn-chip ${mine ? 'is-mine' : ''}" type="button" data-act="rxn-toggle" data-emoji="${escapeAttr(emoji)}">
+        <span class="chat-rxn-chip__emoji">${emoji}</span>
+        ${n > 1 ? `<span class="chat-rxn-chip__count">${n}</span>` : ''}
+      </button>`
+    );
+  }
+  return `<div class="chat-reactions">${chips.join('')}</div>`;
 }
 
 // =========================================================================

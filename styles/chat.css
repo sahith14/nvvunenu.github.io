@@ -933,3 +933,34 @@
   border-color: rgba(255,255,255,.18);
   color: #f4efff;
 }
+
+
+
+/* Reaction count chips on chat bubbles */
+.chat-reactions { gap: 4px; padding: 2px 4px; }
+.chat-rxn-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.95);
+  border: 1px solid rgba(155,140,255,.18);
+  font-size: 12px; line-height: 1;
+  font-family: inherit; cursor: pointer;
+  transition: transform .12s, border-color .15s, background .15s;
+}
+.chat-rxn-chip:hover  { transform: translateY(-1px); border-color: #9b8cff; }
+.chat-rxn-chip.is-mine {
+  background: linear-gradient(135deg, rgba(255,126,182,.18), rgba(155,140,255,.18));
+  border-color: rgba(155,140,255,.55);
+}
+.chat-rxn-chip__emoji { font-size: 13px; line-height: 1; }
+.chat-rxn-chip__count {
+  font-weight: 800; font-size: 11px;
+  color: var(--muted, #6b5b9b);
+}
+.chat-rxn-chip.is-mine .chat-rxn-chip__count { color: #4f3d80; }
+.chat-page[data-chat-theme="midnight"] .chat-rxn-chip {
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.22);
+}
+.chat-page[data-chat-theme="midnight"] .chat-rxn-chip__count { color: #c8baff; }
