@@ -455,3 +455,18 @@
   background: linear-gradient(135deg,#7effc2,#5ed3a3);
   color: #fff;
 }
+
+
+
+/* Adaptive sub-greeting under the home greeting */
+.home-greeting__sub {
+  margin: 4px 0 0;
+  font-size: .8125rem; font-weight: 600;
+  color: var(--muted, #6b5b9b);
+  letter-spacing: .2px;
+  animation: hg-sub-in .35s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+@keyframes hg-sub-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

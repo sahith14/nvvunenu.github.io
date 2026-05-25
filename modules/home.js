@@ -47,6 +47,7 @@ export function renderHome(container) {
     <div class="home-page stagger">
       <header class="home-hero">
         <h1 class="home-greeting" id="homeGreeting">…</h1>
+        <p class="home-greeting__sub" id="homeGreetingSub" hidden></p>
       </header>
 
       <button class="snooze-pill" id="snoozePill" hidden>
@@ -205,6 +206,7 @@ function paint(s) {
 
   _container.querySelector("#homeGreeting").textContent =
     `${greeting()}, ${firstName} 💜`;
+  paintGreetingSub(s);
 
   const card     = _container.querySelector("#presenceCard");
   const photoEl  = _container.querySelector("#partnerPhoto");
@@ -976,4 +978,30 @@ function showMoodHistoryPopover(card) {
     document.addEventListener("scroll", close, true);
     document.addEventListener("keydown", onEsc, true);
   }, 0);
+}
+
+
+// =====================================================================
+// Adaptive sub-greeting — builds a short context line from streak,
+// days-together, and partner first-name. Hidden gracefully when nothing
+// useful is known.
+// =====================================================================
+function paintGreetingSub(s) {
+  const sub = _container?.querySelector("#homeGreetingSub");
+  if (!sub) return;
+  const lines = [];
+  const partner = s?.partner;
+  const partnerName = partner?.displayName?.split(" ")[0] || partner?.username || null;
+  const streak = Number(s?.user?.streak || 0);
+  const startTs = s?.user?.togetherSince?.toMillis?.() ?? s?.user?.matchedAt?.toMillis?.() ?? null;
+  const days = startTs ? Math.max(1, Math.floor((Date.now() - startTs) / 86400000)) : 0;
+
+  if (streak >= 3)            lines.push(`${streak}-day streak 🔥`);
+  if (days >= 30 && days < 365) lines.push(`${days} days with ${partnerName || "your person"}`);
+  else if (days >= 365)       lines.push(`Year ${Math.floor(days / 365) + 1} together`);
+  else if (partnerName)       lines.push(`Saying hi to ${partnerName}`);
+
+  if (!lines.length) { sub.hidden = true; sub.textContent = ""; return; }
+  sub.hidden = false;
+  sub.textContent = lines.join(" · ");
 }
