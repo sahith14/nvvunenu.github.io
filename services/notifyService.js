@@ -49,6 +49,7 @@ export function stopNotifyService() {
   teardownAll();
   _myUid = _coupleId = null;
   _firstSnap.clear();
+  resetTabTitle();
 }
 
 // =====================================================================
@@ -123,6 +124,7 @@ function listenSubcol(subPath, timeField, prefKey, makeToast) {
       const t = makeToast(data);
       if (!t) return;
       playChime();
+      pingTabTitle();
       if (t.type === "success") toastSuccess(t.text);
       else                       toast(t.text);
     });
@@ -169,6 +171,7 @@ function listenMetaMoods() {
         _lastMoodAt.set(uid, at);
         const emoji = m.emoji || "🌙";
         playChime();
+        pingTabTitle();
         toast(`${emoji} ${_partnerName} shared a mood`);
       }
     }
@@ -220,5 +223,56 @@ export function playChime() {
     gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
     osc.start(start);
     osc.stop(start + 0.5);
+  }
+}
+
+
+// =====================================================================
+// Browser tab title ping — when the tab is hidden and a notification
+// fires, prefix the document title with "(N) " and a soft flash. Reset
+// the moment the user comes back to the tab.
+// =====================================================================
+let _origTitle = null;
+let _unreadCount = 0;
+let _flashTimer = null;
+let _visListenerAttached = false;
+
+function ensureVisListener() {
+  if (_visListenerAttached) return;
+  _visListenerAttached = true;
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) resetTabTitle();
+  });
+  // Also reset on window focus for desktop edge cases
+  window.addEventListener("focus", resetTabTitle);
+}
+
+export function pingTabTitle() {
+  ensureVisListener();
+  // Only ping when the tab is hidden — the user can't see the title
+  // inside the tab, but they can in the OS task switcher / tab strip.
+  if (!document.hidden) return;
+  if (_origTitle === null) _origTitle = document.title;
+  _unreadCount += 1;
+  // Two-state flash: "(N) New activity • Nuvvu Nenu" alternates with the
+  // original title every 1s while hidden.
+  clearInterval(_flashTimer);
+  let flip = false;
+  const apply = () => {
+    document.title = flip
+      ? _origTitle
+      : `(${_unreadCount}) New activity • ${_origTitle}`;
+    flip = !flip;
+  };
+  apply();
+  _flashTimer = setInterval(apply, 1100);
+}
+
+function resetTabTitle() {
+  clearInterval(_flashTimer); _flashTimer = null;
+  _unreadCount = 0;
+  if (_origTitle !== null) {
+    document.title = _origTitle;
+    _origTitle = null;
   }
 }
