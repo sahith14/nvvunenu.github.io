@@ -1772,6 +1772,16 @@ function showPartnerPeek(anchor) {
     <div class="chat-peek__presence ${online ? "is-online" : ""}">${escapeHtml(presenceTxt)}</div>
     ${mood   ? `<div class="chat-peek__row"><span>🌙</span><span>${escapeHtml(mood)}</span></div>` : ""}
     ${status ? `<div class="chat-peek__row"><span>✨</span><span>${escapeHtml(status)}</span></div>` : ""}
+    ${(() => {
+      const partnerTz = partner.timezone;
+      if (!partnerTz) return "";
+      try {
+        const myTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (myTz === partnerTz) return "";
+        const t = new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZone: partnerTz });
+        return `<div class="chat-peek__row"><span>🕒</span><span>${escapeHtml(t)} their time</span></div>`;
+      } catch { return ""; }
+    })()}
     <button class="btn btn-primary chat-peek__btn" type="button">Open profile</button>
   `;
   document.body.appendChild(pop);

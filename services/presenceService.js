@@ -33,6 +33,18 @@ async function writeStatus(online) {
   } catch (e) { reportFirestoreError(e, "presence.writeStatus"); }
 }
 
+// Persist the user's IANA timezone once per session so the partner
+// can render local times. Falls back silently if Intl is unavailable.
+async function writeTimezone() {
+  const uid = auth.currentUser?.uid; if (!uid) return;
+  if (isQuotaExhausted()) return;
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!tz) return;
+    await updateDoc(doc(db, "users", uid), { timezone: tz });
+  } catch { /* non-fatal */ }
+}
+
 function onVisibilityChange() {
   const visible = document.visibilityState === "visible";
   writeStatus(visible);
@@ -47,6 +59,7 @@ export function startPresence() {
   if (started) return;
   started = true;
   writeStatus(true);
+  writeTimezone();
   hbTimer = setInterval(() => writeStatus(document.visibilityState === "visible"), HEARTBEAT_MS);
   document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("beforeunload", onBeforeUnload);
