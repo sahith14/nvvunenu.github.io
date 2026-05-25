@@ -65,22 +65,28 @@
   <link rel="stylesheet" href="styles/cute/upgrade.css">
   <link rel="stylesheet" href="styles/cute/ig.css">
   <link rel="stylesheet" href="styles/cute/layout.css">
+
+  <!-- The actual OLD styles.css (recovered from MISC) — loaded LAST so it
+       dominates everything. 711 rules, purple gradient body, glass side-nav,
+       Instagram-style feed classes (.post-card, .post-img, .stories-strip,
+       .like-heart). This is what the user has been asking for. -->
+  <link rel="stylesheet" href="styles/old.css">
 </head>
 <body>
   <div id="app">
     <div class="app-shell"><div id="page"></div></div>
 
     <!-- Desktop side / top navigation (md+ screens) -->
-    <nav class="desktop-nav" id="navDesktop">
-      <button data-page="home"    onclick="loadPage('home')"   ><i class="fas fa-home"></i><span>Home</span></button>
-      <button data-page="feed"    onclick="loadPage('feed')"   ><i class="fas fa-globe"></i><span>Feed</span></button>
-      <button data-page="search"  onclick="loadPage('search')" ><i class="fas fa-search"></i><span>Search</span></button>
-      <button data-page="space"   onclick="loadPage('space')"  ><i class="fas fa-star"></i><span>Space</span></button>
-      <button data-page="chat"    onclick="loadPage('chat')"   ><i class="fas fa-envelope"></i><span>Messages</span></button>
-      <button data-page="moments" onclick="loadPage('moments')"><i class="fas fa-camera"></i><span>Moments</span></button>
-      <button data-page="bond"    onclick="loadPage('bond')"   ><i class="fas fa-heart"></i><span>Partner</span></button>
-      <button data-page="profile" onclick="loadPage('profile')"><i class="fas fa-user"></i><span>Profile</span></button>
-      <button data-page="settings"onclick="loadPage('settings')"><i class="fas fa-gear"></i><span>Settings</span></button>
+    <nav class="desktop-nav side-nav" id="navDesktop" aria-label="Primary navigation">
+      <button data-page="home"    id="nav-home-desktop"    onclick="loadPage('home')"   ><i class="fas fa-home"></i><span>Home</span></button>
+      <button data-page="feed"    id="nav-feed-desktop"    onclick="loadPage('feed')"   ><i class="fas fa-globe"></i><span>Feed</span></button>
+      <button data-page="search"  id="nav-search-desktop"  onclick="loadPage('search')" ><i class="fas fa-search"></i><span>Search</span></button>
+      <button data-page="space"   id="nav-space-desktop"   onclick="loadPage('space')"  ><i class="fas fa-star"></i><span>Space</span></button>
+      <button data-page="chat"    id="nav-messages-desktop" onclick="loadPage('chat')"  ><i class="fas fa-envelope"></i><span>Messages</span></button>
+      <button data-page="moments" id="nav-moments-desktop" onclick="loadPage('moments')"><i class="fas fa-camera"></i><span>Moments</span></button>
+      <button data-page="bond"    id="nav-partner-desktop" onclick="loadPage('bond')"   ><i class="fas fa-heart"></i><span>Partner</span></button>
+      <button data-page="profile" id="nav-profile-desktop" onclick="loadPage('profile')"><i class="fas fa-user"></i><span>Profile</span></button>
+      <button data-page="settings" id="nav-settings-desktop" onclick="loadPage('settings')"><i class="fas fa-gear"></i><span>Settings</span></button>
     </nav>
 
     <!-- Mobile bottom navigation -->
