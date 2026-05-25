@@ -382,6 +382,7 @@ function wirePresenceCard() {
 
 function wireCheckinCard() {
   _container.querySelector("#checkinCard").addEventListener("click", openMoodPicker);
+  attachMoodHistoryLongPress(_container.querySelector("#checkinCard"));
 }
 
 function wireQuickActions() {
@@ -845,4 +846,134 @@ function paintSnoozePill() {
     toast("Notifications resumed");
     paintSnoozePill();
   };
+}
+
+
+// =====================================================================
+// Long-press the check-in card → quick 7-day mood popover. Uses the
+// same touch + right-click pattern as the chat reaction picker.
+// =====================================================================
+function attachMoodHistoryLongPress(card) {
+  if (!card) return;
+  let timer = null, suppressClick = false;
+  const start = (e) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      suppressClick = true;
+      showMoodHistoryPopover(card);
+    }, 480);
+  };
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+
+  card.addEventListener("touchstart",  start, { passive: true });
+  card.addEventListener("touchend",    cancel);
+  card.addEventListener("touchmove",   cancel);
+  card.addEventListener("mousedown",   (e) => { if (e.button === 0) start(e); });
+  card.addEventListener("mouseup",     cancel);
+  card.addEventListener("mouseleave",  cancel);
+  card.addEventListener("contextmenu", (e) => { e.preventDefault(); showMoodHistoryPopover(card); });
+  card.addEventListener("click", (e) => {
+    if (suppressClick) { suppressClick = false; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+}
+
+function showMoodHistoryPopover(card) {
+  document.querySelectorAll(".hm-mood-pop").forEach((p) => p.remove());
+
+  const me = getState().user || {};
+  const log = (me.moodLog && typeof me.moodLog === "object") ? me.moodLog : {};
+
+  // Build last 7 days (oldest → newest)
+  const labels = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const days = [];
+  const today = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    days.push({ key, label: labels[d.getDay()], emoji: log[key] || null });
+  }
+
+  const pop = document.createElement("div");
+  pop.className = "hm-mood-pop";
+  pop.innerHTML = `
+    <div class="hm-mood-pop__title">Past 7 days</div>
+    <div class="hm-mood-pop__grid">
+      ${days.map(d => `
+        <div class="hm-mood-pop__cell ${d.emoji ? 'is-set' : ''}">
+          <div class="hm-mood-pop__emoji">${d.emoji || "·"}</div>
+          <div class="hm-mood-pop__day">${d.label}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+  document.body.appendChild(pop);
+
+  // Position below the card
+  const r = card.getBoundingClientRect();
+  let left = r.left + window.scrollX;
+  const w = pop.offsetWidth;
+  if (left + w > window.innerWidth - 8) left = window.innerWidth - w - 8;
+  pop.style.top  = `${r.bottom + window.scrollY + 8}px`;
+  pop.style.left = `${Math.max(8, left)}px`;
+  requestAnimationFrame(() => pop.classList.add("is-open"));
+
+  if (!document.getElementById("hm-mood-pop-style")) {
+    const s = document.createElement("style");
+    s.id = "hm-mood-pop-style";
+    s.textContent = `
+      .hm-mood-pop {
+        position: absolute; z-index: 9999;
+        background: #fff;
+        border: 1px solid rgba(155,140,255,.25);
+        border-radius: 16px;
+        box-shadow: 0 14px 32px rgba(143,116,255,.35);
+        padding: 10px 12px;
+        opacity: 0; transform: translateY(-6px) scale(.96);
+        transition: opacity .18s, transform .18s var(--ease-out, cubic-bezier(.22,1,.36,1));
+      }
+      .hm-mood-pop.is-open { opacity: 1; transform: translateY(0) scale(1); }
+      .hm-mood-pop__title {
+        font-size: .6875rem; font-weight: 800; color: #4f3d80;
+        text-transform: uppercase; letter-spacing: .4px;
+        margin-bottom: 6px;
+      }
+      .hm-mood-pop__grid {
+        display: grid; grid-template-columns: repeat(7, 36px); gap: 4px;
+      }
+      .hm-mood-pop__cell {
+        display: flex; flex-direction: column; align-items: center;
+        padding: 6px 2px;
+        background: rgba(155,140,255,.08);
+        border: 1px solid rgba(155,140,255,.15);
+        border-radius: 8px;
+      }
+      .hm-mood-pop__cell.is-set {
+        background: linear-gradient(135deg, rgba(255,126,182,.15), rgba(155,140,255,.12));
+        border-color: rgba(155,140,255,.4);
+      }
+      .hm-mood-pop__emoji { font-size: 18px; line-height: 1; }
+      .hm-mood-pop__cell:not(.is-set) .hm-mood-pop__emoji { color: rgba(155,140,255,.5); }
+      .hm-mood-pop__day {
+        font-size: .625rem; font-weight: 800; color: #6b5b9b;
+        margin-top: 2px; text-transform: uppercase; letter-spacing: .3px;
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
+  // Close on outside click / scroll / Esc
+  function close() { try { pop.remove(); } catch {} cleanup(); }
+  function cleanup() {
+    document.removeEventListener("click", onOutside, true);
+    document.removeEventListener("scroll", close, true);
+    document.removeEventListener("keydown", onEsc, true);
+  }
+  function onOutside(ev) { if (!pop.contains(ev.target)) close(); }
+  function onEsc(ev) { if (ev.key === "Escape") close(); }
+  setTimeout(() => {
+    document.addEventListener("click", onOutside, true);
+    document.addEventListener("scroll", close, true);
+    document.addEventListener("keydown", onEsc, true);
+  }, 0);
 }
