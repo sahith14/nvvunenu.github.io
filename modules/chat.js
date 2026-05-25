@@ -19,6 +19,7 @@ import { rememberMessage, suggestReplies } from '../services/aiReply.js';
 import { gateVoiceNote } from '../services/featureGate.js';
 import { startVideoCall, startAudioCall } from './callView.js';
 import { subscribeCoupleMeta } from '../services/coupleService.js';
+import { addMemoryFromUrl } from '../services/memoryService.js';
 
 let _container       = null;
 let _offState        = null;
@@ -307,7 +308,10 @@ function renderMessages(msgs) {
     } else if (m.audio) {
       body = renderVoiceNote(m);
     } else if (m.image) {
-      body = `<img class="chat-image" src="${m.image}" alt="">`;
+      body = `<div class="chat-img-wrap">
+        <img class="chat-image" src="${m.image}" alt="">
+        <button class="chat-img-save" data-act="save-mem" data-img="${escapeAttr(m.image)}" title="Save to Memories" aria-label="Save to Memories">📥</button>
+      </div>`;
     } else {
       body = escapeHtml(m.text || '');
     }
@@ -358,6 +362,28 @@ function renderMessages(msgs) {
 
   // Voice notes — wire each waveform player
   stream.querySelectorAll('.chat-vn').forEach((node) => attachVoiceNoteHandlers(node));
+
+  // Save-photo-to-memories on image bubbles
+  stream.querySelectorAll('[data-act="save-mem"]').forEach((b) => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const url = b.dataset.img;
+      const cid = getState().coupleId;
+      if (!url || !cid) return;
+      b.classList.add('is-saving');
+      const ok = await safe(() => addMemoryFromUrl({
+        coupleId: cid, url, title: "Saved from chat",
+        date: new Date().toISOString().slice(0, 10),
+        mediaType: "image",
+      }), "Couldn't save");
+      b.classList.remove('is-saving');
+      if (ok !== false) {
+        b.classList.add('is-saved');
+        b.textContent = "✓";
+        toastSuccess("Saved to Memories 💜");
+      }
+    });
+  });
 }
 
 function renderReactions(msg) {

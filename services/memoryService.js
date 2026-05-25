@@ -75,3 +75,24 @@ export async function toggleFavoriteMemory(coupleId, memoryId, isFavoriteNow) {
     favoriteByUids: isFavoriteNow ? arrayRemove(uid) : arrayUnion(uid),
   });
 }
+
+
+// =====================================================================
+// addMemoryFromUrl — creates a memory doc pointing at an already-hosted
+// image URL (e.g. a chat attachment) without re-uploading the bytes.
+// =====================================================================
+export async function addMemoryFromUrl({ coupleId, url, title, date, mediaType = "image" }) {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !coupleId || !url) throw new Error("NO_AUTH_OR_URL");
+  await addDoc(path(coupleId), {
+    title:       (title || "Saved from chat").trim(),
+    description: "",
+    date:        date || new Date().toISOString().split("T")[0],
+    mediaUrl:    url,
+    mediaPath:   null,
+    mediaType,
+    createdBy:   uid,
+    createdAt:   serverTimestamp(),
+    sourceKind:  "chat",
+  });
+}

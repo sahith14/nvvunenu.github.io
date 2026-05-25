@@ -779,3 +779,35 @@
   background: rgba(155,140,255,.30);
   border-color: rgba(255,255,255,.5);
 }
+
+
+
+/* Save-to-memories chip on image bubbles */
+.chat-img-wrap {
+  position: relative;
+  display: inline-block;
+  margin-top: 6px;
+}
+.chat-img-wrap .chat-image { margin-top: 0; }
+.chat-img-save {
+  position: absolute; top: 8px; right: 8px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(0,0,0,.55); color: #fff;
+  border: 0; font-size: 13px; cursor: pointer;
+  font-family: inherit;
+  opacity: 0;
+  transition: opacity .15s, transform .12s, background .15s;
+}
+.chat-img-wrap:hover .chat-img-save,
+.chat-img-wrap:focus-within .chat-img-save { opacity: 1; }
+.chat-img-save:hover  { transform: scale(1.05); background: rgba(0,0,0,.7); }
+.chat-img-save:active { transform: scale(.95); }
+.chat-img-save.is-saving {
+  pointer-events: none;
+  animation: chat-save-spin .9s linear infinite;
+}
+.chat-img-save.is-saved {
+  background: linear-gradient(135deg,#7effc2,#5ed3a3);
+  opacity: 1;
+}
+@keyframes chat-save-spin { to { transform: rotate(360deg); } }
