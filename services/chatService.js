@@ -97,6 +97,7 @@ export async function fetchOlder(chatId, beforeDoc, pageSize = PAGE) {
 
 // ---- SEND ----
 export async function sendText(chatId, partnerId, text) {
+export async function sendText(chatId, partnerId, text, replyTo = null) {
   const uid = auth.currentUser?.uid;
   const trimmed = (text || "").trim();
   if (!uid || !trimmed) return null;
@@ -105,14 +106,23 @@ export async function sendText(chatId, partnerId, text) {
   const msgRef  = doc(collection(db, "chats", chatId, "messages"));
   const chatRef = doc(db, "chats", chatId);
 
-  batch.set(msgRef, {
+  const payload = {
     text: trimmed,
     sender: uid,
     time: serverTimestamp(),
     status: "sent",
     deliveredAt: null, seenAt: null,
     reactions: {}
-  });
+  };
+  if (replyTo && replyTo.id) {
+    payload.replyTo = {
+      id:     String(replyTo.id),
+      text:   String(replyTo.text || "").slice(0, 240),
+      sender: String(replyTo.sender || ""),
+      kind:   String(replyTo.kind || "text"),
+    };
+  }
+  batch.set(msgRef, payload);
   batch.update(chatRef, {
     lastMessage:        trimmed.slice(0, 200),
     lastMessageTime:    serverTimestamp(),

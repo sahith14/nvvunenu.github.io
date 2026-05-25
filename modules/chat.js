@@ -34,6 +34,7 @@ let _partnerPhoto    = null;
 let _lastRenderedFor = null;       // (myUid|partnerId) we built the shell for
 let _lastMsgs        = [];
 let _themeOutsideHandler = null;   // doc click handler for closing theme popup
+let _replyingTo      = null;       // { id, text, sender, kind } when replying
 
 export function renderChat(container) {
   _container = container;
@@ -209,6 +210,15 @@ function paintShell() {
 
       <div class="chat-suggest" id="chatSuggest" hidden></div>
 
+      <div class="chat-reply-preview" id="chatReplyPreview" hidden>
+        <div class="chat-reply-preview__bar"></div>
+        <div class="chat-reply-preview__body">
+          <div class="chat-reply-preview__who" id="chatReplyWho">Replying to</div>
+          <div class="chat-reply-preview__text" id="chatReplyText">…</div>
+        </div>
+        <button class="chat-reply-preview__close" id="chatReplyCancel" aria-label="Cancel reply">✕</button>
+      </div>
+
       <footer class="chat-composer">
         <button class="composer-btn" id="btnEmoji"  title="Emoji">😊</button>
         <button class="composer-btn" id="btnPoll"   title="Send a poll">📊</button>
@@ -284,9 +294,11 @@ function renderMessages(msgs) {
     } else {
       body = escapeHtml(m.text || '');
     }
+    const quote = m.replyTo ? renderReplyQuote(m.replyTo) : '';
     html += `
       <div class="chat-row ${mine ? 'mine' : 'theirs'}" data-id="${m.id}">
         <div class="chat-bubble">
+          ${quote}
           <div class="chat-text">${body}</div>
           <div class="chat-meta">
             <span class="chat-time">${time}</span>
@@ -419,9 +431,10 @@ function attachHandlers() {
   function doSend() {
     const text = input.value.trim();
     if (!text || !_chatId || !_partnerId) return;
-    safe(() => sendText(_chatId, _partnerId, text), "Couldn't send");
+    safe(() => sendText(_chatId, _partnerId, text, _replyingTo), "Couldn't send");
     input.value = '';
     setTyping(_chatId, false);
+    clearReply();
     // Tiny send pulse on the send button
     send.classList.remove('is-pulsing');
     void send.offsetWidth;
@@ -755,7 +768,9 @@ function showReactionPicker(row) {
   picker.className = "chat-rxn-picker";
   picker.innerHTML = REACTION_PALETTE.map(e => `
     <button class="chat-rxn-picker__btn" data-e="${e}" type="button" aria-label="${e}">${e}</button>
-  `).join("");
+  `).join("") + `
+    <button class="chat-rxn-picker__btn chat-rxn-picker__btn--reply" data-act="reply" type="button" aria-label="Reply">↩</button>
+  `;
   document.body.appendChild(picker);
 
   // Position above the bubble (or below if there's no room above)
@@ -774,8 +789,12 @@ function showReactionPicker(row) {
   picker.querySelectorAll(".chat-rxn-picker__btn").forEach((b) => {
     b.addEventListener("click", (e) => {
       e.stopPropagation();
-      const emoji = b.dataset.e;
-      toggleReaction(_chatId, id, emoji).catch(() => {});
+      if (b.dataset.act === "reply") {
+        startReply(id);
+      } else {
+        const emoji = b.dataset.e;
+        toggleReaction(_chatId, id, emoji).catch(() => {});
+      }
       picker.remove();
     });
   });
@@ -1012,3 +1031,67 @@ function fmtTime(sec) {
 function escapeAttr(s) {
   return String(s ?? "").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
+
+
+// =====================================================================
+// Reply-to message — long-press picker offers Reply, composer shows
+// a quote preview, sender writes replyTo into the message doc.
+// =====================================================================
+function startReply(msgId) {
+  const msg = _lastMsgs.find((x) => x.id === msgId);
+  if (!msg) return;
+  _replyingTo = {
+    id:     msgId,
+    text:   String(msg.text || (msg.kind === "poll" ? `📊 ${msg.question || "Poll"}` : msg.audio ? "🎙 Voice note" : msg.image ? "📷 Photo" : "")).slice(0, 240),
+    sender: String(msg.sender || ""),
+    kind:   String(msg.kind || (msg.audio ? "audio" : msg.image ? "image" : "text")),
+  };
+  paintReplyPreview();
+  const input = _container?.querySelector('#composerInput');
+  if (input) input.focus();
+}
+function clearReply() {
+  _replyingTo = null;
+  paintReplyPreview();
+}
+function paintReplyPreview() {
+  const slot = _container?.querySelector('#chatReplyPreview');
+  if (!slot) return;
+  if (!_replyingTo) { slot.hidden = true; return; }
+  slot.hidden = false;
+  const whoEl  = _container.querySelector('#chatReplyWho');
+  const textEl = _container.querySelector('#chatReplyText');
+  const isMine = _replyingTo.sender === _myUid;
+  if (whoEl)  whoEl.textContent  = `Replying to ${isMine ? "yourself" : _partnerName}`;
+  if (textEl) textEl.textContent = _replyingTo.text || "(media)";
+  const cancel = _container.querySelector('#chatReplyCancel');
+  if (cancel) cancel.onclick = (e) => { e.preventDefault(); clearReply(); };
+}
+
+function renderReplyQuote(rt) {
+  const isMine = rt.sender === _myUid;
+  return `
+    <div class="chat-quote" data-jump="${escapeAttr(rt.id || '')}">
+      <span class="chat-quote__bar"></span>
+      <span class="chat-quote__body">
+        <span class="chat-quote__who">${isMine ? "You" : escapeHtml(_partnerName || "Them")}</span>
+        <span class="chat-quote__text">${escapeHtml(rt.text || (rt.kind === "audio" ? "🎙 Voice note" : rt.kind === "image" ? "📷 Photo" : ""))}</span>
+      </span>
+    </div>
+  `;
+}
+
+// Click on a quote inside a bubble to scroll the original message into view.
+document.addEventListener("click", (e) => {
+  const q = e.target.closest?.(".chat-quote");
+  if (!q) return;
+  const id = q.dataset.jump;
+  if (!id) return;
+  const stream = _container?.querySelector('#chatStream');
+  const target = stream?.querySelector(`.chat-row[data-id="${CSS.escape(id)}"]`);
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("is-flash");
+    setTimeout(() => target.classList.remove("is-flash"), 900);
+  }
+}, true);
