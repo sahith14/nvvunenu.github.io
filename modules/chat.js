@@ -237,6 +237,8 @@ function paintShell() {
       <footer class="chat-composer">
         <button class="composer-btn" id="btnEmoji"  title="Emoji">😊</button>
         <button class="composer-btn" id="btnPoll"   title="Send a poll">📊</button>
+        <button class="composer-btn" id="btnImage"  title="Send a photo">📎</button>
+        <input type="file" id="chatImageInput" accept="image/*" hidden>
         <input class="composer-input" id="composerInput" placeholder="Write something sweet…" autocomplete="off">
         <button class="composer-btn" id="btnVoice"  title="Hold to record voice note">🎙️</button>
         <button class="composer-send" id="btnSend"  title="Send">➤</button>
@@ -499,6 +501,56 @@ function attachHandlers() {
 
   // Poll composer
   _container.querySelector('#btnPoll').onclick = () => openPollComposer();
+
+  // Image attachments — button, paste, drag-and-drop
+  const imgBtn   = _container.querySelector('#btnImage');
+  const imgInput = _container.querySelector('#chatImageInput');
+  imgBtn?.addEventListener('click', () => imgInput?.click());
+  imgInput?.addEventListener('change', (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (f) uploadAndSendImage(f);
+  });
+  // Paste an image directly into the composer
+  input.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items || [];
+    for (const it of items) {
+      if (it.kind === 'file' && it.type.startsWith('image/')) {
+        const f = it.getAsFile();
+        if (f) {
+          e.preventDefault();
+          uploadAndSendImage(f);
+          return;
+        }
+      }
+    }
+  });
+  // Drag-and-drop anywhere on the chat page
+  const page = _container.querySelector('.chat-page');
+  if (page) {
+    let dragDepth = 0;
+    page.addEventListener('dragenter', (e) => {
+      if (!hasImageFiles(e)) return;
+      e.preventDefault();
+      dragDepth++;
+      page.classList.add('is-dropping');
+    });
+    page.addEventListener('dragover', (e) => {
+      if (hasImageFiles(e)) { e.preventDefault(); }
+    });
+    page.addEventListener('dragleave', () => {
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) page.classList.remove('is-dropping');
+    });
+    page.addEventListener('drop', (e) => {
+      const f = [...(e.dataTransfer?.files || [])].find(x => x.type.startsWith('image/'));
+      dragDepth = 0;
+      page.classList.remove('is-dropping');
+      if (!f) return;
+      e.preventDefault();
+      uploadAndSendImage(f);
+    });
+  }
 
   attachVoiceRecorder(voice);
 }
@@ -1401,4 +1453,68 @@ function openDeleteMessageModal(msgId) {
     toast("Message deleted");
     close();
   });
+}
+
+
+// =====================================================================
+// Image attachments — button / paste / drag-drop. Uploads to storage,
+// falls back to base64 for tiny pastes, then writes a chat message
+// with image: url.
+// =====================================================================
+function hasImageFiles(e) {
+  const items = e.dataTransfer?.items || [];
+  for (const it of items) {
+    if (it.kind === 'file' && it.type?.startsWith('image/')) return true;
+  }
+  return false;
+}
+
+async function uploadAndSendImage(file) {
+  if (!_chatId || !_partnerId || !_myUid || !file) return;
+  if (!file.type.startsWith('image/')) { toastWarn("That isn't an image"); return; }
+  if (file.size > 8 * 1024 * 1024)     { toastWarn("Image too big — under 8 MB please"); return; }
+
+  toast("Uploading photo…");
+  let url = null;
+  try {
+    if (storage) {
+      const { ref, uploadBytes, getDownloadURL } =
+        await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
+      const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase().slice(0, 5);
+      const path = `chatImages/${_chatId}/${Date.now()}_${_myUid}.${ext}`;
+      const fileRef = ref(storage, path);
+      await uploadBytes(fileRef, file, { contentType: file.type || 'image/jpeg' });
+      url = await getDownloadURL(fileRef);
+    }
+  } catch (e) {
+    console.warn('[chat] image upload failed, trying base64 fallback', e);
+  }
+  if (!url) {
+    if (file.size > 256 * 1024) { toastError("Couldn't upload photo"); return; }
+    url = await new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload  = () => res(fr.result);
+      fr.onerror = rej;
+      fr.readAsDataURL(file);
+    });
+  }
+
+  const { collection, doc, writeBatch, serverTimestamp, increment } =
+    await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const batch = writeBatch(db);
+  const msgRef  = doc(collection(db, 'chats', _chatId, 'messages'));
+  const chatRef = doc(db, 'chats', _chatId);
+  batch.set(msgRef, {
+    image: url, sender: _myUid, time: serverTimestamp(),
+    status: 'sent', deliveredAt: null, seenAt: null, reactions: {}
+  });
+  batch.update(chatRef, {
+    lastMessage:        '📷 Photo',
+    lastMessageTime:    serverTimestamp(),
+    lastMessageSender:  _myUid,
+    [`unread.${_partnerId}`]: increment(1),
+    [`unread.${_myUid}`]:     0,
+    [`typing.${_myUid}`]:     false,
+  });
+  await batch.commit();
 }

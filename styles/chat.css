@@ -758,3 +758,24 @@
 .chat-page[data-chat-theme="default"] .chat-bubble { border-radius: 18px; }
 .chat-page[data-chat-theme="default"] .chat-row.mine .chat-bubble   { border-bottom-right-radius: 6px; }
 .chat-page[data-chat-theme="default"] .chat-row.theirs .chat-bubble { border-bottom-left-radius:  6px; }
+
+
+
+/* Drag-and-drop overlay for images on the chat page */
+.chat-page.is-dropping::before {
+  content: "📎  Drop a photo to send";
+  position: absolute; inset: 0;
+  z-index: 50;
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 1rem;
+  color: #4f3d80;
+  background: rgba(255,126,182,.18);
+  border: 3px dashed rgba(155,140,255,.55);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.chat-page[data-chat-theme="midnight"].is-dropping::before {
+  color: #fff;
+  background: rgba(155,140,255,.30);
+  border-color: rgba(255,255,255,.5);
+}
