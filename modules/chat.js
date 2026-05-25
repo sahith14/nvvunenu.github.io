@@ -185,6 +185,7 @@ function paintShell() {
         </div>
         <div class="chat-actions">
           <button class="chat-action" id="btnChatSearch" title="Search messages">🔍</button>
+          <button class="chat-action" id="btnChatMute" title="Mute chat for 1h">🔔</button>
           <button class="chat-action" id="btnChatTheme" title="Chat theme">🎨</button>
           <button class="chat-action" id="btnAudioCall" title="Voice call">📞</button>
           <button class="chat-action" id="btnVideoCall" title="Video call">📹</button>
@@ -519,6 +520,17 @@ function attachHandlers() {
   });
   _container.querySelector('#chatSearchPrev').onclick = () => gotoSearchMatch(-1);
   _container.querySelector('#chatSearchNext').onclick = () => gotoSearchMatch(+1);
+
+  // Chat mute (1-hour toggle)
+  const muteBtn = _container.querySelector('#btnChatMute');
+  paintMuteBtn(muteBtn);
+  muteBtn.onclick = (e) => {
+    e.stopPropagation();
+    const muted = isChatMuted();
+    setChatMuted(!muted);
+    paintMuteBtn(muteBtn);
+    toast(muted ? "Chat unmuted" : "Chat muted for 1 hour");
+  };
   if (_themeOutsideHandler) document.removeEventListener('click', _themeOutsideHandler, true);
   _themeOutsideHandler = (ev) => {
     if (!_container || !themePop) return;
@@ -1685,4 +1697,33 @@ async function transcribeVoiceNote(button) {
   }
   slot.classList.remove('is-loading');
   slot.textContent = text;
+}
+
+
+// =====================================================================
+// Chat mute — silences chat-message notifications for 1 hour at a time.
+// Independent of the global Settings snooze so users can quiet just
+// the chat without losing presence/kindness/etc toasts.
+// =====================================================================
+const CHAT_MUTE_KEY = "nvvunenu.chatMutedUntil";
+const CHAT_MUTE_MS  = 60 * 60 * 1000;
+
+export function isChatMuted() {
+  try {
+    const v = Number(localStorage.getItem(CHAT_MUTE_KEY) || 0);
+    return v > Date.now();
+  } catch { return false; }
+}
+function setChatMuted(on) {
+  try {
+    if (on) localStorage.setItem(CHAT_MUTE_KEY, String(Date.now() + CHAT_MUTE_MS));
+    else    localStorage.removeItem(CHAT_MUTE_KEY);
+  } catch {}
+}
+function paintMuteBtn(btn) {
+  if (!btn) return;
+  const muted = isChatMuted();
+  btn.textContent = muted ? "🔕" : "🔔";
+  btn.title = muted ? "Tap to unmute" : "Mute chat for 1h";
+  btn.classList.toggle("is-muted", muted);
 }

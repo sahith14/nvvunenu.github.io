@@ -964,3 +964,8 @@
   border-color: rgba(255,255,255,.22);
 }
 .chat-page[data-chat-theme="midnight"] .chat-rxn-chip__count { color: #c8baff; }
+
+
+
+/* Chat-mute toggle visual when muted */
+.chat-action.is-muted { opacity: .6; filter: saturate(.65); }

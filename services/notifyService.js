@@ -351,6 +351,7 @@ function listenChatMessages() {
     if (firstSnap) { firstSnap = false; return; }
     if (!getNotifyEnabled()) return;
     if (!isNotifPrefOn(getCurrentPrefs(), "messages")) return;
+    if (chatMutedNow()) return;
 
     // Don't toast when the user is already looking at /chat.
     const onChatPage = location.hash === "#chat" || /\/chat$/.test(location.hash);
@@ -518,4 +519,13 @@ function spawnHeartBurst() {
     document.head.appendChild(s);
   }
   setTimeout(() => { try { layer.remove(); } catch {} }, 2000);
+}
+
+
+// Local mirror of chat-mute (avoids importing chat.js into a service).
+function chatMutedNow() {
+  try {
+    const v = Number(localStorage.getItem("nvvunenu.chatMutedUntil") || 0);
+    return v > Date.now();
+  } catch { return false; }
 }
