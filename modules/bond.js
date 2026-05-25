@@ -362,6 +362,7 @@ function paintPaired(s) {
         <div class="pulse-orb"></div>
         <div class="pulse-label">Relationship Pulse</div>
         <div class="pulse-score" id="pulseScore">—</div>
+        <div class="pulse-delta" id="pulseDelta" hidden></div>
         <div class="pulse-breakdown" id="pulseBreakdown"></div>
         <div class="pulse-trend" id="pulseTrend"></div>
       </div>
@@ -974,6 +975,7 @@ async function loadAndPaintPulseTrend(coupleId) {
   } catch { /* non-fatal */ }
 
   host.innerHTML = renderSparkline(days, scores);
+  paintPulseDelta(scores);
 }
 
 function renderSparkline(days, scores) {
@@ -1054,4 +1056,32 @@ function renderSparkline(days, scores) {
     </svg>
     <div class="pulse-trend__lbl">${filled === 0 ? "Trend builds as you visit Bond each day." : `${filled} of 14 days tracked`}</div>
   `;
+}
+
+
+// =====================================================================
+// Today vs. yesterday — small delta badge near the pulse score.
+// scores[] is ordered oldest → newest; today is the last index.
+// =====================================================================
+function paintPulseDelta(scores) {
+  const el = _container?.querySelector("#pulseDelta");
+  if (!el) return;
+  if (!scores || scores.length < 2) { el.hidden = true; return; }
+  // Find today (last non-null) and the most recent prior non-null entry —
+  // not necessarily yesterday in the calendar sense (could be 2-3 days ago
+  // if you skipped). That's still a meaningful delta to show.
+  let todayIdx = -1, priorIdx = -1;
+  for (let i = scores.length - 1; i >= 0; i--) {
+    if (scores[i] != null) {
+      if (todayIdx === -1) todayIdx = i;
+      else                 { priorIdx = i; break; }
+    }
+  }
+  if (todayIdx === -1 || priorIdx === -1) { el.hidden = true; return; }
+  const diff = scores[todayIdx] - scores[priorIdx];
+  el.hidden = false;
+  el.classList.remove("is-up", "is-down", "is-flat");
+  if (diff > 0)      { el.classList.add("is-up");   el.textContent = `↑ ${diff}`; }
+  else if (diff < 0) { el.classList.add("is-down"); el.textContent = `↓ ${Math.abs(diff)}`; }
+  else               { el.classList.add("is-flat"); el.textContent = `⟷ same`; }
 }
