@@ -8,6 +8,8 @@ import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth
 import { onAppState } from "../state/appState.js";
 import { toast, toastSuccess, toastError, safe } from "../utils/toast.js";
 import { getSubscription, PLANS } from "../services/subscriptionService.js";
+import { db } from "../firebase.js";
+import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const THEME_KEY = "nvvunenu.theme";    // legacy — kept for cleanup only
 const NOTIFY_KEY = "nvvunenu.notify";  // "1" | "0"
@@ -84,13 +86,14 @@ function shell() {
         <div class="settings-row">
           <div>
             <div class="settings-label">In-app notifications</div>
-            <div class="settings-sub">Toasts for new messages, calls and pokes.</div>
+            <div class="settings-sub">Master switch — turns all toasts on or off.</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggleNotify" ${n?'checked':''}>
             <span class="slider"></span>
           </label>
         </div>
+        <div class="settings-prefs" id="notifPrefs"></div>
       </div>
 
       <div class="card settings-section" id="setAbout">
@@ -134,6 +137,11 @@ function shell() {
       .btn-danger{background:rgba(255,99,99,.12);color:#ff8a8a;border:1px solid rgba(255,99,99,.35)}
       .btn-danger:hover{background:rgba(255,99,99,.18)}
       .danger .settings-h{color:#ff8a8a}
+      .settings-prefs{display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-top:10px;border-top:1px solid var(--border)}
+      .settings-pref{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:8px 4px}
+      .settings-pref.is-disabled{opacity:.55}
+      .settings-pref__icon{font-size:18px;line-height:1;text-align:center}
+      .settings-pref__body{min-width:0}
     </style>
   `;
 }
@@ -157,7 +165,10 @@ function paint(container, s, sub) {
   container.querySelector("#toggleNotify").addEventListener("change", (e) => {
     setNotifyEnabled(e.target.checked);
     toast(e.target.checked ? "Notifications on" : "Notifications off");
+    paintNotifPrefs(container, s);
   });
+
+  paintNotifPrefs(container, s);
 
   // Account / Plan / Danger actions
   container.querySelector("#btnEditProfile").addEventListener("click", () => {
@@ -173,4 +184,69 @@ function paint(container, s, sub) {
   container.querySelector("#btnDelete").addEventListener("click", () => {
     toastError("Account deletion will be available soon. Email support to delete now.");
   });
+}
+
+
+
+// =====================================================================
+// Per-event notification preferences
+// Persisted at users/{uid}.notifPrefs.{key} = boolean.
+// Default = true for everything.
+// =====================================================================
+const NOTIF_PREFS = [
+  { key: "messages",  label: "Messages",        sub: "Toast when your partner sends a chat message.",      icon: "💬" },
+  { key: "calls",     label: "Incoming calls",  sub: "Ringer + toast for voice & video calls.",            icon: "📞" },
+  { key: "moods",     label: "Mood shares",     sub: "Toast when your partner shares a new mood.",         icon: "🌙" },
+  { key: "kindness",  label: "Kindness acts",   sub: "Toast when a kind act is logged on the bond.",       icon: "💛" },
+  { key: "dates",     label: "Date completion", sub: "Toast when a date idea is marked done.",             icon: "🌹" },
+  { key: "letters",   label: "Letter unlocks",  sub: "Toast when a sealed time-capsule letter unlocks.",   icon: "📜" },
+  { key: "presence",  label: "Partner activity",sub: "Toast when partner starts a session (game / room).", icon: "🟢" },
+  { key: "polls",     label: "Polls",           sub: "Toast when partner votes on a poll.",                icon: "📊" },
+];
+
+function paintNotifPrefs(container, s) {
+  const host = container.querySelector("#notifPrefs");
+  if (!host) return;
+  const masterOn = getNotifyEnabled();
+  const userPrefs = s.user?.notifPrefs || {};
+
+  host.innerHTML = NOTIF_PREFS.map((p) => {
+    const checked = isNotifPrefOn(userPrefs, p.key);
+    return `
+      <div class="settings-pref ${masterOn ? "" : "is-disabled"}">
+        <div class="settings-pref__icon">${p.icon}</div>
+        <div class="settings-pref__body">
+          <div class="settings-label">${escape(p.label)}</div>
+          <div class="settings-sub">${escape(p.sub)}</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" data-pref="${p.key}" ${checked ? "checked" : ""} ${masterOn ? "" : "disabled"}>
+          <span class="slider"></span>
+        </label>
+      </div>`;
+  }).join("");
+
+  host.querySelectorAll('input[data-pref]').forEach((el) => {
+    el.addEventListener("change", async (ev) => {
+      const key = ev.target.dataset.pref;
+      const on  = ev.target.checked;
+      const ok = await safe(() => updateDoc(doc(db, "users", s.user.uid), {
+        [`notifPrefs.${key}`]: on
+      }), "Couldn't save preference");
+      if (ok !== false) toast(`${on ? "On" : "Off"} · ${key}`);
+    });
+  });
+}
+
+export function isNotifPrefOn(userPrefs, key) {
+  if (!getNotifyEnabled()) return false;        // master kill-switch
+  if (!userPrefs) return true;                  // default on
+  const v = userPrefs[key];
+  return v === undefined ? true : !!v;
+}
+
+function escape(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
 }
