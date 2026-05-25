@@ -13,6 +13,7 @@ import {
 import { onAppState, getState } from "../state/appState.js";
 import { toast, toastSuccess, toastWarn, toastError, safe } from "../utils/toast.js";
 import { skeletonList } from "../utils/skeleton.js";
+import { spawnHeartBurst } from "../services/notifyService.js";
 
 let _container = null;
 let _offState  = null;
@@ -61,6 +62,7 @@ function paint() {
   if (!_container || !_state) return;
   const myUid = _state.user?.uid;
   const partnerName = _state.partner?.displayName?.split(" ")[0] || _state.partner?.username || "your partner";
+  maybeCelebrateFirstLetter(_items.length);
 
   const now = Date.now();
   const unlocked = [];
@@ -337,4 +339,26 @@ function openModal({ title, body, primary, danger, onSubmit }) {
   });
   const firstInput = wrap.querySelector("input, textarea");
   if (firstInput) firstInput.focus();
+}
+
+
+
+// =====================================================================
+// First-letter celebration — fires once per couple when their
+// timecapsule sub-collection transitions from 0 logged to 1+.
+// =====================================================================
+function maybeCelebrateFirstLetter(total) {
+  if (!total) return;
+  const cid = getState()?.coupleId;
+  if (!cid) return;
+  const key = `nvvunenu.firstLetter.${cid}`;
+  let already = false;
+  try { already = localStorage.getItem(key) === "1"; } catch {}
+  if (already) return;
+  try { localStorage.setItem(key, "1"); } catch {}
+
+  setTimeout(() => {
+    try { spawnHeartBurst(); } catch {}
+    toastSuccess("First letter sealed 📜 — soft love, kept safe");
+  }, 500);
 }
