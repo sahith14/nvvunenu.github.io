@@ -278,7 +278,7 @@ function renderMessages(msgs) {
     if (m.kind === 'poll') {
       body = renderPollBody(m);
     } else if (m.audio) {
-      body = `<audio controls src="${m.audio}" class="chat-audio"></audio>`;
+      body = renderVoiceNote(m);
     } else if (m.image) {
       body = `<img class="chat-image" src="${m.image}" alt="">`;
     } else {
@@ -319,6 +319,9 @@ function renderMessages(msgs) {
       votePoll(_chatId, msgId, idx).catch(() => {});
     });
   });
+
+  // Voice notes — wire each waveform player
+  stream.querySelectorAll('.chat-vn').forEach((node) => attachVoiceNoteHandlers(node));
 }
 
 function renderReactions(msg) {
@@ -868,4 +871,144 @@ function insertAtCursor(input, text) {
   } else {
     input.value += text;
   }
+}
+
+
+// =====================================================================
+// Voice notes — custom waveform player.
+// Deterministic faux-waveform derived from the message id so each note
+// looks unique but stable across re-renders. A single hidden HTMLAudioElement
+// is created lazily per node; no native <audio controls> chrome.
+// =====================================================================
+const VN_BAR_COUNT = 32;
+let _vnActive = null;       // currently playing audio element
+let _vnRafs   = new WeakMap();
+
+function renderVoiceNote(m) {
+  const id  = m.id || "x";
+  const url = String(m.audio || "");
+  const bars = generateFauxBars(id, VN_BAR_COUNT);
+  return `
+    <div class="chat-vn" data-src="${escapeAttr(url)}">
+      <button class="chat-vn__play" data-act="toggle" type="button" aria-label="Play voice note">▶</button>
+      <div class="chat-vn__bars">
+        ${bars.map(h => `<span class="chat-vn__bar" style="height:${h}%"></span>`).join("")}
+      </div>
+      <span class="chat-vn__time">0:00</span>
+    </div>
+  `;
+}
+
+function generateFauxBars(seedStr, count) {
+  // Lightweight LCG seeded by id — deterministic, enough variation for a
+  // bar chart that doesn't all look the same height.
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    h ^= seedStr.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  const bars = [];
+  for (let i = 0; i < count; i++) {
+    h = Math.imul(h, 1103515245) + 12345; h = h >>> 0;
+    const v = (h % 1000) / 1000;
+    // Bell-ish curve: lower at edges, taller in middle so it reads "voice"
+    const t = i / (count - 1);
+    const env = 1 - Math.abs(t - 0.5) * 1.5;
+    const height = 18 + v * 70 * Math.max(.35, env);
+    bars.push(Math.max(8, Math.min(95, height)));
+  }
+  return bars;
+}
+
+function attachVoiceNoteHandlers(node) {
+  const playBtn = node.querySelector('.chat-vn__play');
+  const timeEl  = node.querySelector('.chat-vn__time');
+  const barsEl  = node.querySelector('.chat-vn__bars');
+  const src     = node.dataset.src;
+  let audio = null;
+
+  function ensureAudio() {
+    if (audio) return audio;
+    audio = new Audio(src);
+    audio.preload = "metadata";
+    audio.addEventListener("loadedmetadata", () => {
+      timeEl.textContent = fmtTime(audio.duration || 0);
+    });
+    audio.addEventListener("ended", () => {
+      playBtn.textContent = "▶";
+      node.classList.remove("is-playing");
+      timeEl.textContent = fmtTime(audio.duration || 0);
+      stopRaf();
+      if (_vnActive === audio) _vnActive = null;
+    });
+    return audio;
+  }
+
+  function startRaf() {
+    let last = 0;
+    function tick() {
+      if (!audio || audio.paused) return;
+      const now = performance.now();
+      if (now - last > 100) {
+        last = now;
+        const cur = audio.currentTime || 0;
+        const dur = audio.duration || 0;
+        timeEl.textContent = fmtTime(cur);
+        const pct = dur > 0 ? cur / dur : 0;
+        const bars = barsEl.querySelectorAll('.chat-vn__bar');
+        const upTo = Math.floor(bars.length * pct);
+        bars.forEach((b, i) => b.classList.toggle('is-played', i < upTo));
+      }
+      const id = requestAnimationFrame(tick);
+      _vnRafs.set(node, id);
+    }
+    const id = requestAnimationFrame(tick);
+    _vnRafs.set(node, id);
+  }
+  function stopRaf() {
+    const id = _vnRafs.get(node);
+    if (id) { cancelAnimationFrame(id); _vnRafs.delete(node); }
+  }
+
+  playBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    ensureAudio();
+    // Pause any other voice note currently playing
+    if (_vnActive && _vnActive !== audio) {
+      try { _vnActive.pause(); } catch {}
+    }
+    if (audio.paused) {
+      audio.play().then(() => {
+        _vnActive = audio;
+        playBtn.textContent = "⏸";
+        node.classList.add("is-playing");
+        startRaf();
+      }).catch(() => {});
+    } else {
+      audio.pause();
+      playBtn.textContent = "▶";
+      node.classList.remove("is-playing");
+      stopRaf();
+    }
+  });
+
+  // Tap anywhere on the bars to seek
+  barsEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    ensureAudio();
+    const rect = barsEl.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    if (audio.duration) audio.currentTime = pct * audio.duration;
+  });
+}
+
+function fmtTime(sec) {
+  if (!Number.isFinite(sec)) return "0:00";
+  const s = Math.max(0, Math.floor(sec));
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function escapeAttr(s) {
+  return String(s ?? "").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
