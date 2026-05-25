@@ -10,7 +10,7 @@ import { toast, toastSuccess, toastError, safe } from "../utils/toast.js";
 import { getSubscription, PLANS } from "../services/subscriptionService.js";
 import { db } from "../firebase.js";
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { askNativeNotifPermission, nativeNotifSupported, nativeNotifPermission } from "../services/notifyService.js";
+import { askNativeNotifPermission, nativeNotifSupported, nativeNotifPermission, spawnHeartBurst, playChime } from "../services/notifyService.js";
 import { setAIDemoEnabled, isAIDemoEnabled } from "../services/aiProviderMock.js";
 
 const THEME_KEY = "nvvunenu.theme";    // legacy — kept for cleanup only
@@ -165,6 +165,13 @@ function shell() {
           </div>
           <button class="btn btn-ghost" id="btnReplayTour">Show tour</button>
         </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Test celebration</div>
+            <div class="settings-sub">Fire the heart-burst overlay and a soft chime.</div>
+          </div>
+          <button class="btn btn-ghost" id="btnTestCelebrate">Celebrate ✨</button>
+        </div>
       </div>
 
       <div class="card settings-section danger" id="setDanger">
@@ -268,6 +275,11 @@ function paint(container, s, sub) {
     try { localStorage.removeItem("nvvunenu.tourSeen"); } catch {}
     toast("Tour reset · heading home");
     if (typeof window.loadPage === "function") window.loadPage("home");
+  });
+  container.querySelector("#btnTestCelebrate")?.addEventListener("click", () => {
+    try { spawnHeartBurst(); } catch {}
+    try { playChime(); } catch {}
+    toast("✨ Celebrate ✨");
   });
   container.querySelector("#btnSignOut").addEventListener("click", async () => {
     await safe(() => signOut(auth), "Couldn't sign out");
