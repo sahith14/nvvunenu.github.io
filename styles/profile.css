@@ -217,3 +217,68 @@
 .profile-hint {
   margin: 8px 0 0; color: var(--muted, #6b5b9b); font-size: .8125rem;
 }
+
+
+
+/* =====================================================================
+   Profile cover banner (gradient picker behind the hero)
+   ===================================================================== */
+.profile-hero {
+  position: relative;
+  padding-top: 76px;       /* room for the cover; avatar floats over the band */
+}
+.profile-cover {
+  position: absolute; inset: 0 0 auto 0; height: 110px;
+  border: 0; padding: 0; cursor: pointer;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  background: transparent;
+  font-family: inherit;
+}
+.profile-cover__gradient {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff,#7ed7ff);
+  transition: background .35s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.profile-cover__edit {
+  position: absolute; top: 8px; right: 10px;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,.85);
+  color: #4f3d80; font-size: 13px;
+  border: 1px solid rgba(255,255,255,.4);
+  box-shadow: 0 4px 10px rgba(0,0,0,.12);
+  transition: transform .15s;
+}
+.profile-cover:hover .profile-cover__edit { transform: scale(1.05); }
+
+/* Per-named-cover gradient mappings (mirror COVER_GRADIENTS in profile.js) */
+.profile-hero[data-cover="aurora"]   .profile-cover__gradient { background: linear-gradient(135deg,#ff7eb6,#9b8cff,#7ed7ff); }
+.profile-hero[data-cover="sunset"]   .profile-cover__gradient { background: linear-gradient(135deg,#ff8a00,#ff5e7e,#7e3aaa); }
+.profile-hero[data-cover="ocean"]    .profile-cover__gradient { background: linear-gradient(135deg,#7ed7ff,#5ec5ff,#3a86ff); }
+.profile-hero[data-cover="forest"]   .profile-cover__gradient { background: linear-gradient(135deg,#a8e6cf,#5ed3a3,#2e8b57); }
+.profile-hero[data-cover="mint"]     .profile-cover__gradient { background: linear-gradient(135deg,#a0f5d2,#7be0a3,#3eb18c); }
+.profile-hero[data-cover="cherry"]   .profile-cover__gradient { background: linear-gradient(135deg,#ffd1e7,#ff7eb6,#ff5e7e); }
+.profile-hero[data-cover="midnight"] .profile-cover__gradient { background: linear-gradient(135deg,#1a1235,#3a2d6e,#7763ff); }
+.profile-hero[data-cover="sand"]     .profile-cover__gradient { background: linear-gradient(135deg,#fff5d1,#ffd47a,#ff8a00); }
+
+/* Picker grid inside the modal */
+.cover-pick {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.cover-pick__btn {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 6px; border-radius: 12px;
+  background: #fff; border: 1px solid rgba(155,140,255,.25);
+  font-family: inherit; cursor: pointer;
+  transition: transform .12s, border-color .12s;
+}
+.cover-pick__btn:hover { transform: translateY(-1px); border-color: #9b8cff; }
+.cover-pick__btn.is-active { border-color: #9b8cff; box-shadow: 0 0 0 2px rgba(155,140,255,.25); }
+.cover-pick__swatch {
+  width: 100%; aspect-ratio: 16/8; border-radius: 8px;
+}
+.cover-pick__label {
+  font-size: .75rem; font-weight: 700; color: #4f3d80; text-align: center;
+  text-transform: uppercase; letter-spacing: .3px;
+}

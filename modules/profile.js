@@ -54,7 +54,11 @@ function paint(s) {
 
   _container.innerHTML = `
     <section class="profile-page stagger">
-      <header class="profile-hero">
+      <header class="profile-hero" data-cover="${escapeHtml(me.coverGradient || 'aurora')}">
+        <button class="profile-cover" id="btnCover" aria-label="Change cover gradient" title="Change cover">
+          <span class="profile-cover__gradient"></span>
+          <span class="profile-cover__edit">🎨</span>
+        </button>
         <button class="profile-avatar-wrap profile-avatar-wrap--aura" data-aura="${auraKey}"
                 id="btnAvatarUpload"
                 title="Change photo" aria-label="Change profile photo">
@@ -185,6 +189,8 @@ function paintPlanRow(sub) {
 function wireActions() {
   // Avatar upload
   _container.querySelector("#btnAvatarUpload")?.addEventListener("click", openAvatarPicker);
+  // Cover gradient picker
+  _container.querySelector("#btnCover")?.addEventListener("click", openCoverPicker);
 
   // Section actions
   _container.querySelectorAll('button[data-act]').forEach((btn) => {
@@ -491,4 +497,66 @@ function lastNDays(n) {
     out.push({ key: `${y}-${m}-${day}`, short: labels[d.getDay()] });
   }
   return out;
+}
+
+
+// =====================================================================
+// Cover gradient picker — 8 named gradients + reset; persists to user doc.
+// =====================================================================
+const COVER_GRADIENTS = [
+  { key: "aurora",   label: "Aurora",   css: "linear-gradient(135deg,#ff7eb6,#9b8cff,#7ed7ff)" },
+  { key: "sunset",   label: "Sunset",   css: "linear-gradient(135deg,#ff8a00,#ff5e7e,#7e3aaa)" },
+  { key: "ocean",    label: "Ocean",    css: "linear-gradient(135deg,#7ed7ff,#5ec5ff,#3a86ff)" },
+  { key: "forest",   label: "Forest",   css: "linear-gradient(135deg,#a8e6cf,#5ed3a3,#2e8b57)" },
+  { key: "mint",     label: "Mint",     css: "linear-gradient(135deg,#a0f5d2,#7be0a3,#3eb18c)" },
+  { key: "cherry",   label: "Cherry",   css: "linear-gradient(135deg,#ffd1e7,#ff7eb6,#ff5e7e)" },
+  { key: "midnight", label: "Midnight", css: "linear-gradient(135deg,#1a1235,#3a2d6e,#7763ff)" },
+  { key: "sand",     label: "Sand",     css: "linear-gradient(135deg,#fff5d1,#ffd47a,#ff8a00)" },
+];
+
+function openCoverPicker() {
+  const me = getState().user || {};
+  const cur = me.coverGradient || "aurora";
+
+  const wrap = document.createElement("div");
+  wrap.className = "tc-modal";   // reuse modal styling
+  wrap.innerHTML = `
+    <div class="tc-modal__panel" role="dialog" aria-modal="true" aria-label="Pick a cover">
+      <div class="tc-modal__head">Pick a cover</div>
+      <div class="tc-modal__body">
+        <div class="cover-pick">
+          ${COVER_GRADIENTS.map(g => `
+            <button class="cover-pick__btn ${g.key === cur ? 'is-active' : ''}"
+                    data-key="${escapeHtml(g.key)}" type="button" title="${escapeHtml(g.label)}">
+              <span class="cover-pick__swatch" style="background:${g.css}"></span>
+              <span class="cover-pick__label">${escapeHtml(g.label)}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+      <div class="tc-modal__actions">
+        <button class="btn btn-ghost" data-act="cancel">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener("click", close);
+
+  wrap.querySelectorAll('.cover-pick__btn').forEach((b) => {
+    b.addEventListener("click", async () => {
+      const key = b.dataset.key;
+      const ok = await safe(() => updateDoc(doc(db, "users", me.uid), {
+        coverGradient: key,
+      }), "Couldn't save cover");
+      if (ok !== false) {
+        // Optimistic visual
+        const hero = _container?.querySelector(".profile-hero");
+        if (hero) hero.setAttribute("data-cover", key);
+        toastSuccess(`Cover · ${key}`);
+        close();
+      }
+    });
+  });
 }
