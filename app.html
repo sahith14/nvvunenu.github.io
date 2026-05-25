@@ -79,6 +79,12 @@
        top of the cute hearts background instead of being foggy. -->
   <link rel="stylesheet" href="styles/no-blur.css">
 
+  <!-- Premium cinematic visual layer — deeper purple gradient body, ambient
+       aurora background, soft neon glow on cards/buttons, smoother page
+       transitions. Loaded AFTER no-blur so it controls colour/atmosphere
+       while the no-blur structural rules stay in effect. -->
+  <link rel="stylesheet" href="styles/premium-look.css">
+
   <!-- Final inline override for the bottom-nav (loaded LAST so it wins
        any cascade fight). Uses very high specificity (html body) to beat
        earlier `body:not(.auth-body) button` rules. -->
@@ -169,25 +175,25 @@
 
     <!-- Desktop side / top navigation (md+ screens) -->
     <nav class="desktop-nav side-nav" id="navDesktop" aria-label="Primary navigation">
-      <button data-page="home"    id="nav-home-desktop"    onclick="loadPage('home')"   ><i class="fas fa-home"></i><span>Home</span></button>
-      <button data-page="feed"    id="nav-feed-desktop"    onclick="loadPage('feed')"   ><i class="fas fa-globe"></i><span>Feed</span></button>
-      <button data-page="search"  id="nav-search-desktop"  onclick="loadPage('search')" ><i class="fas fa-search"></i><span>Search</span></button>
-      <button data-page="space"   id="nav-space-desktop"   onclick="loadPage('space')"  ><i class="fas fa-star"></i><span>Space</span></button>
-      <button data-page="chat"    id="nav-messages-desktop" onclick="loadPage('chat')"  ><i class="fas fa-envelope"></i><span>Messages</span></button>
-      <button data-page="moments" id="nav-moments-desktop" onclick="loadPage('moments')"><i class="fas fa-camera"></i><span>Moments</span></button>
-      <button data-page="bond"    id="nav-partner-desktop" onclick="loadPage('bond')"   ><i class="fas fa-heart"></i><span>Partner</span></button>
-      <button data-page="profile" id="nav-profile-desktop" onclick="loadPage('profile')"><i class="fas fa-user"></i><span>Profile</span></button>
+      <button data-page="home"     id="nav-home-desktop"     onclick="loadPage('home')"    ><i class="fas fa-house"></i><span>Home</span></button>
+      <button data-page="together" id="nav-together-desktop" onclick="loadPage('together')"><i class="fas fa-people-arrows"></i><span>Together</span></button>
+      <button data-page="chat"     id="nav-chat-desktop"     onclick="loadPage('chat')"    ><i class="fas fa-comment-dots"></i><span>Chat</span></button>
+      <button data-page="memories" id="nav-memories-desktop" onclick="loadPage('memories')"><i class="fas fa-camera-retro"></i><span>Memories</span></button>
+      <button data-page="space"    id="nav-space-desktop"    onclick="loadPage('space')"   ><i class="fas fa-star"></i><span>Space</span></button>
+      <button data-page="profile"  id="nav-profile-desktop"  onclick="loadPage('profile')" ><i class="fas fa-user"></i><span>Profile</span></button>
+      <button data-page="feed"     id="nav-feed-desktop"     onclick="loadPage('feed')"    ><i class="fas fa-globe"></i><span>Feed</span></button>
+      <button data-page="search"   id="nav-search-desktop"   onclick="loadPage('search')"  ><i class="fas fa-search"></i><span>Search</span></button>
       <button data-page="settings" id="nav-settings-desktop" onclick="loadPage('settings')"><i class="fas fa-gear"></i><span>Settings</span></button>
     </nav>
 
     <!-- Mobile bottom navigation -->
     <nav class="bottom-nav" id="navBottom">
-      <button data-page="home"    onclick="loadPage('home')"   ><i class="fas fa-home"></i></button>
-      <button data-page="feed"    onclick="loadPage('feed')"   ><i class="fas fa-globe"></i></button>
-      <button data-page="space"   onclick="loadPage('space')"  ><i class="fas fa-star"></i></button>
-      <button data-page="chat"    onclick="loadPage('chat')"   ><i class="fas fa-envelope"></i></button>
-      <button data-page="moments" onclick="loadPage('moments')"><i class="fas fa-camera"></i></button>
-      <button data-page="profile" onclick="loadPage('profile')"><i class="fas fa-user"></i></button>
+      <button data-page="home"     onclick="loadPage('home')"    ><i class="fas fa-house"></i></button>
+      <button data-page="together" onclick="loadPage('together')"><i class="fas fa-people-arrows"></i></button>
+      <button data-page="chat"     onclick="loadPage('chat')"    ><i class="fas fa-comment-dots"></i></button>
+      <button data-page="memories" onclick="loadPage('memories')"><i class="fas fa-camera-retro"></i></button>
+      <button data-page="space"    onclick="loadPage('space')"   ><i class="fas fa-star"></i></button>
+      <button data-page="profile"  onclick="loadPage('profile')" ><i class="fas fa-user"></i></button>
     </nav>
 
     <!-- Toast (used by utils/toast.js) -->

@@ -17,6 +17,7 @@ import { renderFeed, teardownFeed } from './modules/feed.js';
 import { renderSettings }     from './modules/settings.js';
 import { renderSearch }       from './modules/search.js';
 import { renderProfileView }  from './modules/profileView.js';
+import { renderTogether }     from './modules/together.js';
 import { applyTheme, getStoredTheme } from './modules/settings.js';
 // Side-effect: registers window.avatarFor / window.initialAvatar globals
 import './modules/avatar.js';
@@ -38,6 +39,8 @@ const pages = {
   space:        renderSpace,
   chat:         renderChat,
   moments:      renderMoments,
+  memories:     renderMoments,    // alias — Memories tab in the new 6-tab nav
+  together:     renderTogether,   // marquee shared-experience page
   bond:         renderBond,
   profile:      renderProfile,
   subscription: renderSubscription,

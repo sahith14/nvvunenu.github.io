@@ -1,0 +1,219 @@
+/* =====================================================================
+   styles/premium-look.css — premium cinematic visual layer.
+   Loaded ABSOLUTELY LAST (after no-blur.css), so it dominates colour and
+   atmosphere choices while keeping the no-blur structural rules intact.
+
+   Goal: make the cute base feel premium — deeper richer purples, soft neon
+   glow, ambient aurora background, stronger shadows. The interface stays
+   sharp (no backdrop-filter blur on content) but feels luxurious.
+   ===================================================================== */
+
+:root {
+  --nn-purple-deep:   #7763ff;
+  --nn-purple:        #9b8cff;
+  --nn-purple-light:  #c8baff;
+  --nn-pink:          #ff7eb6;
+  --nn-pink-soft:     #ffb6d6;
+  --nn-text:          #1a1235;
+  --nn-text-soft:     #4f3d80;
+  --nn-text-muted:    #7d6ea8;
+  --nn-card:          rgba(255, 255, 255, 0.78);
+  --nn-card-strong:   rgba(255, 255, 255, 0.92);
+  --nn-card-border:   rgba(255, 255, 255, 0.7);
+  --nn-shadow-sm:     0 4px 14px rgba(143, 116, 255, 0.12);
+  --nn-shadow-md:     0 10px 32px rgba(143, 116, 255, 0.18), 0 2px 8px rgba(255, 126, 182, 0.08);
+  --nn-shadow-lg:     0 20px 50px rgba(143, 116, 255, 0.22), 0 4px 14px rgba(255, 126, 182, 0.12);
+  --nn-glow-pink:     0 0 60px rgba(255, 126, 182, 0.35);
+  --nn-glow-purple:   0 0 60px rgba(155, 140, 255, 0.4);
+  --nn-grad-hero:     linear-gradient(135deg, #ff7eb6 0%, #9b8cff 50%, #7ed7ff 100%);
+  --nn-grad-soft:     linear-gradient(180deg, #d9cfff 0%, #c4b5ff 100%);
+  --nn-grad-deep:     linear-gradient(180deg, #b7a9ff 0%, #9b8cff 60%, #d4c8ff 100%);
+}
+
+/* ----- Body: richer, more saturated gradient ----- */
+html, body {
+  background: var(--nn-grad-deep) fixed !important;
+  color: var(--nn-text) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ----- Aurora layer behind hearts: subtle ambient color blob motion ----- */
+body::before {
+  content: "";
+  position: fixed; inset: -10% -10% -10% -10%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(255, 126, 182, 0.35), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 30%, rgba(126, 215, 255, 0.28), transparent 60%),
+    radial-gradient(ellipse 70% 60% at 50% 90%, rgba(167, 139, 250, 0.40), transparent 60%);
+  animation: nn-aurora 18s ease-in-out infinite alternate;
+  filter: blur(40px);
+}
+@keyframes nn-aurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1.02); opacity: 0.85; }
+  50%  { transform: translate3d(2%, -1%, 0) scale(1.06); opacity: 1; }
+  100% { transform: translate3d(-1%, 1%, 0) scale(1.04); opacity: 0.9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+}
+
+/* ----- Cards: premium glass without backdrop-filter (no-blur compatible) ----- */
+.glass, .glass-premium, .auth-card,
+.partner-box, .room-header, .composer-card,
+.checkin-card, .presence-card, .identity-card, .activity-card,
+.plan-card, .game-card, .live-room, .touch-zone,
+.pulse-card, .goal-card, .countdown-card, .recovery-card,
+.bond-modal__panel, .cute-modal-card, .ch-card,
+.feed-composer, .post-card, .ig-post,
+.profile-section, .settings-section,
+.user-card, .search-result {
+  background: var(--nn-card) !important;
+  border: 1px solid var(--nn-card-border) !important;
+  box-shadow: var(--nn-shadow-md) !important;
+  border-radius: 22px !important;
+}
+
+/* Hover lift for primary cards */
+@media (hover: hover) {
+  .activity-card:hover, .game-card:hover,
+  .post-card:hover, .ig-post:hover,
+  .plan-card:hover, .pulse-card:hover {
+    transform: translateY(-3px) scale(1.012);
+    box-shadow: var(--nn-shadow-lg) !important;
+    transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1);
+  }
+}
+
+/* ----- Primary CTA buttons: gradient + glow ----- */
+.btn-primary,
+.followBtn, .request-btn, .edit-btn, .sub-btn,
+.mem-add-btn, .composer-actions button:first-child,
+.space-btn, .accept,
+.btn.btn-primary, button.btn-primary {
+  background: var(--nn-grad-hero) !important;
+  color: #fff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  box-shadow: 0 8px 24px rgba(255, 126, 182, 0.4),
+              0 2px 8px rgba(155, 140, 255, 0.25) !important;
+  letter-spacing: 0.2px;
+}
+.btn-primary:hover, button.btn-primary:hover {
+  filter: brightness(1.06) saturate(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(255, 126, 182, 0.5),
+              0 4px 14px rgba(155, 140, 255, 0.35) !important;
+}
+
+/* ----- Secondary buttons get a glassy frame ----- */
+.btn-ghost, button.btn-ghost {
+  background: var(--nn-card) !important;
+  border: 1px solid var(--nn-card-border) !important;
+  color: var(--nn-text) !important;
+  box-shadow: var(--nn-shadow-sm) !important;
+}
+.btn-ghost:hover {
+  background: var(--nn-card-strong) !important;
+  transform: translateY(-1px);
+}
+
+/* ----- Headings: cinematic gradient text ----- */
+.gradient-text, .home-greeting, h1.page-title,
+.bond-hero h1, .home-hero h1 {
+  background: var(--nn-grad-hero) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* ----- Status pills: live-presence indicators ----- */
+.nn-presence {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 12px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(155, 140, 255, 0.25);
+  font-size: 0.8125rem; font-weight: 600; color: var(--nn-text-soft);
+  box-shadow: var(--nn-shadow-sm);
+}
+.nn-presence__dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  animation: nn-pulse 2s infinite;
+}
+.nn-presence__dot.is-idle      { background: #fbbf24; animation: none; }
+.nn-presence__dot.is-offline   { background: #cbd5e1; animation: none; }
+.nn-presence__dot.is-busy      { background: #f87171; animation: none; }
+@keyframes nn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
+  50%      { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+}
+
+/* ----- Page transitions: smooth Apple-like ----- */
+.page-enter {
+  animation: nn-page-in .35s cubic-bezier(.22,1,.36,1);
+}
+@keyframes nn-page-in {
+  from { opacity: 0; transform: translateY(8px) scale(.998); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* ----- Inputs: refined glass ----- */
+body:not(.auth-body) input[type="text"],
+body:not(.auth-body) input[type="email"],
+body:not(.auth-body) input[type="password"],
+body:not(.auth-body) input[type="search"],
+body:not(.auth-body) input[type="url"],
+body:not(.auth-body) input[type="date"],
+body:not(.auth-body) textarea {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(155, 140, 255, 0.28) !important;
+  border-radius: 14px !important;
+  padding: 12px 14px !important;
+  color: var(--nn-text) !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: border-color .15s, box-shadow .15s;
+}
+body:not(.auth-body) input:focus,
+body:not(.auth-body) textarea:focus {
+  border-color: var(--nn-purple-deep) !important;
+  box-shadow: 0 0 0 4px rgba(155, 140, 255, 0.18),
+              inset 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  outline: none;
+}
+
+/* ----- Floating ambient motes (richer than the existing hearts) ----- */
+.nn-mote {
+  position: fixed;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,126,182,0.9), transparent);
+  pointer-events: none; z-index: 0;
+  animation: nn-mote-float linear infinite;
+  filter: blur(0.5px);
+}
+@keyframes nn-mote-float {
+  from { transform: translateY(110vh) translateX(0)   scale(.8); opacity: 0; }
+  10%  { opacity: 0.7; }
+  90%  { opacity: 0.5; }
+  to   { transform: translateY(-10vh)  translateX(30px) scale(1.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nn-mote { display: none !important; }
+}
+
+/* ----- Bottom nav: stronger glow on active button ----- */
+html body nav.bottom-nav button.active,
+html body .desktop-nav.side-nav button.active {
+  background: var(--nn-grad-hero) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 22px rgba(255, 126, 182, 0.45),
+              inset 0 0 12px rgba(255, 255, 255, 0.4) !important;
+}
+html body nav.bottom-nav button.active i,
+html body .desktop-nav.side-nav button.active i { color: #fff !important; }
