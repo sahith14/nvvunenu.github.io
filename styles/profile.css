@@ -326,12 +326,25 @@
   padding: 18px 8px; font-size: .875rem;
 }
 .prof-call {
-  display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: center;
+  display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; align-items: center;
   padding: 8px 12px;
   background: rgba(255,255,255,.7);
   border: 1px solid rgba(155,140,255,.14);
   border-radius: 12px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .12s, border-color .15s, background .15s;
 }
+.prof-call:hover { transform: translateY(-1px); border-color: rgba(155,140,255,.45); }
+.prof-call__cb {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  color: #fff; font-size: 13px; font-weight: 700;
+  opacity: 0; transition: opacity .15s;
+}
+.prof-call:hover .prof-call__cb { opacity: 1; }
 .prof-call__icon {
   width: 32px; height: 32px; border-radius: 50%;
   display: grid; place-items: center;

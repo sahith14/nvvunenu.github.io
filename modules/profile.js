@@ -13,6 +13,7 @@ import { skeletonList } from "../utils/skeleton.js";
 import { uploadMedia, compressImage } from "../services/storageService.js";
 import { setUsername, isUsernameAvailable } from "../services/feedService.js";
 import { getSubscription, PLANS } from "../services/subscriptionService.js";
+import { startVideoCall, startAudioCall } from "./callView.js";
 
 let _container = null;
 let _offState  = null;
@@ -711,15 +712,27 @@ function paintRecentCalls(host, rows, partnerName) {
       ? formatCallDuration(r.durationSec)
       : (r.direction === "incoming" ? "Missed" : "No answer");
     return `
-      <div class="prof-call ${dirCls}">
+      <button class="prof-call ${dirCls}" type="button" data-kind="${escapeHtml(r.kind || 'audio')}" data-partner="${escapeHtml(r.partnerId || '')}">
         <span class="prof-call__icon">${icon}</span>
         <div class="prof-call__body">
           <div class="prof-call__name"><span class="prof-call__dir">${dirIcon}</span> ${escapeHtml(partnerName)}</div>
           <div class="prof-call__sub">${escapeHtml(dur)} · ${escapeHtml(ago)}</div>
         </div>
-      </div>
+        <span class="prof-call__cb" aria-hidden="true">↻</span>
+      </button>
     `;
   }).join("");
+
+  // Wire callback clicks
+  host.querySelectorAll(".prof-call").forEach((row) => {
+    row.addEventListener("click", () => {
+      const kind = row.dataset.kind || "audio";
+      const partnerId = row.dataset.partner;
+      if (!partnerId) return;
+      if (kind === "video") startVideoCall(partnerId, partnerName);
+      else                  startAudioCall(partnerId, partnerName);
+    });
+  });
 }
 
 function friendlyAgo(d) {
