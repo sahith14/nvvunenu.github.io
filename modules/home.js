@@ -48,6 +48,19 @@ export function renderHome(container) {
         <h1 class="home-greeting" id="homeGreeting">…</h1>
       </header>
 
+      <section class="welcome-tour" id="welcomeTour" hidden>
+        <button class="welcome-tour__close" id="welcomeTourClose" aria-label="Dismiss">✕</button>
+        <div class="welcome-tour__title">Welcome to Nuvvu Nenu 💜</div>
+        <p class="welcome-tour__sub">A small, soft place for the two of you. Here's what's waiting:</p>
+        <ul class="welcome-tour__list">
+          <li><span>🌙</span><div><strong>Share a mood</strong>Tap an emoji on the check-in card to keep the daily streak alive.</div></li>
+          <li><span>🫧</span><div><strong>Together</strong>Watch, listen, sleep, and play in shared rooms — both of you in real time.</div></li>
+          <li><span>💞</span><div><strong>Bond</strong>A live pulse + Question of the Week + kindness streak that grow with you.</div></li>
+          <li><span>📷</span><div><strong>Memories</strong>Photos, captions, favourites, and an AI suggest button when words don't come.</div></li>
+        </ul>
+        <button class="btn btn-primary welcome-tour__cta" id="welcomeTourCta">Start exploring</button>
+      </section>
+
       <section class="presence-card" id="presenceCard" role="button" tabindex="0">
         <div class="presence-avatar">
           <img id="partnerPhoto" alt="" hidden referrerpolicy="no-referrer">
@@ -372,6 +385,9 @@ function wireQuickActions() {
   const input = _container.querySelector("#homeCaptureInput");
   fab?.addEventListener("click", () => input?.click());
   input?.addEventListener("change", onCaptureFile);
+
+  // First-run welcome tour
+  initWelcomeTour();
 }
 
 // ---------- Actions ----------
@@ -708,4 +724,26 @@ function todayKeyLocal(d = new Date()) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+
+// =====================================================================
+// First-run welcome tour — shown only once per device.
+// =====================================================================
+const TOUR_KEY = "nvvunenu.tourSeen";
+function initWelcomeTour() {
+  const tour = _container?.querySelector("#welcomeTour");
+  if (!tour) return;
+  let seen = false;
+  try { seen = localStorage.getItem(TOUR_KEY) === "1"; } catch {}
+  if (seen) { tour.hidden = true; return; }
+  tour.hidden = false;
+
+  const dismiss = () => {
+    tour.classList.add("is-leaving");
+    setTimeout(() => { tour.hidden = true; tour.classList.remove("is-leaving"); }, 240);
+    try { localStorage.setItem(TOUR_KEY, "1"); } catch {}
+  };
+  _container.querySelector("#welcomeTourClose").addEventListener("click", dismiss);
+  _container.querySelector("#welcomeTourCta").addEventListener("click", dismiss);
 }

@@ -341,3 +341,77 @@
   0%, 100% { box-shadow: 0 4px 10px rgba(255,196,80,.20); }
   50%      { box-shadow: 0 8px 18px rgba(255,126,182,.40); }
 }
+
+
+
+/* First-run welcome tour card */
+.welcome-tour {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,196,80,.16), rgba(255,126,182,.16), rgba(155,140,255,.18));
+  border: 1px solid rgba(155,140,255,.28);
+  border-radius: 22px;
+  padding: 22px 22px 20px;
+  margin: 0 0 14px;
+  box-shadow: 0 14px 32px rgba(155,140,255,.16);
+  animation: welcome-in .4s cubic-bezier(.22,1,.36,1);
+}
+.welcome-tour.is-leaving {
+  animation: welcome-out .24s ease-in forwards;
+}
+@keyframes welcome-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+@keyframes welcome-out {
+  to { opacity: 0; transform: translateY(-6px) scale(.98); }
+}
+.welcome-tour__close {
+  position: absolute; top: 10px; right: 10px;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(155,140,255,.25);
+  background: rgba(255,255,255,.85);
+  color: var(--muted, #6b5b9b); cursor: pointer;
+  font-family: inherit; font-size: 12px;
+}
+.welcome-tour__close:hover { background: rgba(255,255,255,1); }
+.welcome-tour__title {
+  font-weight: 800; font-size: 1.125rem;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.welcome-tour__sub {
+  margin: 6px 0 14px;
+  color: var(--text-secondary, #4f3d80);
+  font-size: .9375rem; line-height: 1.5;
+}
+.welcome-tour__list {
+  list-style: none; padding: 0; margin: 0 0 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.welcome-tour__list li {
+  display: grid; grid-template-columns: 30px 1fr; gap: 10px;
+  align-items: start;
+}
+.welcome-tour__list li > span {
+  width: 30px; height: 30px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(155,140,255,.18);
+  font-size: 16px;
+}
+.welcome-tour__list li > div {
+  font-size: .875rem; color: var(--text, #1a1235); line-height: 1.45;
+}
+.welcome-tour__list li strong {
+  display: block;
+  font-weight: 800; font-size: .9375rem; color: var(--text, #1a1235);
+  margin-bottom: 1px;
+}
+.welcome-tour__cta {
+  width: 100%;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff) !important;
+  color: #fff !important; border: 0 !important;
+  font-weight: 700 !important; padding: 11px 18px !important;
+  border-radius: 999px !important;
+  box-shadow: 0 8px 18px rgba(155,140,255,.32);
+}
