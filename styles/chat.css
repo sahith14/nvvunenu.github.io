@@ -843,3 +843,46 @@
 .chat-page[data-chat-theme="midnight"] .chat-receipt__init {
   border-color: #2a2055;
 }
+
+
+
+/* Memory share bubble in chat */
+.chat-mem {
+  display: flex; flex-direction: column;
+  width: 240px; min-width: 220px; max-width: 100%;
+  border-radius: 14px; overflow: hidden;
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(155,140,255,.3);
+  cursor: pointer;
+  transition: transform .15s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.chat-mem:hover { transform: translateY(-1px); }
+.chat-mem__img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
+}
+.chat-mem__body { padding: 10px 12px; }
+.chat-mem__chip {
+  display: inline-block; padding: 2px 10px;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  color: #fff; border-radius: 999px;
+  font-size: .625rem; font-weight: 800; letter-spacing: .4px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.chat-mem__title {
+  font-weight: 700; font-size: .9375rem; color: var(--text, #1a1235);
+  word-break: break-word;
+}
+.chat-mem__date {
+  font-size: .75rem; color: var(--muted, #6b5b9b); margin-top: 2px;
+}
+.chat-bubble.mine .chat-mem {
+  background: rgba(255,255,255,.92);
+  border-color: rgba(255,255,255,.6);
+}
+.chat-page[data-chat-theme="midnight"] .chat-mem {
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
+}
+.chat-page[data-chat-theme="midnight"] .chat-mem__title { color: #f4efff; }
+.chat-page[data-chat-theme="midnight"] .chat-mem__date  { color: #c8baff; }

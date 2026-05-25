@@ -305,6 +305,8 @@ function renderMessages(msgs) {
     let body = '';
     if (m.kind === 'poll') {
       body = renderPollBody(m);
+    } else if (m.kind === 'memory') {
+      body = renderMemoryBubble(m);
     } else if (m.audio) {
       body = renderVoiceNote(m);
     } else if (m.image) {
@@ -1585,3 +1587,30 @@ function paintSeenAvatar(msgs) {
   // Insert right after the message row
   row.insertAdjacentElement("afterend", receipt);
 }
+
+
+// =====================================================================
+// Memory bubble — renders a special card shared from /memories.
+// =====================================================================
+function renderMemoryBubble(m) {
+  const mem = m.memory || {};
+  const date = (mem.date || "").trim();
+  return `
+    <div class="chat-mem" data-mem-id="${escapeAttr(mem.id || '')}">
+      ${mem.image ? `<img class="chat-mem__img" src="${escapeAttr(mem.image)}" alt="" referrerpolicy="no-referrer">` : ''}
+      <div class="chat-mem__body">
+        <div class="chat-mem__chip">📷 Memory</div>
+        <div class="chat-mem__title">${escapeHtml(mem.title || "A moment together")}</div>
+        ${date ? `<div class="chat-mem__date">${escapeHtml(date)}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// Memory bubble click → jump to /memories
+document.addEventListener("click", (e) => {
+  const card = e.target.closest?.(".chat-mem");
+  if (!card) return;
+  if (e.target.closest(".chat-rxn-picker")) return;
+  window.loadPage?.("memories");
+}, true);

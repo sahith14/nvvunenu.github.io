@@ -9,6 +9,7 @@ import { onAppState, getState } from "../state/appState.js";
 import { skeletonList } from "../utils/skeleton.js";
 import { toast, toastSuccess, toastWarn, toastError, safe } from "../utils/toast.js";
 import { addMemory, subscribeRecent, deleteMemory, toggleFavoriteMemory } from "../services/memoryService.js";
+import { sendMemory, chatIdFor } from "../services/chatService.js";
 
 let _container       = null;
 let _offState        = null;
@@ -319,6 +320,21 @@ function renderShell() {
         box-shadow: 0 4px 12px rgba(255,138,0,.45);
       }
 
+      .mem-card__share {
+        position: absolute; top: 10px; left: 50px;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(0,0,0,.45); color: #fff;
+        border: 0; font-size: 14px; cursor: pointer;
+        font-family: inherit;
+        opacity: 0;
+        transition: opacity .2s, transform .15s, background .15s;
+      }
+      .mem-card:hover .mem-card__share,
+      .mem-card:focus-within .mem-card__share { opacity: 1; }
+      .mem-card__share:hover  { transform: scale(1.05); background: rgba(0,0,0,.65); }
+      .mem-card__share.is-saving { animation: mem-share-spin .9s linear infinite; pointer-events: none; }
+      @keyframes mem-share-spin { to { transform: rotate(360deg); } }
+
       /* PHOTOS GRID */
       .mem-grid {
         display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
@@ -548,6 +564,7 @@ function renderCardHTML(m) {
       </div>
       <button class="mem-card__del" data-act="delete" data-id="${escapeAttr(m.id)}" aria-label="Delete">🗑</button>
       <button class="mem-card__fav ${(m.favoriteByUids||[]).length ? 'is-fav':''}" data-act="favorite" data-id="${escapeAttr(m.id)}" aria-label="Favorite">${(m.favoriteByUids||[]).length ? '★' : '☆'}</button>
+      <button class="mem-card__share" data-act="share-chat" data-id="${escapeAttr(m.id)}" title="Share to chat" aria-label="Share to chat">↗</button>
     </article>
   `;
 }
@@ -557,9 +574,31 @@ function wireCards(host) {
     el.addEventListener("click", (e) => {
       if (e.target.closest('[data-act="delete"]')) return;
       if (e.target.closest('[data-act="favorite"]')) return;
+      if (e.target.closest('[data-act="share-chat"]')) return;
       const id = el.dataset.id;
       const m = _allMemories.find((x) => x.id === id);
       if (m) openLightbox(m);
+    });
+  });
+  host.querySelectorAll('[data-act="share-chat"]').forEach((b) => {
+    b.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const id = b.dataset.id;
+      const m = _allMemories.find((x) => x.id === id);
+      if (!m) return;
+      const s = getState();
+      if (!s.partnerId) { toastWarn("Connect with your partner first"); return; }
+      const myUid = s.user?.uid;
+      const chatId = chatIdFor(myUid, s.partnerId);
+      b.classList.add("is-saving");
+      const ok = await safe(() => sendMemory(chatId, s.partnerId, {
+        id: m.id, title: m.title, date: m.date, image: m.mediaUrl,
+      }), "Couldn't share");
+      b.classList.remove("is-saving");
+      if (ok !== false) {
+        toastSuccess("Shared 💌");
+        setTimeout(() => window.loadPage?.("chat"), 350);
+      }
     });
   });
   host.querySelectorAll('[data-act="favorite"]').forEach((b) => {

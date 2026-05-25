@@ -292,3 +292,44 @@ export async function deleteMessage(chatId, msgId) {
   if (!chatId || !msgId) return;
   await deleteDoc(doc(db, "chats", chatId, "messages", msgId));
 }
+
+
+
+// =====================================================================
+// Share a memory to chat — special message kind 'memory' rendered as
+// a card bubble. Stores a snapshot of the memory so the bubble keeps
+// rendering even if the memory doc is later deleted.
+// =====================================================================
+export async function sendMemory(chatId, partnerId, memorySnapshot) {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !chatId || !partnerId || !memorySnapshot?.id) return null;
+
+  const batch = writeBatch(db);
+  const msgRef  = doc(collection(db, "chats", chatId, "messages"));
+  const chatRef = doc(db, "chats", chatId);
+
+  batch.set(msgRef, {
+    kind: "memory",
+    sender: uid,
+    time: serverTimestamp(),
+    status: "sent",
+    deliveredAt: null, seenAt: null,
+    memory: {
+      id:    String(memorySnapshot.id),
+      title: String(memorySnapshot.title || "").slice(0, 120),
+      date:  String(memorySnapshot.date  || ""),
+      image: String(memorySnapshot.image || memorySnapshot.mediaUrl || ""),
+    },
+    reactions: {}
+  });
+  batch.update(chatRef, {
+    lastMessage:        `📷 ${(memorySnapshot.title || "Memory").slice(0, 180)}`,
+    lastMessageTime:    serverTimestamp(),
+    lastMessageSender:  uid,
+    [`unread.${partnerId}`]: increment(1),
+    [`unread.${uid}`]:       0,
+    [`typing.${uid}`]:       false
+  });
+  await batch.commit();
+  return msgRef.id;
+}
