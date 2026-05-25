@@ -20,6 +20,7 @@ import { gateVoiceNote } from '../services/featureGate.js';
 import { startVideoCall, startAudioCall } from './callView.js';
 import { subscribeCoupleMeta } from '../services/coupleService.js';
 import { addMemoryFromUrl } from '../services/memoryService.js';
+import { aiCall } from '../services/aiProvider.js';
 
 let _container       = null;
 let _offState        = null;
@@ -1645,17 +1646,9 @@ async function transcribeVoiceNote(button) {
   wrap.querySelector('.chat-vn__btx')?.remove();
   wrap.appendChild(slot);
 
-  const provider = (typeof window !== "undefined") ? window.__AI_PROVIDER__ : null;
-  let text = null;
-  if (provider && typeof provider.transcribe === "function") {
-    try {
-      const audioEl = wrap.querySelector('.chat-vn');
-      const url = audioEl?.dataset?.src;
-      if (url) {
-        text = await Promise.resolve(provider.transcribe(url));
-      }
-    } catch { /* fall through to placeholder */ }
-  }
+  const audioEl = wrap.querySelector('.chat-vn');
+  const url = audioEl?.dataset?.src;
+  let text = url ? await aiCall("transcribe", url) : null;
   if (!text || typeof text !== "string") {
     text = "Transcripts arrive once we wire a speech-to-text provider. Tap the heart on any note in the meantime.";
   }
