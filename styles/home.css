@@ -171,3 +171,56 @@
 @media (max-width: 380px) {
   .hm-mood-grid { grid-template-columns: repeat(3, 1fr) !important; }
 }
+
+
+
+/* Anniversary banner — appears within 14 days of the next month/day occurrence */
+.anniv-banner {
+  display: grid; grid-template-columns: 48px 1fr auto; gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255,196,80,.18), rgba(255,126,182,.16), rgba(155,140,255,.16));
+  border: 1px solid rgba(255,196,80,.35);
+  position: relative; overflow: hidden;
+  box-shadow: 0 12px 28px rgba(255,196,80,.12);
+}
+.anniv-banner::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(circle at 20% -20%, rgba(255,255,255,.4), transparent 60%);
+  pointer-events: none;
+}
+.anniv-banner > * { position: relative; z-index: 1; }
+.anniv-banner__icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  display: grid; place-items: center;
+  font-size: 26px;
+  background: linear-gradient(135deg, rgba(255,255,255,.85), rgba(255,235,180,.7));
+  border: 1px solid rgba(255,196,80,.4);
+}
+.anniv-banner__title {
+  font-weight: 800; font-size: 1rem;
+  background: linear-gradient(135deg,#ffb347,#ff7eb6,#9b8cff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.anniv-banner__sub {
+  margin-top: 2px; color: var(--text-secondary, #4f3d80);
+  font-size: .8125rem; line-height: 1.3;
+}
+.anniv-banner__cta {
+  padding: 8px 14px; border-radius: 999px;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff) !important;
+  color: #fff !important; border: 0 !important;
+  font-weight: 700 !important; font-size: .8125rem;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(155,140,255,.3);
+}
+.anniv-banner.is-today {
+  background: linear-gradient(135deg, rgba(255,126,182,.25), rgba(255,196,80,.20), rgba(155,140,255,.20));
+  border-color: rgba(255,126,182,.5);
+  animation: anniv-glow 2.6s ease-in-out infinite;
+}
+@keyframes anniv-glow {
+  0%, 100% { box-shadow: 0 12px 28px rgba(255,126,182,.18); }
+  50%      { box-shadow: 0 18px 40px rgba(255,126,182,.4); }
+}

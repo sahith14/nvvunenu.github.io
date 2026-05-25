@@ -79,6 +79,15 @@ export function renderHome(container) {
         <div class="stat-card"><div class="num" id="memCount">—</div><div class="label">Memories</div></div>
       </section>
 
+      <section class="anniv-banner" id="annivBanner" hidden>
+        <div class="anniv-banner__icon">🎂</div>
+        <div class="anniv-banner__body">
+          <div class="anniv-banner__title" id="annivBannerTitle">Anniversary coming up</div>
+          <div class="anniv-banner__sub"   id="annivBannerSub">…</div>
+        </div>
+        <button class="btn anniv-banner__cta" id="annivBannerCta">Plan</button>
+      </section>
+
       <section class="ai-recap" id="aiRecap">
         <div class="ai-recap__head">
           <span class="ai-recap__badge">✨ AI</span>
@@ -203,6 +212,7 @@ function paint(s) {
   if (totalDaysEl) {
     totalDaysEl.textContent = startTs ? daysTogether({ toMillis: () => startTs }) : "—";
   }
+  paintAnnivBanner(startTs);
 }
 
 function paintMeta(meta, s) {
@@ -461,4 +471,58 @@ function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[c]));
+}
+
+
+
+// =====================================================================
+// Anniversary banner — surfaces only within 14 days of the next
+// month/day occurrence of the start date. Quietly hidden otherwise.
+// =====================================================================
+function paintAnnivBanner(startTs) {
+  const banner = _container?.querySelector("#annivBanner");
+  if (!banner) return;
+  if (!startTs) { banner.hidden = true; return; }
+
+  const start = new Date(startTs);
+  const today = new Date();
+  // Next anniversary is the start month/day in either this year or next.
+  let next = new Date(today.getFullYear(), start.getMonth(), start.getDate());
+  // Strip time; compare against today at midnight
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (next < todayMid) next.setFullYear(today.getFullYear() + 1);
+  const days = Math.round((next - todayMid) / 86400000);
+  const yearsAway = next.getFullYear() - start.getFullYear();
+
+  // Hide when too far out
+  if (days > 14) { banner.hidden = true; return; }
+
+  const titleEl = _container.querySelector("#annivBannerTitle");
+  const subEl   = _container.querySelector("#annivBannerSub");
+  const ctaEl   = _container.querySelector("#annivBannerCta");
+  const dateStr = next.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+
+  let titleTxt = "";
+  let subTxt   = "";
+  if (days === 0) {
+    titleTxt = "Happy anniversary 💜";
+    subTxt   = `Year ${yearsAway} together — celebrate today.`;
+    banner.classList.add("is-today");
+  } else if (days === 1) {
+    titleTxt = "Anniversary tomorrow";
+    subTxt   = `${dateStr} · year ${yearsAway} together. Plan something soft.`;
+    banner.classList.remove("is-today");
+  } else {
+    titleTxt = `${days} days to your anniversary`;
+    subTxt   = `${dateStr} · year ${yearsAway} together.`;
+    banner.classList.remove("is-today");
+  }
+
+  if (titleEl) titleEl.textContent = titleTxt;
+  if (subEl)   subEl.textContent   = subTxt;
+  if (ctaEl) {
+    ctaEl.textContent = days === 0 ? "Open Bond" : "Plan a date";
+    ctaEl.onclick = () => window.loadPage?.(days === 0 ? "bond" : "dates");
+  }
+  banner.hidden = false;
 }
