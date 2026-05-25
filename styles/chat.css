@@ -674,3 +674,25 @@
   outline: 3px solid #ffb347;
   box-shadow: 0 0 0 6px rgba(255,196,80,.25);
 }
+
+
+
+/* Edit message modal textarea */
+#editMsgInput {
+  width: 100%; min-height: 110px;
+  padding: 10px 12px;
+  border: 1px solid rgba(155,140,255,.3);
+  border-radius: 12px;
+  font-family: inherit; font-size: 1rem;
+  color: var(--text, #1a1235);
+  background: rgba(255,255,255,.95);
+  resize: vertical;
+}
+#editMsgInput:focus {
+  outline: none;
+  border-color: #9b8cff;
+  box-shadow: 0 0 0 3px rgba(155,140,255,.2);
+}
+.chat-rxn-picker__btn--edit { font-size: 16px; }
+.chat-rxn-picker__btn--del  { font-size: 16px; }
+.chat-rxn-picker__btn--del:hover { background: rgba(255,99,99,.12); }

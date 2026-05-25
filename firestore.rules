@@ -77,9 +77,15 @@ service cloud.firestore {
         allow create: if inCouple(coupleId)
           && request.resource.data.sender == uid();
         allow update: if inCouple(coupleId)
-          // deliveredAt/seenAt/reactions/votes writable by the non-sender too
-          && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['deliveredAt','seenAt','status','reactions','votes']);
+          && (
+            // deliveredAt/seenAt/reactions/votes writable by the non-sender too
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['deliveredAt','seenAt','status','reactions','votes'])
+            // Author can edit their own message text + flag editedAt
+            || (resource.data.sender == uid()
+                && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['text','editedAt']))
+          );
         allow delete: if inCouple(coupleId)
           && resource.data.sender == uid();
       }

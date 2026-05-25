@@ -12,7 +12,8 @@ import {
   ensureChat, subscribeMessages, sendText, setTyping,
   markDeliveredAndSeen, toggleReaction, subscribeChatMeta, renderTicks,
   sendPoll, votePoll,
-  pinMessage, unpinMessage
+  pinMessage, unpinMessage,
+  editText, deleteMessage
 } from '../services/chatService.js';
 import { rememberMessage, suggestReplies } from '../services/aiReply.js';
 import { gateVoiceNote } from '../services/featureGate.js';
@@ -315,7 +316,7 @@ function renderMessages(msgs) {
           ${quote}
           <div class="chat-text">${body}</div>
           <div class="chat-meta">
-            <span class="chat-time">${time}</span>
+            <span class="chat-time">${time}${m.editedAt ? ' · edited' : ''}</span>
             ${mine ? renderTicks(m, _myUid) : ''}
           </div>
           ${reactions}
@@ -805,6 +806,8 @@ function showReactionPicker(row) {
 
   const id = row?.dataset.id;
   if (!id) return;
+  const msg = _lastMsgs.find((x) => x.id === id);
+  const isMine = msg?.sender === _myUid;
   const bubble = row.querySelector(".chat-bubble");
   const rect = (bubble || row).getBoundingClientRect();
 
@@ -815,6 +818,14 @@ function showReactionPicker(row) {
   `).join("") + `
     <button class="chat-rxn-picker__btn chat-rxn-picker__btn--reply" data-act="reply" type="button" aria-label="Reply">↩</button>
     <button class="chat-rxn-picker__btn chat-rxn-picker__btn--pin"   data-act="pin"   type="button" aria-label="Pin">📌</button>
+    ${isMine && msg?.kind !== "poll" && !msg?.audio && !msg?.image
+      ? `<button class="chat-rxn-picker__btn chat-rxn-picker__btn--edit" data-act="edit" type="button" aria-label="Edit">✏️</button>`
+      : ""
+    }
+    ${isMine
+      ? `<button class="chat-rxn-picker__btn chat-rxn-picker__btn--del"  data-act="del"  type="button" aria-label="Delete">🗑</button>`
+      : ""
+    }
   `;
   document.body.appendChild(picker);
 
@@ -838,6 +849,10 @@ function showReactionPicker(row) {
         startReply(id);
       } else if (b.dataset.act === "pin") {
         togglePin(id);
+      } else if (b.dataset.act === "edit") {
+        openEditMessageModal(id);
+      } else if (b.dataset.act === "del") {
+        openDeleteMessageModal(id);
       } else {
         const emoji = b.dataset.e;
         toggleReaction(_chatId, id, emoji).catch(() => {});
@@ -1311,4 +1326,79 @@ function clearSearchHighlights() {
         .forEach((r) => r.classList.remove("is-search-match"));
   stream.querySelectorAll(".chat-row.is-search-current")
         .forEach((r) => r.classList.remove("is-search-current"));
+}
+
+
+// =====================================================================
+// Edit / delete a message — only your own.
+// =====================================================================
+function openEditMessageModal(msgId) {
+  const msg = _lastMsgs.find((x) => x.id === msgId);
+  if (!msg) return;
+  if (msg.sender !== _myUid) return;
+  const cur = String(msg.text || "");
+
+  const wrap = document.createElement("div");
+  wrap.className = "tc-modal";
+  wrap.innerHTML = `
+    <div class="tc-modal__panel" role="dialog" aria-modal="true" aria-label="Edit message">
+      <div class="tc-modal__head">Edit message</div>
+      <div class="tc-modal__body">
+        <textarea id="editMsgInput" rows="4" maxlength="2000" placeholder="Edit your message…"></textarea>
+        <p class="tc-fineprint">Edits show an "edited" tag next to the time.</p>
+      </div>
+      <div class="tc-modal__actions">
+        <button class="btn btn-ghost"   data-act="cancel">Cancel</button>
+        <button class="btn btn-primary" data-act="ok">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const ta = wrap.querySelector("#editMsgInput");
+  ta.value = cur; ta.focus(); ta.setSelectionRange(cur.length, cur.length);
+
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener("click", close);
+  wrap.querySelector('[data-act="ok"]').addEventListener("click", async () => {
+    const v = ta.value.trim();
+    if (!v) { toastWarn("Type something"); return; }
+    if (v === cur) { close(); return; }
+    const okBtn = wrap.querySelector('[data-act="ok"]');
+    okBtn.disabled = true;
+    await safe(() => editText(_chatId, msgId, v), "Couldn't update");
+    close();
+  });
+}
+
+function openDeleteMessageModal(msgId) {
+  const msg = _lastMsgs.find((x) => x.id === msgId);
+  if (!msg) return;
+  if (msg.sender !== _myUid) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "tc-modal";
+  wrap.innerHTML = `
+    <div class="tc-modal__panel" role="dialog" aria-modal="true" aria-label="Delete message">
+      <div class="tc-modal__head">Delete this message?</div>
+      <div class="tc-modal__body">
+        <p>It will disappear for both of you. There's no undo.</p>
+      </div>
+      <div class="tc-modal__actions">
+        <button class="btn btn-ghost"  data-act="cancel">Cancel</button>
+        <button class="btn btn-danger" data-act="ok">Delete</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener("click", close);
+  wrap.querySelector('[data-act="ok"]').addEventListener("click", async () => {
+    const okBtn = wrap.querySelector('[data-act="ok"]');
+    okBtn.disabled = true;
+    await safe(() => deleteMessage(_chatId, msgId), "Couldn't delete");
+    toast("Message deleted");
+    close();
+  });
 }

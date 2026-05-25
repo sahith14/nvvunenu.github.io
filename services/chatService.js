@@ -23,7 +23,8 @@
 import {
   collection, doc, query, where, orderBy, limit, startAfter,
   onSnapshot, getDocs, getDoc, addDoc, updateDoc, writeBatch,
-  setDoc, serverTimestamp, increment, arrayUnion, arrayRemove
+  setDoc, serverTimestamp, increment, arrayUnion, arrayRemove,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db, auth } from "../firebase.js";
 import { makeCoupleId } from "../utils/coupleId.js";
@@ -271,4 +272,23 @@ export async function unpinMessage(chatId, snapshot) {
   await updateDoc(doc(db, "chats", chatId), {
     pinnedMsgs: arrayRemove(snapshot),
   });
+}
+
+
+// =====================================================================
+// Edit / delete a message (only your own).
+// =====================================================================
+export async function editText(chatId, msgId, newText) {
+  const uid = auth.currentUser?.uid;
+  const trimmed = String(newText || "").trim();
+  if (!uid || !chatId || !msgId || !trimmed) return;
+  await updateDoc(doc(db, "chats", chatId, "messages", msgId), {
+    text: trimmed,
+    editedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteMessage(chatId, msgId) {
+  if (!chatId || !msgId) return;
+  await deleteDoc(doc(db, "chats", chatId, "messages", msgId));
 }
