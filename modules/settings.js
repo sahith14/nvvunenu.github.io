@@ -38,6 +38,25 @@ export function setNotifyEnabled(on) {
   try { localStorage.setItem(NOTIFY_KEY, on ? "1" : "0"); } catch {}
 }
 
+// =====================================================================
+// Notification snooze — short-term mute. Persists ms-since-epoch
+// timestamp; once Date.now() passes it, snooze is no longer active.
+// =====================================================================
+const NOTIF_SNOOZE_KEY = "nvvunenu.notifSnoozeUntil";
+export function setNotifSnooze(durationMs) {
+  try {
+    if (!durationMs || durationMs <= 0) localStorage.removeItem(NOTIF_SNOOZE_KEY);
+    else localStorage.setItem(NOTIF_SNOOZE_KEY, String(Date.now() + Number(durationMs)));
+  } catch {}
+}
+export function notifSnoozeEnd() {
+  try {
+    const v = Number(localStorage.getItem(NOTIF_SNOOZE_KEY) || 0);
+    return v > Date.now() ? v : 0;
+  } catch { return 0; }
+}
+export function isNotifSnoozed() { return notifSnoozeEnd() > 0; }
+
 // ----- Page render -----
 export async function renderSettings(container) {
   container.innerHTML = shell();
@@ -102,6 +121,18 @@ function shell() {
           </div>
           <button class="btn btn-ghost" id="btnNativeNotif">Enable</button>
         </div>
+        <div class="settings-row" id="rowSnooze">
+          <div>
+            <div class="settings-label">Snooze</div>
+            <div class="settings-sub" id="snoozeSub">All notifications are flowing.</div>
+          </div>
+          <div class="snooze-chips">
+            <button class="snooze-chip" data-mins="60">1h</button>
+            <button class="snooze-chip" data-mins="240">4h</button>
+            <button class="snooze-chip" data-mins="480">8h</button>
+            <button class="snooze-chip" data-mins="0" id="snoozeOff" hidden>Resume</button>
+          </div>
+        </div>
         <div class="settings-prefs" id="notifPrefs"></div>
       </div>
 
@@ -165,6 +196,18 @@ function shell() {
       .settings-pref.is-disabled{opacity:.55}
       .settings-pref__icon{font-size:18px;line-height:1;text-align:center}
       .settings-pref__body{min-width:0}
+      .snooze-chips{display:flex;gap:6px;flex-wrap:wrap}
+      .snooze-chip{
+        padding:6px 12px;border-radius:999px;border:1px solid var(--border);
+        background:var(--surface);color:var(--text);
+        font-family:inherit;font-size:.75rem;font-weight:700;cursor:pointer;
+        transition:all .15s var(--ease-out);
+      }
+      .snooze-chip:hover{border-color:#9b8cff;transform:translateY(-1px)}
+      #snoozeOff{
+        background:linear-gradient(135deg,#7effc2,#5ed3a3);
+        color:#fff;border-color:transparent;
+      }
     </style>
   `;
 }
@@ -193,6 +236,7 @@ function paint(container, s, sub) {
 
   paintNotifPrefs(container, s);
   paintNativeNotifRow(container);
+  paintSnoozeRow(container);
 
   // AI demo toggle
   const aiToggle = container.querySelector("#toggleAIDemo");
@@ -277,6 +321,7 @@ function paintNotifPrefs(container, s) {
 
 export function isNotifPrefOn(userPrefs, key) {
   if (!getNotifyEnabled()) return false;        // master kill-switch
+  if (isNotifSnoozed())     return false;        // snooze active
   if (!userPrefs) return true;                  // default on
   const v = userPrefs[key];
   return v === undefined ? true : !!v;
@@ -325,4 +370,45 @@ function paintNativeNotifRow(container) {
     if (result === "granted") toast("Browser notifications enabled");
     else if (result === "denied") toast("Permission blocked. Allow it from site settings.");
   });
+}
+
+
+// =====================================================================
+// Snooze row — quick mute for 1h / 4h / 8h
+// =====================================================================
+function paintSnoozeRow(container) {
+  const sub  = container.querySelector("#snoozeSub");
+  const off  = container.querySelector("#snoozeOff");
+  if (!sub || !off) return;
+
+  const refresh = () => {
+    const end = notifSnoozeEnd();
+    if (!end) {
+      sub.textContent = "All notifications are flowing.";
+      off.hidden = true;
+    } else {
+      const ms = end - Date.now();
+      const m  = Math.max(1, Math.round(ms / 60000));
+      const txt = m >= 60 ? `${Math.round(m / 60)}h` : `${m}m`;
+      sub.textContent = `Muted for ${txt} more.`;
+      off.hidden = false;
+    }
+  };
+
+  container.querySelectorAll(".snooze-chip[data-mins]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const mins = Number(b.dataset.mins);
+      setNotifSnooze(mins ? mins * 60 * 1000 : 0);
+      refresh();
+      toast(mins ? `Muted for ${mins >= 60 ? Math.round(mins / 60) + "h" : mins + "m"}` : "Notifications resumed");
+    });
+  });
+  refresh();
+
+  // Tick every minute so the countdown stays fresh while Settings is open
+  const interval = setInterval(refresh, 60_000);
+  container.addEventListener("click", () => {}, { once: false });
+  // Best-effort cleanup tied to the page render cycle
+  if (window.__nvSnoozeInterval) clearInterval(window.__nvSnoozeInterval);
+  window.__nvSnoozeInterval = interval;
 }
