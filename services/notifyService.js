@@ -11,13 +11,16 @@ import {
 import { onAppState, getState } from "../state/appState.js";
 import { toast, toastSuccess } from "../utils/toast.js";
 import { isNotifPrefOn, getNotifyEnabled } from "../modules/settings.js";
+import { coupleMetaPath } from "./coupleService.js";
 
 let _myUid       = null;
 let _coupleId    = null;
+let _partnerId   = null;
 let _partnerName = "your partner";
 let _offState    = null;
 let _unsubs      = [];      // current Firestore listeners
 let _firstSnap   = new Set();
+let _lastMoodAt  = new Map(); // uid -> timestamp ms last seen
 
 /**
  * Start the listener service. Idempotent — calling twice is fine.
@@ -27,6 +30,7 @@ export function startNotifyService() {
   _offState = onAppState((s) => {
     if (!s.ready) return;
     _myUid = s.user?.uid || null;
+    _partnerId = s.partnerId || null;
     _partnerName = s.partner?.displayName?.split(" ")[0] || s.partner?.username || "your partner";
 
     if (s.coupleId && s.coupleId !== _coupleId) {
@@ -81,6 +85,7 @@ function reattachAll() {
       if (!partnerHasAnswered) return null;
       return { type: "info", text: `💞 ${_partnerName} answered this week's question` };
     }),
+    listenMetaMoods(),
   );
 }
 
@@ -88,6 +93,7 @@ function teardownAll() {
   for (const off of _unsubs) { try { off(); } catch {} }
   _unsubs = [];
   _firstSnap.clear();
+  _lastMoodAt.clear();
 }
 
 /**
@@ -126,4 +132,43 @@ function listenSubcol(subPath, timeField, prefKey, makeToast) {
 function getCurrentPrefs() {
   try { return getState()?.user?.notifPrefs || null; }
   catch { return null; }
+}
+
+
+
+// =====================================================================
+// Mood listener — couple meta is a single doc with a moods.{uid} map.
+// We track each side's last-seen at-timestamp and toast on a fresh
+// share by the partner.
+// =====================================================================
+function listenMetaMoods() {
+  if (!_coupleId) return () => {};
+  let firstSnap = true;
+  return onSnapshot(coupleMetaPath(_coupleId), (snap) => {
+    const data = snap.data() || {};
+    const moods = data.moods || {};
+    if (firstSnap) {
+      // Seed last-seen so we don't toast the existing snapshot.
+      for (const uid of Object.keys(moods)) {
+        const at = moods[uid]?.at?.toMillis?.() || 0;
+        _lastMoodAt.set(uid, at);
+      }
+      firstSnap = false;
+      return;
+    }
+    if (!getNotifyEnabled()) return;
+    if (!isNotifPrefOn(getCurrentPrefs(), "moods")) return;
+
+    for (const uid of Object.keys(moods)) {
+      if (uid === _myUid) continue;     // ignore my own update
+      const m = moods[uid] || {};
+      const at = m.at?.toMillis?.() || 0;
+      const last = _lastMoodAt.get(uid) || 0;
+      if (at > last) {
+        _lastMoodAt.set(uid, at);
+        const emoji = m.emoji || "🌙";
+        toast(`${emoji} ${_partnerName} shared a mood`);
+      }
+    }
+  });
 }
