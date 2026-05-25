@@ -74,10 +74,94 @@
   <!-- Patches for old.css's known-bad global selectors (button{width:250px},
        input{width:250px}, video{...}) and lock-in for the purple body bg. -->
   <link rel="stylesheet" href="styles/old-fixes.css">
+
+  <!-- Final inline override for the bottom-nav (loaded LAST so it wins
+       any cascade fight). Uses very high specificity (html body) to beat
+       earlier `body:not(.auth-body) button` rules. -->
+  <style>
+    @media (max-width: 900px) {
+      html body nav.bottom-nav {
+        position: fixed !important;
+        left: 50% !important;
+        right: auto !important;
+        bottom: 10px !important;
+        transform: translateX(-50%) !important;
+        width: calc(100vw - 24px) !important;
+        max-width: 420px !important;
+        margin: 0 !important;
+        padding: 6px 8px !important;
+        border-radius: 22px !important;
+        z-index: 9999 !important;
+        display: grid !important;
+        grid-template-columns: repeat(6, 1fr) !important;
+        gap: 4px !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+      }
+      html body nav.bottom-nav > button {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: 38px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-size: 15px !important;
+        border-radius: 11px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        background: rgba(255, 255, 255, 0.5) !important;
+        color: #2a235a !important;
+        border: none !important;
+        flex: none !important;
+      }
+      html body nav.bottom-nav > button.active {
+        background: linear-gradient(135deg, #8f74ff, #bda6ff) !important;
+        color: #fff !important;
+        transform: none !important;
+      }
+    }
+    @media (min-width: 901px) {
+      html body nav.bottom-nav { display: none !important; }
+    }
+
+    /* Initial loading state — visible until a page module replaces #page */
+    .app-loading {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; padding: 60px 20px;
+      min-height: 60vh;
+      text-align: center;
+    }
+    .app-loading-orb {
+      width: 84px; height: 84px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 143, 177, 0.55), rgba(167, 139, 250, 0.25) 60%, transparent 80%);
+      animation: appLoadBreathe 3.5s ease-in-out infinite;
+      box-shadow: 0 0 40px rgba(255, 143, 177, 0.45);
+      display: grid; place-items: center; font-size: 38px; color: #a78bfa;
+    }
+    .app-loading-orb::after { content: '💜'; }
+    .app-loading-title {
+      font-size: 1.4rem; font-weight: 800; letter-spacing: 0.3px;
+      background: linear-gradient(135deg, #ff8fb1, #a78bfa);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .app-loading-sub { font-size: 0.875rem; color: #7c6f8e; }
+    @keyframes appLoadBreathe {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.06); }
+    }
+  </style>
 </head>
 <body>
   <div id="app">
-    <div class="app-shell"><div id="page"></div></div>
+    <div class="app-shell"><div id="page">
+      <div class="app-loading" aria-hidden="true">
+        <div class="app-loading-orb"></div>
+        <div class="app-loading-title">Nuvvu Nenu</div>
+        <div class="app-loading-sub">Loading your space…</div>
+      </div>
+    </div></div>
 
     <!-- Desktop side / top navigation (md+ screens) -->
     <nav class="desktop-nav side-nav" id="navDesktop" aria-label="Primary navigation">

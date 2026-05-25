@@ -57,8 +57,11 @@ body:not(.auth-body) video {
 
 /* ----- 3. Re-establish the bottom-nav buttons as round icon pills ----- */
 /* old.css overrides them, but its own .bottom-nav button block is what we
-   want — let's make sure that wins over our reset above. */
-.bottom-nav button {
+   want — let's make sure that wins over our reset above. Specificity is
+   bumped via `body .bottom-nav button` (0,1,2) so it beats our own
+   `body:not(.auth-body) button { width:auto }` rule (0,1,2 — same, but
+   defined later in source, so this wins). */
+body .bottom-nav button {
   width: 45px !important;
   height: 45px !important;
   padding: 0 !important;
@@ -71,14 +74,14 @@ body:not(.auth-body) video {
   align-items: center !important;
   justify-content: center !important;
 }
-.bottom-nav button.active {
+body .bottom-nav button.active {
   background: linear-gradient(135deg, #8f74ff, #bda6ff) !important;
   color: #fff !important;
   transform: scale(1.12) !important;
 }
 
 /* ----- 4. Side-nav (desktop) — re-establish the 240px glass rail ----- */
-.desktop-nav.side-nav {
+body .desktop-nav.side-nav {
   width: 240px !important;
   padding: 20px 15px !important;
   background: rgba(255, 255, 255, 0.25) !important;
@@ -86,7 +89,7 @@ body:not(.auth-body) video {
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1) !important;
   border-radius: 0 !important;
 }
-.desktop-nav.side-nav button {
+body .desktop-nav.side-nav button {
   width: 100% !important;
   display: flex !important;
   align-items: center !important;
@@ -99,11 +102,11 @@ body:not(.auth-body) video {
   text-align: left !important;
   height: auto !important;
 }
-.desktop-nav.side-nav button:hover {
+body .desktop-nav.side-nav button:hover {
   background: rgba(255, 255, 255, 0.5) !important;
   transform: translateX(4px) !important;
 }
-.desktop-nav.side-nav button.active {
+body .desktop-nav.side-nav button.active {
   background: linear-gradient(135deg, #8f74ff, #bda6ff) !important;
   color: #fff !important;
   box-shadow: 0 6px 16px rgba(143, 116, 255, 0.35) !important;
@@ -128,12 +131,12 @@ h1, h2, h3, h4, h5 { color: inherit; }
 /* ----- 7. Glass cards: visible against the purple bg ----- */
 .glass, .auth-card, .post-card.glass, .partner-box, .room-header, .composer-card {
   /* Slightly more opaque on the purple bg than the cute version */
-  background: rgba(255, 255, 255, 0.55) !important;
-  backdrop-filter: blur(20px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(12px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
 }
 body.theme-dark .glass {
-  background: rgba(40, 30, 60, 0.5) !important;
+  background: rgba(40, 30, 60, 0.55) !important;
 }
 
 /* ----- 8. Inputs/textareas inside non-auth pages should have visible style ----- */
@@ -170,43 +173,48 @@ body:not(.auth-body) textarea:focus {
 
 /* =====================================================================
    Mobile bottom-nav — force 6 buttons to fit and be centered
+   Specificity bumped via `body .bottom-nav` to win over `body:not(.auth-body)`.
    ===================================================================== */
 @media (max-width: 900px) {
-  .bottom-nav {
+  body .bottom-nav {
     position: fixed !important;
     bottom: 10px !important;
     left: 50% !important;
     right: auto !important;
     transform: translateX(-50%) !important;
-    width: calc(100vw - 32px) !important;
+    width: calc(100vw - 24px) !important;
     max-width: 420px !important;
     margin: 0 !important;
     padding: 6px 8px !important;
     border-radius: 22px !important;
     z-index: 9999 !important;
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    justify-content: space-around !important;
-    align-items: center !important;
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    grid-auto-rows: 40px !important;
     gap: 4px !important;
+    align-items: center !important;
     overflow: visible !important;
+    box-sizing: border-box !important;
     background: rgba(255, 255, 255, 0.65) !important;
     backdrop-filter: blur(20px) saturate(170%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(170%) !important;
     border: 1px solid rgba(255, 255, 255, 0.45) !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), inset 0 0 6px rgba(255, 255, 255, 0.55) !important;
   }
-  .bottom-nav button {
-    flex: 1 1 0 !important;          /* equal share, 6 buttons fit */
+  body .bottom-nav button {
+    flex: none !important;
+    width: 100% !important;
     min-width: 0 !important;
-    max-width: 60px !important;
-    width: auto !important;
+    max-width: 100% !important;
     height: 40px !important;
     padding: 0 !important;
     margin: 0 !important;
-    font-size: 18px !important;
-    border-radius: 14px !important;
+    font-size: 16px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
   }
   /* Ensure body doesn't horizontally scroll on small screens */
   html, body { overflow-x: hidden !important; }
@@ -214,5 +222,5 @@ body:not(.auth-body) textarea:focus {
 
 /* Desktop: hide bottom-nav (side-nav takes over) */
 @media (min-width: 901px) {
-  .bottom-nav { display: none !important; }
+  body .bottom-nav { display: none !important; }
 }
