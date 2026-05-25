@@ -23,6 +23,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { computePulse, PULSE_LABELS } from "../services/bondPulseService.js";
 import { aiCall } from "../services/aiProvider.js";
+import { spawnHeartBurst } from "../services/notifyService.js";
 
 let _container = null;
 let _offState  = null;
@@ -517,6 +518,7 @@ async function loadPairedData(coupleId) {
   // Persist today's snapshot (idempotent — last write of day wins) and paint trend.
   if (pulseResult?.score != null) {
     persistPulseSnapshot(coupleId, pulseResult);
+    maybeCelebratePulseMilestone(pulseResult.score);
   }
   loadAndPaintPulseTrend(coupleId);
   loadAndPaintHeatmap(coupleId);
@@ -1230,4 +1232,36 @@ function wireCoach() {
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); ask(); }
   });
+}
+
+
+// =====================================================================
+// Heart burst on a fresh 10-point pulse milestone (60 → 70 → 80 → …).
+// Persists per-couple so each couple's milestones celebrate
+// independently and don't fire on every visit.
+// =====================================================================
+function maybeCelebratePulseMilestone(score) {
+  const cid = getState()?.coupleId;
+  if (!cid) return;
+  const tier = Math.floor(Math.max(0, Math.min(100, Number(score) || 0)) / 10) * 10;
+  if (tier < 50) return;            // baseline-ish, don't be needy below 50
+  const key = `nvvunenu.pulseMilestone.${cid}`;
+  let lastSeen = 0;
+  try { lastSeen = Number(localStorage.getItem(key) || 0); } catch {}
+  if (tier <= lastSeen) return;     // already celebrated this tier (or higher)
+  try { localStorage.setItem(key, String(tier)); } catch {}
+
+  // Tier-specific copy
+  const labels = {
+    50: "Steady — you're keeping pace ✨",
+    60: "Warming up · 60+ pulse 💞",
+    70: "Strong week — 70+ pulse 🌟",
+    80: "Glowing — 80+ pulse 🔥",
+    90: "Lit up — 90+ pulse 💜",
+    100: "Perfect 100 — keep choosing each other 🏆",
+  };
+  setTimeout(() => {
+    try { spawnHeartBurst(); } catch {}
+    toastSuccess(labels[tier] || `Pulse milestone · ${tier}+`);
+  }, 600);
 }
