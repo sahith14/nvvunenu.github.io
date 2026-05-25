@@ -11,6 +11,7 @@ import { getSubscription, PLANS } from "../services/subscriptionService.js";
 import { db } from "../firebase.js";
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { askNativeNotifPermission, nativeNotifSupported, nativeNotifPermission } from "../services/notifyService.js";
+import { setAIDemoEnabled, isAIDemoEnabled } from "../services/aiProviderMock.js";
 
 const THEME_KEY = "nvvunenu.theme";    // legacy — kept for cleanup only
 const NOTIFY_KEY = "nvvunenu.notify";  // "1" | "0"
@@ -104,6 +105,20 @@ function shell() {
         <div class="settings-prefs" id="notifPrefs"></div>
       </div>
 
+      <div class="card settings-section" id="setAIDemo">
+        <h3 class="settings-h">AI</h3>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">AI demo mode</div>
+            <div class="settings-sub">Plug in canned responses so you can see how transcripts, smart replies, weekly recaps and memory captions feel — no API key needed.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggleAIDemo">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
       <div class="card settings-section" id="setAbout">
         <h3 class="settings-h">About</h3>
         <div class="settings-row">
@@ -178,6 +193,18 @@ function paint(container, s, sub) {
 
   paintNotifPrefs(container, s);
   paintNativeNotifRow(container);
+
+  // AI demo toggle
+  const aiToggle = container.querySelector("#toggleAIDemo");
+  if (aiToggle) {
+    aiToggle.checked = isAIDemoEnabled();
+    aiToggle.addEventListener("change", (e) => {
+      setAIDemoEnabled(e.target.checked);
+      toast(e.target.checked
+        ? "AI demo on — try a transcript or recap"
+        : "AI demo off");
+    });
+  }
 
   // Account / Plan / Danger actions
   container.querySelector("#btnEditProfile").addEventListener("click", () => {

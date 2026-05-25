@@ -29,6 +29,8 @@ import { applyTheme, getStoredTheme } from './modules/settings.js';
 import './modules/avatar.js';
 // Side-effect: floating hearts BG + click sparkles + ripple + like-bursts
 import './modules/cuteFx.js';
+// Side-effect: auto-restores AI demo provider if user enabled it
+import './services/aiProviderMock.js';
 
 // Background services
 import { startIncomingCallListener, stopIncomingCallListener } from './modules/incomingCall.js';
