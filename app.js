@@ -33,6 +33,8 @@ import './modules/cuteFx.js';
 import './services/aiProviderMock.js';
 // Side-effect: subscribes to chat doc and paints unread badge on nav
 import './services/chatBadge.js';
+// Side-effect: paints a gold dot on /memories nav when partner adds a memory
+import './services/memoriesBadge.js';
 
 // Background services
 import { startIncomingCallListener, stopIncomingCallListener } from './modules/incomingCall.js';
