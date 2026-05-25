@@ -180,6 +180,7 @@ function listenMetaMoods() {
         pingTabTitle();
         fireNative("Nuvvu Nenu", txt);
         toast(txt);
+        spawnFloatingHeart(emoji);
       }
     }
   });
@@ -409,4 +410,43 @@ function detectPresenceTransition(s) {
   pingTabTitle();
   fireNative("Nuvvu Nenu", txt);
   toast(txt);
+}
+
+
+// =====================================================================
+// Floating-heart effect — spawns 1 small drifting glyph at the bottom-
+// right when partner shares a fresh mood. Pure DOM, auto-cleans up.
+// =====================================================================
+function spawnFloatingHeart(emoji = "💜") {
+  if (typeof document === "undefined") return;
+  const el = document.createElement("div");
+  el.className = "nv-float-heart";
+  el.textContent = emoji;
+  // Random horizontal offset so multiple in a row don't stack
+  el.style.right = `${24 + Math.random() * 60}px`;
+  el.style.bottom = `${72 + Math.random() * 30}px`;
+  el.style.fontSize = `${28 + Math.random() * 14}px`;
+  document.body.appendChild(el);
+
+  // Inject keyframe + class once
+  if (!document.getElementById("nv-float-heart-style")) {
+    const s = document.createElement("style");
+    s.id = "nv-float-heart-style";
+    s.textContent = `
+      .nv-float-heart {
+        position: fixed; z-index: 9999;
+        pointer-events: none;
+        line-height: 1;
+        text-shadow: 0 4px 14px rgba(255,126,182,.55);
+        animation: nv-float-up 3s cubic-bezier(.22,1,.36,1) forwards;
+      }
+      @keyframes nv-float-up {
+        0%   { transform: translateY(0)     scale(.6); opacity: 0; }
+        15%  { transform: translateY(-20px) scale(1.05); opacity: 1; }
+        100% { transform: translateY(-260px) scale(.85); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(s);
+  }
+  setTimeout(() => { try { el.remove(); } catch {} }, 3100);
 }
