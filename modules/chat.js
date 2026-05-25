@@ -366,6 +366,14 @@ function renderMessages(msgs) {
   // Voice notes — wire each waveform player
   stream.querySelectorAll('.chat-vn').forEach((node) => attachVoiceNoteHandlers(node));
 
+  // Voice-note transcripts (stub)
+  stream.querySelectorAll('[data-act="transcribe"]').forEach((b) => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      transcribeVoiceNote(b);
+    });
+  });
+
   // Save-photo-to-memories on image bubbles
   stream.querySelectorAll('[data-act="save-mem"]').forEach((b) => {
     b.addEventListener('click', async (e) => {
@@ -1050,13 +1058,20 @@ function renderVoiceNote(m) {
   const id  = m.id || "x";
   const url = String(m.audio || "");
   const bars = generateFauxBars(id, VN_BAR_COUNT);
+  const cached = m.transcript || null;
   return `
-    <div class="chat-vn" data-src="${escapeAttr(url)}">
-      <button class="chat-vn__play" data-act="toggle" type="button" aria-label="Play voice note">▶</button>
-      <div class="chat-vn__bars">
-        ${bars.map(h => `<span class="chat-vn__bar" style="height:${h}%"></span>`).join("")}
+    <div class="chat-vn-wrap">
+      <div class="chat-vn" data-src="${escapeAttr(url)}">
+        <button class="chat-vn__play" data-act="toggle" type="button" aria-label="Play voice note">▶</button>
+        <div class="chat-vn__bars">
+          ${bars.map(h => `<span class="chat-vn__bar" style="height:${h}%"></span>`).join("")}
+        </div>
+        <span class="chat-vn__time">0:00</span>
       </div>
-      <span class="chat-vn__time">0:00</span>
+      ${cached
+        ? `<div class="chat-vn__transcript">${escapeHtml(cached)}</div>`
+        : `<button class="chat-vn__btx" data-act="transcribe" data-id="${escapeAttr(id)}" type="button">📝 Show transcript</button>`
+      }
     </div>
   `;
 }
@@ -1614,3 +1629,36 @@ document.addEventListener("click", (e) => {
   if (e.target.closest(".chat-rxn-picker")) return;
   window.loadPage?.("memories");
 }, true);
+
+
+// =====================================================================
+// Voice-note transcription — stub. Wired so that when window.__AI_PROVIDER__
+// is set later, we can plug in a real STT call. Falls back to a friendly
+// 'transcript not ready' line so the surface is visible today.
+// =====================================================================
+async function transcribeVoiceNote(button) {
+  const wrap = button.closest('.chat-vn-wrap');
+  if (!wrap) return;
+  const slot = document.createElement('div');
+  slot.className = 'chat-vn__transcript is-loading';
+  slot.textContent = "Transcribing…";
+  wrap.querySelector('.chat-vn__btx')?.remove();
+  wrap.appendChild(slot);
+
+  const provider = (typeof window !== "undefined") ? window.__AI_PROVIDER__ : null;
+  let text = null;
+  if (provider && typeof provider.transcribe === "function") {
+    try {
+      const audioEl = wrap.querySelector('.chat-vn');
+      const url = audioEl?.dataset?.src;
+      if (url) {
+        text = await Promise.resolve(provider.transcribe(url));
+      }
+    } catch { /* fall through to placeholder */ }
+  }
+  if (!text || typeof text !== "string") {
+    text = "Transcripts arrive once we wire a speech-to-text provider. Tap the heart on any note in the meantime.";
+  }
+  slot.classList.remove('is-loading');
+  slot.textContent = text;
+}
