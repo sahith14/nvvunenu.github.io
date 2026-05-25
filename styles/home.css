@@ -224,3 +224,36 @@
   0%, 100% { box-shadow: 0 12px 28px rgba(255,126,182,.18); }
   50%      { box-shadow: 0 18px 40px rgba(255,126,182,.4); }
 }
+
+
+
+/* Quick capture FAB on Home */
+.home-capture-fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(72px + 20px);   /* clear bottom-nav */
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, #ff7eb6, #9b8cff);
+  color: #fff; border: 0;
+  font-family: inherit; cursor: pointer;
+  display: grid; place-items: center;
+  box-shadow: 0 14px 34px rgba(155,140,255,.4);
+  z-index: 30;
+  transition: transform .15s, box-shadow .2s;
+}
+.home-capture-fab:hover  { transform: scale(1.04); box-shadow: 0 18px 40px rgba(155,140,255,.55); }
+.home-capture-fab:active { transform: scale(.96); }
+.home-capture-fab__icon { font-size: 24px; line-height: 1; }
+.home-capture-fab.is-uploading {
+  pointer-events: none;
+  animation: capture-spin 1s linear infinite;
+}
+@keyframes capture-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* On wider screens, sit the FAB inside the column rather than over the
+   side-nav rail */
+@media (min-width: 900px) {
+  .home-capture-fab { right: max(20px, calc(50% - 480px)); }
+}

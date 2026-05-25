@@ -12,6 +12,7 @@ import {
   updateMood, daysTogether
 } from "../services/coupleService.js";
 import { formatActivity } from "../services/presenceService.js";
+import { addMemory } from "../services/memoryService.js";
 import {
   doc, addDoc, collection, serverTimestamp, setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -108,6 +109,11 @@ export function renderHome(container) {
         <button class="quick-action" id="qaPlay"><span class="icon">🎮</span><span class="label">Play Game</span></button>
         <button class="quick-action" id="qaBond"><span class="icon">💫</span><span class="label">Our Bond</span></button>
       </section>
+
+      <button class="home-capture-fab" id="homeCaptureFab" aria-label="Capture a memory" title="Capture a memory">
+        <span class="home-capture-fab__icon">📷</span>
+      </button>
+      <input type="file" id="homeCaptureInput" accept="image/*" capture="environment" hidden>
     </div>
   `;
 
@@ -316,6 +322,12 @@ function wireQuickActions() {
   _container.querySelector("#qaPlay").addEventListener("click", () => window.loadPage?.("together"));
   _container.querySelector("#qaBond").addEventListener("click", () => window.loadPage?.("bond"));
   _container.querySelector("#aiRecapCta")?.addEventListener("click", () => window.loadPage?.("memories"));
+
+  // Quick capture — open camera, save the photo as a memory in one tap.
+  const fab   = _container.querySelector("#homeCaptureFab");
+  const input = _container.querySelector("#homeCaptureInput");
+  fab?.addEventListener("click", () => input?.click());
+  input?.addEventListener("change", onCaptureFile);
 }
 
 // ---------- Actions ----------
@@ -525,4 +537,44 @@ function paintAnnivBanner(startTs) {
     ctaEl.onclick = () => window.loadPage?.(days === 0 ? "bond" : "dates");
   }
   banner.hidden = false;
+}
+
+
+// =====================================================================
+// Quick capture — turns a single camera shot into a saved memory.
+// =====================================================================
+async function onCaptureFile(ev) {
+  const input = ev.target;
+  const file  = input.files?.[0];
+  // Reset so picking the same file twice still fires "change"
+  input.value = "";
+  if (!file) return;
+
+  const s = getState();
+  if (!s.coupleId) {
+    toastWarn("Connect with your partner first");
+    return;
+  }
+
+  const fab = _container?.querySelector("#homeCaptureFab");
+  fab?.classList.add("is-uploading");
+  toast("Saving moment…");
+
+  const today = new Date();
+  const titleAuto = today.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+  const ok = await safe(() => addMemory({
+    coupleId: s.coupleId,
+    title: titleAuto,
+    description: "",
+    date: today.toISOString().slice(0, 10),
+    file,
+    onProgress: () => {},
+  }), "Couldn't save memory");
+
+  fab?.classList.remove("is-uploading");
+  if (ok !== false) {
+    toastSuccess("Saved 💜");
+    // Optional: jump to memories so the user can see it
+    setTimeout(() => window.loadPage?.("memories"), 500);
+  }
 }
