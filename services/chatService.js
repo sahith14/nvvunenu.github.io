@@ -23,7 +23,7 @@
 import {
   collection, doc, query, where, orderBy, limit, startAfter,
   onSnapshot, getDocs, getDoc, addDoc, updateDoc, writeBatch,
-  setDoc, serverTimestamp, increment
+  setDoc, serverTimestamp, increment, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db, auth } from "../firebase.js";
 import { makeCoupleId } from "../utils/coupleId.js";
@@ -243,5 +243,32 @@ export async function votePoll(chatId, msgId, choiceIndex) {
   const ref = doc(db, "chats", chatId, "messages", msgId);
   await updateDoc(ref, {
     [`votes.${uid}`]: Number(choiceIndex)
+  });
+}
+
+
+// =====================================================================
+// Pinned messages — chats/{chatId}.pinnedMsgs is an array of
+// snapshots: { id, text, sender, kind }, capped at 5 by callers.
+// =====================================================================
+export async function pinMessage(chatId, msgSnapshot) {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !chatId || !msgSnapshot?.id) return;
+  await updateDoc(doc(db, "chats", chatId), {
+    pinnedMsgs: arrayUnion({
+      id:     String(msgSnapshot.id),
+      text:   String(msgSnapshot.text || "").slice(0, 240),
+      sender: String(msgSnapshot.sender || ""),
+      kind:   String(msgSnapshot.kind || "text"),
+      pinnedAt: Date.now(),     // serverTimestamp not allowed inside arrayUnion
+      pinnedBy: uid,
+    }),
+  });
+}
+
+export async function unpinMessage(chatId, snapshot) {
+  if (!chatId || !snapshot) return;
+  await updateDoc(doc(db, "chats", chatId), {
+    pinnedMsgs: arrayRemove(snapshot),
   });
 }

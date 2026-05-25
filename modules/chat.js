@@ -11,7 +11,8 @@ import { formatDayHeader } from '../utils/time.js';
 import {
   ensureChat, subscribeMessages, sendText, setTyping,
   markDeliveredAndSeen, toggleReaction, subscribeChatMeta, renderTicks,
-  sendPoll, votePoll
+  sendPoll, votePoll,
+  pinMessage, unpinMessage
 } from '../services/chatService.js';
 import { rememberMessage, suggestReplies } from '../services/aiReply.js';
 import { gateVoiceNote } from '../services/featureGate.js';
@@ -129,6 +130,7 @@ async function onState(s) {
       const t = meta?.typing?.[_partnerId];
       const tEl = _container?.querySelector('#chatTyping');
       if (tEl) tEl.textContent = t ? `${_partnerName} is typing…` : '';
+      paintPinnedBar(meta?.pinnedMsgs || []);
     });
   }
 
@@ -203,6 +205,8 @@ function paintShell() {
           `).join("")}
         </div>
       </div>
+
+      <div class="chat-pinned" id="chatPinned" hidden></div>
 
       <div class="chat-stream" id="chatStream">${skeletonList(4, "msg")}</div>
 
@@ -770,6 +774,7 @@ function showReactionPicker(row) {
     <button class="chat-rxn-picker__btn" data-e="${e}" type="button" aria-label="${e}">${e}</button>
   `).join("") + `
     <button class="chat-rxn-picker__btn chat-rxn-picker__btn--reply" data-act="reply" type="button" aria-label="Reply">↩</button>
+    <button class="chat-rxn-picker__btn chat-rxn-picker__btn--pin"   data-act="pin"   type="button" aria-label="Pin">📌</button>
   `;
   document.body.appendChild(picker);
 
@@ -791,6 +796,8 @@ function showReactionPicker(row) {
       e.stopPropagation();
       if (b.dataset.act === "reply") {
         startReply(id);
+      } else if (b.dataset.act === "pin") {
+        togglePin(id);
       } else {
         const emoji = b.dataset.e;
         toggleReaction(_chatId, id, emoji).catch(() => {});
@@ -1095,3 +1102,81 @@ document.addEventListener("click", (e) => {
     setTimeout(() => target.classList.remove("is-flash"), 900);
   }
 }, true);
+
+
+// =====================================================================
+// Pinned messages — bar at the top of the chat that surfaces up to 3
+// pinned snapshots. Tap a pinned row to scroll to the original message.
+// =====================================================================
+let _pinnedSnapshots = [];
+
+async function togglePin(msgId) {
+  const msg = _lastMsgs.find((x) => x.id === msgId);
+  if (!msg) return;
+  // Already pinned? Find a matching snapshot and unpin it.
+  const existing = _pinnedSnapshots.find((p) => p.id === msgId);
+  if (existing) {
+    await safe(() => unpinMessage(_chatId, existing), "Couldn't unpin");
+    toast("Unpinned");
+    return;
+  }
+  if (_pinnedSnapshots.length >= 5) {
+    toastWarn("Already 5 messages pinned. Unpin one first.");
+    return;
+  }
+  const snapshot = {
+    id:     msgId,
+    text:   String(msg.text || (msg.kind === "poll" ? `📊 ${msg.question || "Poll"}` : msg.audio ? "🎙 Voice note" : msg.image ? "📷 Photo" : "")).slice(0, 240),
+    sender: String(msg.sender || ""),
+    kind:   String(msg.kind || (msg.audio ? "audio" : msg.image ? "image" : "text")),
+  };
+  await safe(() => pinMessage(_chatId, snapshot), "Couldn't pin");
+  toastSuccess("Pinned 📌");
+}
+
+function paintPinnedBar(pinnedMsgs) {
+  _pinnedSnapshots = Array.isArray(pinnedMsgs) ? pinnedMsgs.slice(-3) : [];
+  const host = _container?.querySelector('#chatPinned');
+  if (!host) return;
+  if (!_pinnedSnapshots.length) { host.hidden = true; host.innerHTML = ""; return; }
+  host.hidden = false;
+  host.innerHTML = `
+    <div class="chat-pinned__head">
+      <span class="chat-pinned__icon">📌</span>
+      <span class="chat-pinned__title">Pinned · ${_pinnedSnapshots.length}</span>
+    </div>
+    ${_pinnedSnapshots.map((p) => {
+      const isMine = p.sender === _myUid;
+      const previewTxt = p.text || (p.kind === "audio" ? "🎙 Voice note" : p.kind === "image" ? "📷 Photo" : "(media)");
+      return `<button class="chat-pinned__row" data-jump="${escapeAttr(p.id)}" type="button">
+        <span class="chat-pinned__bar"></span>
+        <span class="chat-pinned__body">
+          <span class="chat-pinned__who">${isMine ? "You" : escapeHtml(_partnerName || "Them")}</span>
+          <span class="chat-pinned__text">${escapeHtml(previewTxt)}</span>
+        </span>
+        <span class="chat-pinned__unpin" data-unpin="${escapeAttr(p.id)}" title="Unpin" aria-label="Unpin">✕</span>
+      </button>`;
+    }).join("")}
+  `;
+  // Wire jump + unpin
+  host.querySelectorAll('.chat-pinned__row').forEach((row) => {
+    row.addEventListener('click', (e) => {
+      const unpinTarget = e.target.closest('[data-unpin]');
+      if (unpinTarget) {
+        e.stopPropagation();
+        const id = unpinTarget.dataset.unpin;
+        const snap = _pinnedSnapshots.find((p) => p.id === id);
+        if (snap) safe(() => unpinMessage(_chatId, snap), "Couldn't unpin");
+        return;
+      }
+      const id = row.dataset.jump;
+      const stream = _container?.querySelector('#chatStream');
+      const target = stream?.querySelector(`.chat-row[data-id="${CSS.escape(id)}"]`);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.classList.add("is-flash");
+        setTimeout(() => target.classList.remove("is-flash"), 900);
+      }
+    });
+  });
+}
