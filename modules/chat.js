@@ -29,6 +29,7 @@ let _partnerName     = "Partner";
 let _partnerPhoto    = null;
 let _lastRenderedFor = null;       // (myUid|partnerId) we built the shell for
 let _lastMsgs        = [];
+let _themeOutsideHandler = null;   // doc click handler for closing theme popup
 
 export function renderChat(container) {
   _container = container;
@@ -50,6 +51,10 @@ function cleanup() {
   try { _offState?.(); } catch {}
   try { _unsubMessages?.(); } catch {}
   try { _unsubMeta?.(); } catch {}
+  if (_themeOutsideHandler) {
+    try { document.removeEventListener('click', _themeOutsideHandler, true); } catch {}
+    _themeOutsideHandler = null;
+  }
   clearTimeout(_typingDebounce);
   clearTimeout(_suggestDebounce);
   _offState = _unsubMessages = _unsubMeta = null;
@@ -147,10 +152,30 @@ function paintShell() {
           </div>
         </div>
         <div class="chat-actions">
+          <button class="chat-action" id="btnChatTheme" title="Chat theme">🎨</button>
           <button class="chat-action" id="btnAudioCall" title="Voice call">📞</button>
           <button class="chat-action" id="btnVideoCall" title="Video call">📹</button>
         </div>
       </header>
+
+      <div class="chat-theme-pop" id="chatThemePop" hidden>
+        <div class="chat-theme-pop__title">Pick a chat theme</div>
+        <div class="chat-theme-pop__grid">
+          ${[
+            { key: "default",  label: "Default",  cls: "" },
+            { key: "aurora",   label: "Aurora",   cls: "is-aurora" },
+            { key: "sunset",   label: "Sunset",   cls: "is-sunset" },
+            { key: "ocean",    label: "Ocean",    cls: "is-ocean" },
+            { key: "forest",   label: "Forest",   cls: "is-forest" },
+            { key: "midnight", label: "Midnight", cls: "is-midnight" },
+          ].map(t => `
+            <button class="chat-theme-swatch ${t.cls}" data-theme="${t.key}" type="button">
+              <span class="chat-theme-swatch__preview"></span>
+              <span class="chat-theme-swatch__label">${t.label}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
 
       <div class="chat-stream" id="chatStream">${skeletonList(4, "msg")}</div>
 
@@ -299,6 +324,32 @@ function attachHandlers() {
   audioCallBtn.onclick = () => startAudioCall(_partnerId, _partnerName);
   videoCallBtn.onclick = () => startVideoCall(_partnerId, _partnerName);
 
+  // ---- Chat theme picker -----------------------------------------------
+  applyChatTheme(loadChatTheme());
+  const themeBtn = _container.querySelector('#btnChatTheme');
+  const themePop = _container.querySelector('#chatThemePop');
+  themeBtn.onclick = (e) => {
+    e.stopPropagation();
+    themePop.hidden = !themePop.hidden;
+  };
+  if (_themeOutsideHandler) document.removeEventListener('click', _themeOutsideHandler, true);
+  _themeOutsideHandler = (ev) => {
+    if (!_container || !themePop) return;
+    if (themePop.hidden) return;
+    if (themePop.contains(ev.target) || themeBtn.contains(ev.target)) return;
+    themePop.hidden = true;
+  };
+  document.addEventListener('click', _themeOutsideHandler, true);
+  _container.querySelectorAll('.chat-theme-swatch').forEach((b) => {
+    b.addEventListener('click', () => {
+      const key = b.dataset.theme;
+      saveChatTheme(key);
+      applyChatTheme(key);
+      themePop.hidden = true;
+      toast(`Theme · ${key}`);
+    });
+  });
+
   input.addEventListener('input', () => {
     if (!_chatId) return;
     setTyping(_chatId, true);
@@ -312,6 +363,11 @@ function attachHandlers() {
     safe(() => sendText(_chatId, _partnerId, text), "Couldn't send");
     input.value = '';
     setTyping(_chatId, false);
+    // Tiny send pulse on the send button
+    send.classList.remove('is-pulsing');
+    void send.offsetWidth;
+    send.classList.add('is-pulsing');
+    setTimeout(() => send.classList.remove('is-pulsing'), 500);
     // Hide suggestions immediately when user sends
     const host = _container?.querySelector('#chatSuggest');
     if (host) host.hidden = true;
@@ -434,4 +490,42 @@ function escapeHtml(s) {
 }
 function encodeAttr(s) {
   return String(s ?? "").replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+
+
+// =====================================================================
+// Chat theme helpers — set data-chat-theme on .chat-page
+// =====================================================================
+const VALID_CHAT_THEMES = ["default","aurora","sunset","ocean","forest","midnight"];
+function loadChatTheme() {
+  try {
+    const v = localStorage.getItem("nvvunenu.chatTheme");
+    return VALID_CHAT_THEMES.includes(v) ? v : "default";
+  } catch { return "default"; }
+}
+function saveChatTheme(key) {
+  try { localStorage.setItem("nvvunenu.chatTheme", key); } catch {}
+}
+function applyChatTheme(key) {
+  if (!_container) return;
+  const page = _container.querySelector(".chat-page");
+  if (!page) return;
+  page.setAttribute("data-chat-theme", VALID_CHAT_THEMES.includes(key) ? key : "default");
+  // mark active swatch
+  _container.querySelectorAll(".chat-theme-swatch").forEach((b) => {
+    b.classList.toggle("is-active", b.dataset.theme === key);
+  });
+}
+
+// Public hook: trigger a tiny pulse on send (called from doSend if added later).
+export function chatSendPulse() {
+  if (!_container) return;
+  const send = _container.querySelector("#btnSend");
+  if (!send) return;
+  send.classList.remove("is-pulsing");
+  // force reflow so animation restarts cleanly
+  void send.offsetWidth;
+  send.classList.add("is-pulsing");
+  setTimeout(() => send?.classList.remove("is-pulsing"), 500);
 }

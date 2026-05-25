@@ -134,3 +134,86 @@
 .settings-list .settings-item:hover{background:var(--card-hover)}
 .settings-list .settings-item.danger{color:#ff8a8a}
 .settings-list .settings-item.danger:hover{background:rgba(255,99,99,.08)}
+
+
+
+/* =====================================================================
+   Aura ring + plan badge + 7-day mood strip
+   ===================================================================== */
+
+/* Make the wrap a touch larger to accommodate the ring without clipping */
+.profile-avatar-wrap--aura {
+  width: 96px; height: 96px; flex: 0 0 96px;
+}
+.profile-avatar-wrap--aura .profile-avatar {
+  width: 84px; height: 84px;
+  position: absolute; inset: 6px;
+}
+.profile-avatar-wrap--aura .profile-avatar-edit {
+  bottom: 2px; right: 2px;
+}
+
+.profile-aura-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  padding: 0;
+  z-index: 0;
+  background: conic-gradient(from 0deg,
+    rgba(255,126,182,.95) 0deg,
+    rgba(155,140,255,.95) 120deg,
+    rgba(126,215,255,.95) 240deg,
+    rgba(255,126,182,.95) 360deg);
+  filter: drop-shadow(0 0 14px rgba(255,126,182,.45));
+  animation: prof-aura-spin 12s linear infinite;
+}
+.profile-avatar-wrap--aura[data-aura="love"]   .profile-aura-ring { background: conic-gradient(from 0deg, #ff7eb6, #ff5e7e, #ff7eb6); }
+.profile-avatar-wrap--aura[data-aura="bloom"]  .profile-aura-ring { background: conic-gradient(from 0deg, #ff7eb6, #ffb6e5, #ff8fb1, #ff7eb6); }
+.profile-avatar-wrap--aura[data-aura="tender"] .profile-aura-ring { background: conic-gradient(from 0deg, #ffb6e5, #c8baff, #ffb6e5); }
+.profile-avatar-wrap--aura[data-aura="night"]  .profile-aura-ring { background: conic-gradient(from 0deg, #1a1235, #7763ff, #3a2d6e, #1a1235); }
+.profile-avatar-wrap--aura[data-aura="glow"]   .profile-aura-ring { background: conic-gradient(from 0deg, #fff5d1, #ffd47a, #ff7eb6, #fff5d1); }
+.profile-avatar-wrap--aura[data-aura="rain"]   .profile-aura-ring { background: conic-gradient(from 0deg, #7ed7ff, #c8baff, #7ed7ff); }
+.profile-avatar-wrap--aura[data-aura="ocean"]  .profile-aura-ring { background: conic-gradient(from 0deg, #5ec5ff, #3a86ff, #7ed7ff, #5ec5ff); }
+.profile-avatar-wrap--aura[data-aura="warm"]   .profile-aura-ring { background: conic-gradient(from 0deg, #ff8a00, #ff5e7e, #ff8a00); }
+.profile-avatar-wrap--aura[data-aura="fresh"]  .profile-aura-ring { background: conic-gradient(from 0deg, #a8e6cf, #5ed3a3, #a8e6cf); }
+.profile-avatar-wrap--aura[data-aura="sunny"]  .profile-aura-ring { background: conic-gradient(from 0deg, #ffd47a, #ff7eb6, #ffd47a); }
+
+@keyframes prof-aura-spin { to { transform: rotate(360deg); } }
+
+/* Plan badge */
+.profile-plan-badge {
+  position: absolute; top: 0; right: 0;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 6px 16px rgba(155,140,255,.45);
+  z-index: 2;
+}
+.profile-plan-badge.is-together { background: linear-gradient(135deg,#ff7eb6,#9b8cff); }
+.profile-plan-badge.is-forever  { background: linear-gradient(135deg,#ffd47a,#ff5e7e,#9b8cff); }
+
+/* Mood strip */
+.mood-strip {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;
+}
+.mood-strip__cell {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(255,255,255,.7);
+  border: 1px solid rgba(155,140,255,.18);
+  border-radius: 12px;
+  padding: 10px 4px;
+  transition: transform .15s, border-color .15s;
+}
+.mood-strip__cell:hover { transform: translateY(-1px); }
+.mood-strip__cell.is-set {
+  background: linear-gradient(135deg, rgba(255,126,182,.10), rgba(155,140,255,.10));
+  border-color: rgba(155,140,255,.4);
+}
+.mood-strip__emoji { font-size: 1.25rem; line-height: 1.4; min-height: 24px; }
+.mood-strip__cell:not(.is-set) .mood-strip__emoji { color: rgba(155,140,255,.5); }
+.mood-strip__day {
+  font-size: .6875rem; color: var(--muted, #6b5b9b);
+  text-transform: uppercase; letter-spacing: .4px; font-weight: 700;
+}
+.profile-hint {
+  margin: 8px 0 0; color: var(--muted, #6b5b9b); font-size: .8125rem;
+}

@@ -281,6 +281,7 @@ function renderPlay(body) {
           { type: "whoknowsbetter", icon: "💞",   name: "Who Knows Better", desc: "Compare honest answers." },
           { type: "memorymatch",    icon: "🧠",   name: "Memory Match",     desc: "Flip the pairs, beat your time." },
           { type: "speedreactions", icon: "⚡",   name: "Speed Reactions",  desc: "Tap pink as fast as you can." },
+          { type: "typingrace",     icon: "⌨️",   name: "Typing Race",      desc: "60s, your WPM and accuracy." },
         ].map((g) => `
           <button class="tg-game-tile" data-game="${g.type}">
             <span class="tg-game-tile__icon">${g.icon}</span>
@@ -289,7 +290,7 @@ function renderPlay(body) {
           </button>
         `).join("")}
       </div>
-      <p class="tg-play__more">More games (UNO, Draw &amp; Guess, Typing Race, Music Quiz) are next on the roadmap.</p>
+      <p class="tg-play__more">More games (UNO, Draw &amp; Guess, Music Quiz, Pictionary) are next on the roadmap.</p>
       <div class="tg-game-mount" id="tgGameMount"></div>
     </div>
     <style>

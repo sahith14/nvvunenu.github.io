@@ -304,3 +304,72 @@
 .sp-sr-result__row span { color: var(--muted, #6b5b9b); font-size: .8125rem; }
 .sp-sr-result__row strong { font-size: 1rem; color: var(--nn-text, #1a1235); }
 .sp-sr-result__hint { color: var(--text-secondary, #4f3d80); font-size: .875rem; text-align: center; margin: 6px 0 0; }
+
+
+
+/* TYPING RACE */
+.sp-tr-prompt {
+  background: var(--surface, rgba(255,255,255,.85));
+  border: 1px solid var(--border, rgba(155,140,255,.25));
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 1.0625rem; line-height: 1.6;
+  font-family: ui-monospace, "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  color: var(--muted, #6b5b9b);
+  user-select: none;
+  margin-bottom: 10px;
+  word-break: break-word;
+}
+.sp-tr-ch { transition: color .1s; }
+.sp-tr-ch.is-right { color: var(--nn-text, #1a1235); }
+.sp-tr-ch.is-wrong {
+  color: #c62842; text-decoration: underline; text-decoration-color: #ff7e8e;
+  background: rgba(255,126,142,.18); border-radius: 3px;
+}
+.sp-tr-ch.is-cursor {
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  color: #fff;
+  border-radius: 3px;
+  animation: sp-tr-cursor 1s ease-in-out infinite;
+}
+@keyframes sp-tr-cursor {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .6; }
+}
+.sp-tr-input {
+  width: 100%;
+  border: 1px solid var(--border, rgba(155,140,255,.3));
+  border-radius: 14px;
+  background: var(--surface, rgba(255,255,255,.85));
+  font-family: inherit; font-size: 1rem; padding: 12px 14px; resize: vertical;
+  color: var(--nn-text, #1a1235);
+}
+.sp-tr-input:focus {
+  outline: none;
+  border-color: var(--nn-purple, #9b8cff);
+  box-shadow: 0 0 0 4px rgba(155,140,255,.18);
+}
+.sp-tr-input:disabled {
+  opacity: .85; cursor: default;
+  background: linear-gradient(135deg, rgba(255,126,182,.08), rgba(155,140,255,.08));
+}
+.sp-tr-result {
+  display: flex; flex-direction: column; gap: 8px; padding: 14px 0 0;
+}
+.sp-tr-result__row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-radius: 12px;
+  background: var(--surface, rgba(255,255,255,.85));
+  border: 1px solid var(--border, rgba(155,140,255,.25));
+}
+.sp-tr-result__row span { color: var(--muted, #6b5b9b); font-size: .8125rem; }
+.sp-tr-result__row strong {
+  font-size: 1.125rem;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-weight: 800;
+}
+.sp-tr-result__hint {
+  color: var(--text-secondary, #4f3d80);
+  font-size: .9375rem; text-align: center; margin: 8px 0 0;
+}

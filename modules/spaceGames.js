@@ -655,6 +655,145 @@ export function mountSpeedReactions(root, opts = {}) {
 }
 
 // =====================================================================
+// 8) TYPING RACE — 60s, type the prompt, live WPM + accuracy
+// =====================================================================
+const TR_SENTENCES = [
+  "The two of us against the rest of the world, gently choosing each other every quiet morning.",
+  "I love the way you laugh, especially when nobody is looking and the world feels small around us.",
+  "Some days are noisy and other days are still, but every day with you feels exactly like home.",
+  "Coffee, sunlight on the kitchen floor, and you across the table reading slowly — that's a Sunday I keep in my pocket.",
+  "If we could bottle this feeling we would never need anything else, just a window seat and your hand in mine.",
+  "Long distance is just a temporary geometry; the heart still draws the shortest line between two people who chose each other.",
+  "Tell me everything about your day in the smallest details, and I will love each ordinary thing because it happened to you.",
+  "We are building a small, kind world together, one breakfast and one inside joke at a time, and I think we are doing it really well.",
+];
+
+export function mountTypingRace(root, opts = {}) {
+  if (!root) return { destroy() {} };
+  const DURATION = 60;             // seconds
+  let prompt = "", started = 0, ticker = null, finished = false;
+  let chars = [], correct = 0, total = 0, errors = 0;
+
+  function pickPrompt() {
+    prompt = TR_SENTENCES[Math.floor(Math.random() * TR_SENTENCES.length)];
+    chars = [...prompt];
+    correct = 0; total = 0; errors = 0;
+  }
+
+  function draw() {
+    root.innerHTML = `
+      <div class="sp-game-root">
+        <div class="sp-game-root__head">
+          <h4>⌨️ Typing Race</h4>
+          <span class="sp-turn" data-role="time">${DURATION}s</span>
+          <div class="sp-score" data-role="score">— WPM · — %</div>
+          <button class="sp-game-reset" data-role="reset">Reset</button>
+        </div>
+
+        <div class="sp-tr-prompt" id="trPrompt">${renderPromptHTML()}</div>
+        <textarea class="sp-tr-input" id="trInput" rows="3" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Start typing the prompt above…"></textarea>
+        <div class="sp-tr-result" id="trResult" hidden></div>
+      </div>`;
+
+    const input = root.querySelector("#trInput");
+    input.addEventListener("input", onInput);
+    input.focus();
+    root.querySelector('[data-role="reset"]').addEventListener("click", reset);
+  }
+
+  function renderPromptHTML(typed = "") {
+    return chars.map((ch, i) => {
+      if (i < typed.length) {
+        const right = typed[i] === ch;
+        return `<span class="sp-tr-ch ${right ? "is-right" : "is-wrong"}">${escapeHtml(ch)}</span>`;
+      }
+      if (i === typed.length) return `<span class="sp-tr-ch is-cursor">${escapeHtml(ch)}</span>`;
+      return `<span class="sp-tr-ch">${escapeHtml(ch)}</span>`;
+    }).join("");
+  }
+
+  function onInput(e) {
+    if (finished) return;
+    const typed = e.target.value;
+    if (!started) {
+      started = performance.now();
+      ticker = setInterval(tick, 200);
+    }
+    // recount: compare each char against prompt
+    let okCount = 0;
+    for (let i = 0; i < typed.length; i++) {
+      if (i < chars.length && typed[i] === chars[i]) okCount++;
+    }
+    correct = okCount;
+    total = typed.length;
+    errors = total - correct;
+    root.querySelector("#trPrompt").innerHTML = renderPromptHTML(typed);
+    paintScore();
+    // Auto-finish when prompt completed
+    if (typed.length >= chars.length) finish();
+  }
+
+  function tick() {
+    if (finished) return;
+    const elapsed = (performance.now() - started) / 1000;
+    const left = Math.max(0, DURATION - elapsed);
+    root.querySelector('[data-role="time"]').textContent = `${Math.ceil(left)}s`;
+    paintScore();
+    if (left <= 0) finish();
+  }
+
+  function paintScore() {
+    const elapsed = started ? (performance.now() - started) / 60000 : 0;   // minutes
+    const wpm = elapsed > 0 ? Math.round((correct / 5) / elapsed) : 0;       // 5 chars per word
+    const acc = total > 0 ? Math.round((correct / total) * 100) : 100;
+    const score = root.querySelector('[data-role="score"]');
+    if (score) score.textContent = `${wpm} WPM · ${acc}%`;
+  }
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    clearInterval(ticker); ticker = null;
+    root.querySelector("#trInput").disabled = true;
+
+    const elapsed = started ? (performance.now() - started) / 60000 : 0;
+    const wpm = elapsed > 0 ? Math.round((correct / 5) / elapsed) : 0;
+    const acc = total > 0 ? Math.round((correct / total) * 100) : 100;
+    const result = root.querySelector("#trResult");
+    if (result) {
+      result.hidden = false;
+      result.innerHTML = `
+        <div class="sp-tr-result__row"><span>Speed</span><strong>${wpm} WPM</strong></div>
+        <div class="sp-tr-result__row"><span>Accuracy</span><strong>${acc}%</strong></div>
+        <div class="sp-tr-result__row"><span>Errors</span><strong>${errors}</strong></div>
+        <p class="sp-tr-result__hint">${
+          wpm >= 70 ? "Lightning fingers ⚡" :
+          wpm >= 45 ? "Smooth and steady 💜" :
+          wpm >= 25 ? "Solid run — try again to beat it." :
+                      "Take your time. The keys remember kindness."
+        }</p>`;
+    }
+    toastSuccess(`${wpm} WPM · ${acc}% accuracy`);
+  }
+
+  function reset() {
+    finished = false; started = 0; clearInterval(ticker); ticker = null;
+    pickPrompt();
+    draw();
+  }
+
+  pickPrompt();
+  draw();
+
+  return {
+    destroy() {
+      clearInterval(ticker); ticker = null;
+      root.innerHTML = "";
+    }
+  };
+}
+
+// =====================================================================
 // Dispatcher
 // =====================================================================
 export function mountGame(type, root, opts) {
@@ -666,6 +805,7 @@ export function mountGame(type, root, opts) {
     case "whoknowsbetter": return mountWhoKnowsBetter(root, opts);
     case "memorymatch":    return mountMemoryMatch(root, opts);
     case "speedreactions": return mountSpeedReactions(root, opts);
+    case "typingrace":     return mountTypingRace(root, opts);
     default:
       root.innerHTML = `<div class="sp-empty"><div class="sp-empty__icon">🎮</div><h4>Game coming soon</h4></div>`;
       return { destroy() {} };
@@ -676,6 +816,7 @@ if (typeof window !== "undefined") {
   window.NuvvunenuGames = {
     mountTicTacToe, mountConnect4, mountChessUI,
     mountTrivia, mountWhoKnowsBetter, mountMemoryMatch, mountSpeedReactions,
+    mountTypingRace,
     mountGame
   };
 }

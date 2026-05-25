@@ -47,14 +47,24 @@ function paint(s) {
   const avatarUrl = me.photoURL ||
     (typeof window.avatarFor === "function" ? window.avatarFor(me, me.uid) : null);
 
+  // Aura ring color set comes from currentMood emoji or a stored preference.
+  const auraKey = pickAuraKey(me.currentMood);
+  const planBadge = pickPlanBadge(me);
+  const moodStrip = renderMoodStrip(me.moodLog);
+
   _container.innerHTML = `
     <section class="profile-page stagger">
       <header class="profile-hero">
-        <button class="profile-avatar-wrap" id="btnAvatarUpload"
+        <button class="profile-avatar-wrap profile-avatar-wrap--aura" data-aura="${auraKey}"
+                id="btnAvatarUpload"
                 title="Change photo" aria-label="Change profile photo">
+          <span class="profile-aura-ring" aria-hidden="true"></span>
           ${avatarUrl
             ? `<img class="profile-avatar" alt="" src="${avatarUrl}" referrerpolicy="no-referrer">`
             : `<div class="profile-avatar profile-avatar--initial">${escapeHtml(initial)}</div>`}
+          ${planBadge
+            ? `<span class="profile-plan-badge ${planBadge.cls}" title="${escapeHtml(planBadge.title)}" aria-label="${escapeHtml(planBadge.title)}">${planBadge.icon}</span>`
+            : ""}
           <span class="profile-avatar-edit">📷</span>
         </button>
         <div class="profile-meta">
@@ -62,6 +72,8 @@ function paint(s) {
           <div class="profile-handle" id="profileHandle">${escapeHtml(handle)}</div>
         </div>
       </header>
+
+      ${moodStrip}
 
       <section class="card profile-section">
         <h3 class="profile-h">About you</h3>
@@ -134,6 +146,23 @@ function paintPlanRow(sub) {
   if (subEl)  subEl.textContent  = planId === "free"
     ? "You're on the Free plan."
     : `${def.label} · $${def.priceMonthly.toFixed(2)} / month`;
+
+  // Refresh the avatar plan-badge from the live subscription doc
+  const wrap = _container?.querySelector("#btnAvatarUpload");
+  if (wrap) {
+    wrap.querySelector(".profile-plan-badge")?.remove();
+    const badge = pickPlanBadge({ plan: planId });
+    if (badge) {
+      const el = document.createElement("span");
+      el.className = `profile-plan-badge ${badge.cls}`;
+      el.title = badge.title;
+      el.setAttribute("aria-label", badge.title);
+      el.textContent = badge.icon;
+      // Insert before the camera icon so DOM order matches initial render
+      const editIcon = wrap.querySelector(".profile-avatar-edit");
+      wrap.insertBefore(el, editIcon || null);
+    }
+  }
 }
 
 // =========================================================================
@@ -381,4 +410,65 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) {
   return String(s ?? "").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+
+
+// =====================================================================
+// Aura ring + plan badge + mood-history helpers
+// =====================================================================
+const AURA_BY_MOOD = {
+  // emoji prefix → aura palette key
+  "💜": "calm",     "🥰": "love",    "🌸": "bloom",
+  "🥺": "tender",   "🌙": "night",   "✨": "glow",
+  "😍": "love",     "🌧": "rain",    "🌊": "ocean",
+  "🔥": "warm",     "🌿": "fresh",   "🌻": "sunny",
+};
+function pickAuraKey(currentMood) {
+  if (!currentMood) return "calm";
+  const ch = [...String(currentMood)][0];
+  return AURA_BY_MOOD[ch] || "calm";
+}
+
+function pickPlanBadge(me) {
+  // Use whatever plan signal we have on the user doc; the plan card paints later
+  // from the subscription doc, so this is a best-effort visual hint that updates
+  // every render. Falls back to no badge for free users.
+  const plan = me?.plan || me?.subscription?.plan || null;
+  if (plan === "forever")        return { cls: "is-forever",  icon: "♾",  title: "Forever plan" };
+  if (plan === "together_plus")  return { cls: "is-together", icon: "✦",  title: "Together+" };
+  return null;
+}
+
+function renderMoodStrip(moodLog) {
+  const days = lastNDays(7);
+  const log = moodLog && typeof moodLog === "object" ? moodLog : {};
+  const cells = days.map(({ key, short }) => {
+    const emoji = log[key];
+    return `
+      <div class="mood-strip__cell ${emoji ? "is-set" : ""}">
+        <div class="mood-strip__emoji">${emoji ? escapeHtml(emoji) : "·"}</div>
+        <div class="mood-strip__day">${short}</div>
+      </div>`;
+  }).join("");
+  return `
+    <section class="card profile-section">
+      <h3 class="profile-h">Past 7 days</h3>
+      <div class="mood-strip">${cells}</div>
+      <p class="profile-hint">Each day's check-in lives here. Pick a mood on Home to fill today.</p>
+    </section>`;
+}
+
+function lastNDays(n) {
+  const out = [];
+  const labels = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const today = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    out.push({ key: `${y}-${m}-${day}`, short: labels[d.getDay()] });
+  }
+  return out;
 }

@@ -43,6 +43,22 @@ export async function updateMood(coupleId, uid, moodEmoji) {
     [`moods.${uid}`]: { emoji: moodEmoji, at: serverTimestamp() },
     updatedAt: serverTimestamp()
   });
+  // Also log on the user's own doc so we can show a 7-day strip on /profile.
+  // Key by local YYYY-MM-DD; last write of the day wins.
+  try {
+    const today = todayKey();
+    await updateDoc(doc(db, "users", uid), {
+      [`moodLog.${today}`]: moodEmoji,
+      currentMood: moodEmoji,
+    });
+  } catch { /* user doc may not exist yet on a brand-new account; non-fatal */ }
+}
+
+function todayKey(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export async function sendThinkingOfYou(coupleId, fromUid, toUid) {
