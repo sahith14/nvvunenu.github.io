@@ -39,6 +39,8 @@ import './services/memoriesBadge.js';
 import './services/togetherBadge.js';
 // Side-effect: paints a pink dot on /bond nav when partner logs kindness / dates / qotw
 import './services/bondBadge.js';
+// Side-effect: paints a red dot on /profile nav when a new missed call arrives
+import './services/callsBadge.js';
 
 // Background services
 import { startIncomingCallListener, stopIncomingCallListener } from './modules/incomingCall.js';
