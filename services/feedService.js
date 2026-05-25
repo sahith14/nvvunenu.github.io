@@ -256,10 +256,25 @@ export async function addComment(postId, text) {
     authorPhoto:  me.photoURL || null,
     authorUsername: me.username || null,
     text:         cleaned,
+    likes:        [],
     createdAt:    serverTimestamp()
   });
   batch.update(doc(db, "posts", postId), { commentCount: increment(1) });
   await batch.commit();
+}
+
+/** Toggle a like on a comment. likes is a uid[] array on the comment doc. */
+export async function toggleCommentLike(postId, commentId) {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !postId || !commentId) return;
+  const ref = doc(db, "posts", postId, "comments", commentId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const liked = (snap.data().likes || []).includes(uid);
+  const { arrayUnion, arrayRemove } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+  await updateDoc(ref, {
+    likes: liked ? arrayRemove(uid) : arrayUnion(uid),
+  });
 }
 
 export function subscribeComments(postId, cb) {

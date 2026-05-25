@@ -8,7 +8,7 @@ import { auth } from '../firebase.js';
 import {
   createPost, deletePost, getPost,
   subscribeFeed, subscribeExplore, subscribeUserPosts,
-  toggleLike, addComment, subscribeComments,
+  toggleLike, addComment, subscribeComments, toggleCommentLike,
   follow, unfollow, isFollowing,
   searchUsers, subscribeUserDoc
 } from '../services/feedService.js';
@@ -548,19 +548,32 @@ function showPost(postId) {
     const list = document.getElementById('commentsList');
     if (!list) return;
     if (!comments.length) { list.innerHTML = `<div class="muted">Be the first to comment</div>`; return; }
+    const myUid = auth.currentUser?.uid;
     list.innerHTML = comments.map((c) => {
       const ts = c.createdAt?.toDate ? timeAgo(c.createdAt.toDate()) : '';
       const av = c.authorPhoto || PRAVATAR_FALLBACK(c.author);
+      const likes = Array.isArray(c.likes) ? c.likes : [];
+      const liked = !!myUid && likes.includes(myUid);
+      const count = likes.length;
       return `
-        <div class="ig-comment">
+        <div class="ig-comment" data-comment="${c.id}">
           <img class="ig-comment-avatar" src="${av}" alt="" referrerpolicy="no-referrer">
           <div class="ig-comment-body">
             <p><strong>${escapeHtml(c.authorUsername || c.authorName || 'someone')}</strong>${escapeHtml(c.text)}</p>
-            <div class="ig-comment-meta">${ts}</div>
+            <div class="ig-comment-meta">${ts}${count ? ` · ${count} ${count === 1 ? 'like' : 'likes'}` : ''}</div>
           </div>
+          <button class="ig-comment-like ${liked ? 'is-liked' : ''}" data-comment-like="${c.id}" aria-label="${liked ? 'Unlike' : 'Like'}" title="${liked ? 'Unlike' : 'Like'}">${liked ? '♥' : '♡'}</button>
         </div>
       `;
     }).join('');
+
+    list.querySelectorAll('[data-comment-like]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cid = btn.dataset.commentLike;
+        toggleCommentLike(postId, cid).catch(() => {});
+      });
+    });
   });
 }
 

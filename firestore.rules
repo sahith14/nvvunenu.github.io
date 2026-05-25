@@ -327,7 +327,13 @@ service cloud.firestore {
       match /comments/{cid} {
         allow read: if signedIn();
         allow create: if signedIn() && request.resource.data.author == uid();
-        allow update, delete: if signedIn() && resource.data.author == uid();
+        // Author can update/delete fully; others can only flip the
+        // `likes` array (used for comment hearts).
+        allow update: if signedIn() && (
+          resource.data.author == uid()
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+        );
+        allow delete: if signedIn() && resource.data.author == uid();
       }
     }
 

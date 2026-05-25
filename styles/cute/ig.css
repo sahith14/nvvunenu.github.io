@@ -1003,3 +1003,26 @@ body.theme-dark .sub-btn { background: #f5f5f5; color: #111; }
   color: var(--muted, #6b5b9b);
   font-size: .875rem; line-height: 1.5;
 }
+
+
+
+/* Comment like heart */
+.ig-comment { position: relative; }
+.ig-comment-like {
+  flex: 0 0 auto;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 0; background: transparent;
+  font-size: 16px; line-height: 1;
+  color: rgba(0,0,0,.45);
+  cursor: pointer; font-family: inherit;
+  align-self: center;
+  transition: transform .12s, color .12s;
+}
+.ig-comment-like:hover { transform: scale(1.18); }
+.ig-comment-like.is-liked { color: #ff5e7e; }
+.ig-comment-like.is-liked { animation: ig-comment-like-pop .25s ease-out; }
+@keyframes ig-comment-like-pop {
+  0%   { transform: scale(.8); }
+  60%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
