@@ -247,7 +247,17 @@ function paintMeta(meta, s) {
   const bondEl    = _container.querySelector("#bondScore");
   const streakEl  = _container.querySelector("#streakDays");
   if (bondEl)   bondEl.textContent   = (meta?.bondScore ?? 50) + "";
-  if (streakEl) streakEl.textContent = (meta?.streak    ?? 0)  + "";
+
+  // Streak — sourced from the user doc (streakService maintains it)
+  const streakNow  = Number(s?.user?.streak     ?? meta?.streak ?? 0);
+  const streakBest = Number(s?.user?.streakBest ?? streakNow);
+  if (streakEl) {
+    streakEl.innerHTML = `${streakNow}${
+      streakBest > 0 && streakBest >= streakNow
+        ? ` <span class="streak-best ${streakNow > 0 && streakNow === streakBest ? "is-record" : ""}">${streakNow > 0 && streakNow === streakBest ? "🏆" : "best " + streakBest}</span>`
+        : ""
+    }`;
+  }
 
   // My mood (if previously set, reflect it)
   const myMood = meta?.moods?.[s.user?.uid];
