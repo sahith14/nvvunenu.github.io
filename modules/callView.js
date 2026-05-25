@@ -331,13 +331,32 @@ async function declineIncoming() {
 }
 
 export function closeCallUI(reason) {
+  // Capture state before teardown so we can log a snapshot.
+  const histSnap = (coupleId && myUid && partnerId) ? {
+    coupleId, kind: callType, direction: mode === 'callee' ? 'incoming' : 'outgoing',
+    partnerId, sender: myUid,
+    durationSec: startMs ? Math.max(0, Math.round((Date.now() - startMs) / 1000)) : 0,
+    reason: reason || (startMs ? 'ended' : 'missed'),
+  } : null;
+
   if (currentCall) {
     try { currentCall.endCall(); } catch {}
   }
   if (mode && coupleId && myUid) {
     setCallStatus('ended').then(clearSignaling).catch(()=>{});
   }
+  // Fire-and-forget: write to couples/{cid}/callHistory
+  if (histSnap) logCallHistory(histSnap);
   teardown(reason);
+}
+
+async function logCallHistory({ coupleId, kind, direction, partnerId, sender, durationSec, reason }) {
+  try {
+    await addDoc(collection(db, 'couples', coupleId, 'callHistory'), {
+      kind, direction, partnerId, sender, durationSec, reason,
+      at: serverTimestamp(),
+    });
+  } catch (e) { /* non-fatal */ }
 }
 
 function teardown(reason) {

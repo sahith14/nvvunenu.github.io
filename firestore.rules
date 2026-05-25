@@ -297,6 +297,15 @@ service cloud.firestore {
         allow delete: if inCouple(coupleId);
       }
 
+      // Call history — written when a call ends. Sender is the user
+      // closing the UI (could be either side; both write their own row).
+      match /callHistory/{callId} {
+        allow read: if inCouple(coupleId);
+        allow create: if inCouple(coupleId)
+          && request.resource.data.sender == uid();
+        allow delete: if inCouple(coupleId);
+      }
+
       // Shared memories within couple
       match /memories/{memId} {
         allow read, write: if inCouple(coupleId);
