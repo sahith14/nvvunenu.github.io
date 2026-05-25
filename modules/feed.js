@@ -174,17 +174,20 @@ function renderStoriesFromPosts(posts) {
   const stripEl = document.getElementById('igStories');
   if (!stripEl) return;
 
+  const seenSet = getSeenStories();
   // Take up to 8 unique recent owners
   const seen = new Set();
   const stories = [];
   for (const p of posts) {
     if (!p.owner || seen.has(p.owner)) continue;
     seen.add(p.owner);
+    const lastTs = p.createdAt?.toMillis?.() || p.createdAt?.seconds * 1000 || 0;
     stories.push({
       uid: p.owner,
       name: (p.ownerName || p.ownerUsername || 'someone').split(' ')[0],
       img: p.ownerPhoto || PRAVATAR_FALLBACK(p.owner),
-      hasUnseen: true   // visual flag — could use a "seen" set later
+      hasUnseen: !seenSet.has(`${p.owner}|${lastTs}`),
+      lastTs,
     });
     if (stories.length >= 8) break;
   }
@@ -198,7 +201,7 @@ function renderStoriesFromPosts(posts) {
       <p>Your story</p>
     </div>
     ${stories.map((s) => `
-      <button class="ig-story" data-uid="${s.uid}">
+      <button class="ig-story" data-uid="${s.uid}" data-last-ts="${s.lastTs}">
         <div class="ig-story-ring ${s.hasUnseen ? 'active' : ''}">
           <img src="${s.img}" alt="" referrerpolicy="no-referrer">
         </div>
@@ -212,7 +215,14 @@ function renderStoriesFromPosts(posts) {
     if (typeof window.loadPage === 'function') window.loadPage('moments');
   });
   stripEl.querySelectorAll('.ig-story[data-uid]').forEach((s) => {
-    s.addEventListener('click', () => showUser(s.dataset.uid));
+    s.addEventListener('click', () => {
+      const uid = s.dataset.uid;
+      const lastTs = s.dataset.lastTs || "0";
+      markStorySeen(`${uid}|${lastTs}`);
+      const ring = s.querySelector('.ig-story-ring');
+      if (ring) ring.classList.remove('active');
+      showUser(uid);
+    });
   });
 }
 
@@ -511,3 +521,28 @@ function timeAgo(d) {
 // expose for cross-module (profile module's "View public" links here)
 window.openFeedUser = showUser;
 window.openFeedPost = showPost;
+
+
+
+// =====================================================================
+// Story seen tracking — keyed by "<owner-uid>|<post-timestamp-ms>" so
+// a brand-new post by a previously-seen owner re-activates the ring.
+// Persisted to localStorage. Capped at 200 entries (FIFO trim).
+// =====================================================================
+const SEEN_STORIES_KEY = "nvvunenu.seenStories";
+
+function getSeenStories() {
+  try {
+    const raw = localStorage.getItem(SEEN_STORIES_KEY) || "[]";
+    return new Set(JSON.parse(raw));
+  } catch { return new Set(); }
+}
+function markStorySeen(key) {
+  if (!key) return;
+  const set = getSeenStories();
+  if (set.has(key)) return;
+  const list = [...set, key];
+  // Cap to last 200 to keep localStorage tidy.
+  const trimmed = list.length > 200 ? list.slice(-200) : list;
+  try { localStorage.setItem(SEEN_STORIES_KEY, JSON.stringify(trimmed)); } catch {}
+}
