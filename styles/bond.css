@@ -413,3 +413,62 @@
   color: var(--muted, #6b5b9b);
   border-color: rgba(155,140,255,.3);
 }
+
+
+
+/* =====================================================================
+   Activity heatmap — 13 weeks × 7 days, GitHub-style
+   ===================================================================== */
+.bd-heatmap {
+  background: var(--card, rgba(255,255,255,.85));
+  border: 1px solid var(--border, rgba(155,140,255,.18));
+  border-radius: 18px; padding: 16px;
+}
+.bd-heatmap__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.bd-heatmap__head h3 { margin: 0; font-size: 1rem; color: var(--text, #1a1235); }
+.bd-heatmap__caption {
+  font-size: .6875rem; color: var(--muted, #6b5b9b); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .4px;
+}
+.bd-heatmap__grid {
+  display: grid; grid-auto-flow: column; gap: 4px;
+  grid-template-rows: repeat(7, 1fr);
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: thin;
+}
+.bd-heatmap__grid::-webkit-scrollbar { height: 5px; }
+.bd-heatmap__grid::-webkit-scrollbar-thumb { background: rgba(155,140,255,.3); border-radius: 3px; }
+.bd-heat-col {
+  display: grid; grid-template-rows: repeat(7, 1fr); gap: 4px;
+}
+.bd-heat-cell {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  background: rgba(155,140,255,.10);
+  border: 1px solid rgba(155,140,255,.12);
+  cursor: default;
+}
+.bd-heat-cell.is-l0 { background: rgba(155,140,255,.10); border-color: rgba(155,140,255,.12); }
+.bd-heat-cell.is-l1 { background: rgba(255,126,182,.30); border-color: rgba(255,126,182,.30); }
+.bd-heat-cell.is-l2 { background: rgba(255,126,182,.55); border-color: rgba(255,126,182,.55); }
+.bd-heat-cell.is-l3 { background: linear-gradient(135deg,#ff7eb6,#9b8cff); border-color: transparent; }
+.bd-heat-cell.is-l4 {
+  background: linear-gradient(135deg,#ff5e7e,#7763ff);
+  border-color: transparent;
+  box-shadow: 0 0 6px rgba(255,126,182,.45);
+}
+.bd-heat-cell.is-future {
+  background: transparent;
+  border: 1px dashed rgba(155,140,255,.18);
+}
+.bd-heatmap__legend {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 10px;
+  font-size: .6875rem; color: var(--muted, #6b5b9b);
+  text-transform: uppercase; letter-spacing: .3px; font-weight: 700;
+}
+.bd-heatmap__legend .bd-heat-cell { width: 12px; height: 12px; }

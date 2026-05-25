@@ -372,6 +372,23 @@ function paintPaired(s) {
         <div class="bd-timeline__strip" id="bdTimelineStrip"></div>
       </div>
 
+      <div class="bd-heatmap">
+        <div class="bd-heatmap__head">
+          <h3>Activity heatmap</h3>
+          <span class="bd-heatmap__caption" id="bdHeatCaption">Last 13 weeks</span>
+        </div>
+        <div class="bd-heatmap__grid" id="bdHeatmap"></div>
+        <div class="bd-heatmap__legend">
+          <span>Less</span>
+          <span class="bd-heat-cell is-l0"></span>
+          <span class="bd-heat-cell is-l1"></span>
+          <span class="bd-heat-cell is-l2"></span>
+          <span class="bd-heat-cell is-l3"></span>
+          <span class="bd-heat-cell is-l4"></span>
+          <span>More</span>
+        </div>
+      </div>
+
       <div class="bd-qotw" id="bdQotw">
         <div class="bd-qotw__head">
           <span class="bd-qotw__chip">Question of the week</span>
@@ -487,6 +504,7 @@ async function loadPairedData(coupleId) {
     persistPulseSnapshot(coupleId, pulseResult);
   }
   loadAndPaintPulseTrend(coupleId);
+  loadAndPaintHeatmap(coupleId);
   if (bond?.languages) {
     Object.entries(bond.languages).forEach(([key, val]) => {
       const el = _container.querySelector(`#lang${key.charAt(0).toUpperCase() + key.slice(1)}`);
@@ -1084,4 +1102,79 @@ function paintPulseDelta(scores) {
   if (diff > 0)      { el.classList.add("is-up");   el.textContent = `↑ ${diff}`; }
   else if (diff < 0) { el.classList.add("is-down"); el.textContent = `↓ ${Math.abs(diff)}`; }
   else               { el.classList.add("is-flat"); el.textContent = `⟷ same`; }
+}
+
+
+// =====================================================================
+// 13-week activity heatmap (GitHub-style). Reads pulseHistory and maps
+// each day's score to one of 5 color levels.
+// =====================================================================
+async function loadAndPaintHeatmap(coupleId) {
+  const host = _container?.querySelector("#bdHeatmap");
+  if (!host || !coupleId) return;
+
+  // Build the last 13 weeks (= 91 days) anchored to today's column. Each
+  // column is a week (Sun..Sat), oldest first.
+  const today = new Date();
+  // Find this Sunday (start of current week)
+  const startThisWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+  // Anchor 13 weeks back from start-of-this-week
+  const start = new Date(startThisWeek.getFullYear(), startThisWeek.getMonth(), startThisWeek.getDate() - 12 * 7);
+
+  const days = [];
+  for (let i = 0; i < 13 * 7; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    days.push(todayKeyLocal(d));
+  }
+
+  // Fetch up to 100 most recent docs
+  const map = new Map();
+  try {
+    const q = query(
+      collection(db, "bonds", coupleId, "pulseHistory"),
+      orderBy("__name__", "desc"),
+      limit(100)
+    );
+    const snap = await getDocs(q);
+    snap.forEach((d) => map.set(d.id, Number(d.data().score) || 0));
+  } catch { /* non-fatal */ }
+
+  // Render — columns are weeks, rows are days of week (Sun..Sat)
+  const COLS = 13;
+  const ROWS = 7;
+  const cols = [];
+  for (let c = 0; c < COLS; c++) {
+    const cells = [];
+    for (let r = 0; r < ROWS; r++) {
+      const idx = c * 7 + r;
+      const key = days[idx];
+      const future = idx >= days.length || dayKeyIsFuture(key);
+      const score = map.has(key) ? map.get(key) : null;
+      const lvl = future ? -1 : levelFor(score);
+      const title = future
+        ? key
+        : (score == null ? `${key} · no entry` : `${key} · pulse ${score}`);
+      cells.push(`<div class="bd-heat-cell is-l${lvl >= 0 ? lvl : 0} ${future ? 'is-future' : ''}" title="${escape(title)}"></div>`);
+    }
+    cols.push(`<div class="bd-heat-col">${cells.join("")}</div>`);
+  }
+  host.innerHTML = cols.join("");
+
+  const cap = _container.querySelector("#bdHeatCaption");
+  if (cap) {
+    const tracked = days.filter((k) => map.has(k)).length;
+    cap.textContent = tracked === 0 ? "Build it day by day" : `${tracked} of ${days.length} days tracked`;
+  }
+}
+
+function levelFor(score) {
+  if (score == null) return 0;
+  if (score < 40) return 1;
+  if (score < 60) return 2;
+  if (score < 80) return 3;
+  return 4;
+}
+function dayKeyIsFuture(key) {
+  const today = todayKeyLocal();
+  return key > today;     // string compare works because YYYY-MM-DD
 }
