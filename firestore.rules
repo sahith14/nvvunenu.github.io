@@ -263,6 +263,9 @@ service cloud.firestore {
       match /bucket/{itemId} {
         allow read, write: if inCouple(coupleId);
       }
+      match /pulseHistory/{dayKey} {
+        allow read, write: if inCouple(coupleId);
+      }
     }
 
     // ---------- subscriptions (per user) ----------

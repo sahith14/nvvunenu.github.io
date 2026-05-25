@@ -18,7 +18,7 @@ import {
   pairWithInviteCode, unpair, getUser
 } from "../services/partnerService.js";
 import {
-  doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, orderBy, limit, getDocs,
+  doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs,
   onSnapshot, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { computePulse, PULSE_LABELS } from "../services/bondPulseService.js";
@@ -363,6 +363,7 @@ function paintPaired(s) {
         <div class="pulse-label">Relationship Pulse</div>
         <div class="pulse-score" id="pulseScore">—</div>
         <div class="pulse-breakdown" id="pulseBreakdown"></div>
+        <div class="pulse-trend" id="pulseTrend"></div>
       </div>
 
       <div class="bd-timeline">
@@ -480,6 +481,11 @@ async function loadPairedData(coupleId) {
 
   if (pulseEl) pulseEl.textContent = `${pulseResult?.score ?? bond?.pulse ?? 75}%`;
   paintPulseBreakdown(pulseResult);
+  // Persist today's snapshot (idempotent — last write of day wins) and paint trend.
+  if (pulseResult?.score != null) {
+    persistPulseSnapshot(coupleId, pulseResult);
+  }
+  loadAndPaintPulseTrend(coupleId);
   if (bond?.languages) {
     Object.entries(bond.languages).forEach(([key, val]) => {
       const el = _container.querySelector(`#lang${key.charAt(0).toUpperCase() + key.slice(1)}`);
@@ -913,4 +919,139 @@ function paintPulseBreakdown(result) {
       <span class="pulse-chip__num">${n}</span>
     </div>`;
   }).join("");
+}
+
+
+// =====================================================================
+// Pulse history — persist today's snapshot + render 14-day sparkline.
+// Storage: bonds/{cid}/pulseHistory/{YYYY-MM-DD} = { score, at }
+// =====================================================================
+function todayKeyLocal(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+async function persistPulseSnapshot(coupleId, pulseResult) {
+  if (!coupleId) return;
+  try {
+    await setDoc(
+      doc(db, "bonds", coupleId, "pulseHistory", todayKeyLocal()),
+      {
+        score: Number(pulseResult.score),
+        at: serverTimestamp()
+      },
+      { merge: true }
+    );
+  } catch { /* non-fatal */ }
+}
+
+async function loadAndPaintPulseTrend(coupleId) {
+  const host = _container?.querySelector("#pulseTrend");
+  if (!host || !coupleId) return;
+  // Build expected last 14 day-keys (oldest → newest)
+  const days = [];
+  const today = new Date();
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    days.push(todayKeyLocal(d));
+  }
+
+  let scores = days.map(() => null);
+  try {
+    // Fetch last 14 docs ordered by id desc — doc IDs are YYYY-MM-DD so
+    // lexicographic order matches calendar order.
+    const q = query(
+      collection(db, "bonds", coupleId, "pulseHistory"),
+      orderBy("__name__", "desc"),
+      limit(14)
+    );
+    const snap = await getDocs(q);
+    const map = new Map();
+    snap.forEach((d) => map.set(d.id, Number(d.data().score) || 0));
+    scores = days.map((k) => map.has(k) ? map.get(k) : null);
+  } catch { /* non-fatal */ }
+
+  host.innerHTML = renderSparkline(days, scores);
+}
+
+function renderSparkline(days, scores) {
+  // SVG dimensions
+  const W = 280, H = 60, PAD = 4;
+  const innerW = W - PAD * 2;
+  const innerH = H - PAD * 2;
+  const n = days.length;
+  if (!n) return "";
+
+  // Map a score to a y coord (0..100 → bottom..top)
+  const yFor = (v) => {
+    const clamped = Math.max(0, Math.min(100, v));
+    return PAD + innerH - (clamped / 100) * innerH;
+  };
+  const xFor = (i) => PAD + (i / Math.max(1, n - 1)) * innerW;
+
+  // Build line path skipping null points (gap)
+  let pathD = "";
+  let started = false;
+  for (let i = 0; i < n; i++) {
+    const v = scores[i];
+    if (v == null) { started = false; continue; }
+    const cmd = started ? "L" : "M";
+    pathD += ` ${cmd}${xFor(i).toFixed(1)},${yFor(v).toFixed(1)}`;
+    started = true;
+  }
+
+  // Filled area under the line (for the visual)
+  let areaD = "";
+  let areaStarted = false;
+  let lastX = null;
+  for (let i = 0; i < n; i++) {
+    const v = scores[i];
+    if (v == null) continue;
+    const x = xFor(i), y = yFor(v);
+    if (!areaStarted) {
+      areaD += `M${x.toFixed(1)},${(PAD + innerH).toFixed(1)} L${x.toFixed(1)},${y.toFixed(1)}`;
+      areaStarted = true;
+    } else {
+      areaD += ` L${x.toFixed(1)},${y.toFixed(1)}`;
+    }
+    lastX = x;
+  }
+  if (areaStarted && lastX != null) {
+    areaD += ` L${lastX.toFixed(1)},${(PAD + innerH).toFixed(1)} Z`;
+  }
+
+  // Dots for each non-null point
+  const dots = scores.map((v, i) => {
+    if (v == null) return "";
+    return `<circle cx="${xFor(i).toFixed(1)}" cy="${yFor(v).toFixed(1)}" r="2.5" class="pulse-trend__dot"></circle>`;
+  }).join("");
+
+  // Today is the last index — emphasise it
+  const lastIdx = scores.map((v, i) => v == null ? -1 : i).reduce((a, b) => Math.max(a, b), -1);
+  const today = lastIdx >= 0
+    ? `<circle cx="${xFor(lastIdx).toFixed(1)}" cy="${yFor(scores[lastIdx]).toFixed(1)}" r="4" class="pulse-trend__today"></circle>`
+    : "";
+
+  const filled = scores.filter((v) => v != null).length;
+  return `
+    <svg class="pulse-trend__svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Pulse trend (last 14 days)">
+      <defs>
+        <linearGradient id="pulseAreaG" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%"  stop-color="#ff7eb6" stop-opacity="0.45"/>
+          <stop offset="100%" stop-color="#9b8cff" stop-opacity="0.05"/>
+        </linearGradient>
+        <linearGradient id="pulseLineG" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%"  stop-color="#ff7eb6"/>
+          <stop offset="100%" stop-color="#9b8cff"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaD}" fill="url(#pulseAreaG)"></path>
+      <path d="${pathD}" fill="none" stroke="url(#pulseLineG)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+      ${dots}
+      ${today}
+    </svg>
+    <div class="pulse-trend__lbl">${filled === 0 ? "Trend builds as you visit Bond each day." : `${filled} of 14 days tracked`}</div>
+  `;
 }

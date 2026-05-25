@@ -359,3 +359,30 @@
   background: linear-gradient(135deg,#ff7eb6,#9b8cff);
   color: #fff;
 }
+
+
+
+/* Pulse trend sparkline */
+.pulse-trend {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; margin-top: 14px;
+}
+.pulse-trend__svg {
+  width: 100%; max-width: 320px; height: 60px;
+  display: block;
+}
+.pulse-trend__dot {
+  fill: #fff;
+  stroke: #9b8cff;
+  stroke-width: 2;
+}
+.pulse-trend__today {
+  fill: #fff;
+  stroke: #ff7eb6;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px rgba(255,126,182,.7));
+}
+.pulse-trend__lbl {
+  font-size: .6875rem; color: var(--muted, #6b5b9b);
+  text-transform: uppercase; letter-spacing: .4px; font-weight: 700;
+}
