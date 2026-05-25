@@ -12,7 +12,9 @@ import {
   follow, unfollow, isFollowing,
   searchUsers, subscribeUserDoc
 } from '../services/feedService.js';
-import { toast, toastError, toastSuccess, safe } from '../utils/toast.js';
+import { toast, toastError, toastSuccess, toastWarn, safe } from '../utils/toast.js';
+import { addMemoryFromUrl } from '../services/memoryService.js';
+import { getState } from '../state/appState.js';
 
 let unsubFeed         = null;
 let unsubComments     = null;
@@ -356,6 +358,27 @@ function attachPostHandlers(posts) {
       }
       lastTap = now;
     });
+    // Long-press / right-click → "Save to memories"
+    let lpTimer = null, suppressClick = false;
+    const lpStart = () => {
+      clearTimeout(lpTimer);
+      lpTimer = setTimeout(() => {
+        lpTimer = null;
+        suppressClick = true;
+        offerSaveToMemories(id);
+      }, 500);
+    };
+    const lpCancel = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+    media.addEventListener('touchstart',  lpStart, { passive: true });
+    media.addEventListener('touchend',    lpCancel);
+    media.addEventListener('touchmove',   lpCancel);
+    media.addEventListener('mousedown',   (e) => { if (e.button === 0) lpStart(); });
+    media.addEventListener('mouseup',     lpCancel);
+    media.addEventListener('mouseleave',  lpCancel);
+    media.addEventListener('contextmenu', (e) => { e.preventDefault(); offerSaveToMemories(id); });
+    media.addEventListener('click', (e) => {
+      if (suppressClick) { suppressClick = false; e.stopPropagation(); }
+    }, true);
   });
 }
 
@@ -661,5 +684,50 @@ function attachPullToRefresh() {
       await switchTab();    // re-attach subscriptions, replays the latest data
     } catch {}
     setTimeout(() => { refreshing = false; reset(); }, 500);
+  });
+}
+
+
+// =====================================================================
+// Save a feed post's photo to your memories (long-press / right-click).
+// =====================================================================
+async function offerSaveToMemories(postId) {
+  const article = containerEl.querySelector(`.ig-post[data-post="${CSS.escape(postId)}"]`);
+  if (!article) return;
+  const img = article.querySelector('.ig-post-img');
+  const url = img?.getAttribute('src');
+  if (!url) return;
+  const cid = getState()?.coupleId;
+  if (!cid) { toastWarn("Pair up to save memories"); return; }
+
+  // Quick confirm modal — reuse tc-modal styling (already on the page elsewhere).
+  const wrap = document.createElement("div");
+  wrap.className = "tc-modal";
+  wrap.innerHTML = `
+    <div class="tc-modal__panel" role="dialog" aria-modal="true" aria-label="Save to Memories">
+      <div class="tc-modal__head">Save this photo?</div>
+      <div class="tc-modal__body">
+        <p>Adds it to your shared Memories grid. The original post stays where it is.</p>
+      </div>
+      <div class="tc-modal__actions">
+        <button class="btn btn-ghost"   data-act="cancel">Cancel</button>
+        <button class="btn btn-primary" data-act="ok">Save 💜</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener("click", close);
+  wrap.querySelector('[data-act="ok"]').addEventListener("click", async () => {
+    const okBtn = wrap.querySelector('[data-act="ok"]');
+    okBtn.disabled = true;
+    const ok = await safe(() => addMemoryFromUrl({
+      coupleId: cid, url, title: "Saved from feed",
+      date: new Date().toISOString().slice(0, 10),
+      mediaType: "image",
+    }), "Couldn't save");
+    close();
+    if (ok !== false) toastSuccess("Saved to Memories 💜");
   });
 }
