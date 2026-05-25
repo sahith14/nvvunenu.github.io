@@ -253,3 +253,74 @@
   color: #c8baff;
   border-color: rgba(255,255,255,.18);
 }
+
+
+
+/* =====================================================================
+   Polls — bubble inside chat stream
+   ===================================================================== */
+.chat-poll {
+  display: flex; flex-direction: column; gap: 8px;
+  min-width: 240px; max-width: 320px;
+}
+.chat-poll__q {
+  font-weight: 700; font-size: .9375rem;
+  line-height: 1.4;
+}
+.chat-poll__choices { display: flex; flex-direction: column; gap: 6px; }
+.chat-poll__choice {
+  position: relative;
+  display: block;
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(155,140,255,.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: inherit; cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  transition: all .15s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.chat-poll__choice:hover { transform: translateY(-1px); border-color: #9b8cff; }
+.chat-poll__choice.is-mine {
+  border-color: #9b8cff;
+  box-shadow: 0 0 0 2px rgba(155,140,255,.18);
+}
+.chat-poll__bar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(255,126,182,.28), rgba(155,140,255,.28));
+  z-index: 0;
+  transition: width .35s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.chat-poll__label {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 6px;
+  font-size: .875rem; color: var(--text, #1a1235); font-weight: 600;
+}
+.chat-poll__label > span:first-child { flex: 1; min-width: 0; word-break: break-word; }
+.chat-poll__pickers { display: inline-flex; gap: 4px; }
+.chat-poll__pin {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+}
+.chat-poll__pin--mine   { background: #9b8cff; }
+.chat-poll__pin--theirs { background: #ff7eb6; }
+.chat-poll__pct {
+  font-size: .75rem; color: var(--muted, #6b5b9b); font-weight: 700;
+  min-width: 36px; text-align: right;
+}
+.chat-poll__total {
+  font-size: .75rem; color: var(--muted, #6b5b9b);
+  text-align: right; opacity: .75;
+}
+
+/* In midnight theme, lighten poll surfaces */
+.chat-page[data-chat-theme="midnight"] .chat-poll__choice {
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
+  color: #f4efff;
+}
+.chat-page[data-chat-theme="midnight"] .chat-poll__label {
+  color: #f4efff;
+}
+.chat-page[data-chat-theme="midnight"] .chat-poll__total {
+  color: #c8baff;
+}

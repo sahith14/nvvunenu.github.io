@@ -10,7 +10,8 @@ import { toast, toastWarn, toastError, safe } from '../utils/toast.js';
 import { formatDayHeader } from '../utils/time.js';
 import {
   ensureChat, subscribeMessages, sendText, setTyping,
-  markDeliveredAndSeen, toggleReaction, subscribeChatMeta, renderTicks
+  markDeliveredAndSeen, toggleReaction, subscribeChatMeta, renderTicks,
+  sendPoll, votePoll
 } from '../services/chatService.js';
 import { rememberMessage, suggestReplies } from '../services/aiReply.js';
 import { gateVoiceNote } from '../services/featureGate.js';
@@ -205,6 +206,7 @@ function paintShell() {
 
       <footer class="chat-composer">
         <button class="composer-btn" id="btnEmoji"  title="Emoji">😊</button>
+        <button class="composer-btn" id="btnPoll"   title="Send a poll">📊</button>
         <input class="composer-input" id="composerInput" placeholder="Write something sweet…" autocomplete="off">
         <button class="composer-btn" id="btnVoice"  title="Hold to record voice note">🎙️</button>
         <button class="composer-send" id="btnSend"  title="Send">➤</button>
@@ -254,7 +256,9 @@ function renderMessages(msgs) {
     const reactions = renderReactions(m);
 
     let body = '';
-    if (m.audio) {
+    if (m.kind === 'poll') {
+      body = renderPollBody(m);
+    } else if (m.audio) {
       body = `<audio controls src="${m.audio}" class="chat-audio"></audio>`;
     } else if (m.image) {
       body = `<img class="chat-image" src="${m.image}" alt="">`;
@@ -281,6 +285,18 @@ function renderMessages(msgs) {
     row.addEventListener('dblclick', () => {
       const id = row.dataset.id;
       toggleReaction(_chatId, id, '❤️').catch(() => {});
+    });
+  });
+
+  // Poll vote clicks
+  stream.querySelectorAll('.chat-poll__choice').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = btn.closest('.chat-row');
+      const msgId = row?.dataset.id;
+      const idx = Number(btn.dataset.idx);
+      if (!msgId || Number.isNaN(idx)) return;
+      votePoll(_chatId, msgId, idx).catch(() => {});
     });
   });
 }
@@ -400,6 +416,9 @@ function attachHandlers() {
     input.value += palette[Math.floor(Math.random() * palette.length)];
     input.focus();
   };
+
+  // Poll composer
+  _container.querySelector('#btnPoll').onclick = () => openPollComposer();
 
   attachVoiceRecorder(voice);
 }
@@ -571,4 +590,87 @@ function paintMoodWidget(meta) {
     else if (my)        lab.textContent = "You shared your mood";
     else                lab.textContent = `${_partnerName} shared their mood`;
   }
+}
+
+
+// =====================================================================
+// Polls — bubble renderer + composer modal
+// =====================================================================
+function renderPollBody(m) {
+  const choices = Array.isArray(m.choices) ? m.choices : [];
+  const votes   = m.votes || {};
+  const totals  = choices.map((_, i) => 0);
+  let total = 0;
+  for (const uid of Object.keys(votes)) {
+    const idx = Number(votes[uid]);
+    if (idx >= 0 && idx < choices.length) { totals[idx]++; total++; }
+  }
+  const myChoice = votes[_myUid] !== undefined ? Number(votes[_myUid]) : -1;
+  const partnerChoice = votes[_partnerId] !== undefined ? Number(votes[_partnerId]) : -1;
+
+  return `
+    <div class="chat-poll">
+      <div class="chat-poll__q">📊 ${escapeHtml(m.question || "")}</div>
+      <div class="chat-poll__choices">
+        ${choices.map((c, i) => {
+          const count = totals[i];
+          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+          const youPicked = i === myChoice;
+          const themPicked = i === partnerChoice;
+          return `<button class="chat-poll__choice ${youPicked ? 'is-mine' : ''}"
+                          data-idx="${i}" type="button">
+            <span class="chat-poll__bar" style="width:${pct}%"></span>
+            <span class="chat-poll__label">
+              <span>${escapeHtml(c)}</span>
+              <span class="chat-poll__pickers">
+                ${youPicked ? '<span class="chat-poll__pin chat-poll__pin--mine" title="You">●</span>' : ''}
+                ${themPicked ? '<span class="chat-poll__pin chat-poll__pin--theirs" title="Partner">●</span>' : ''}
+              </span>
+              <span class="chat-poll__pct">${pct}%</span>
+            </span>
+          </button>`;
+        }).join("")}
+      </div>
+      <div class="chat-poll__total">${total} vote${total === 1 ? "" : "s"}</div>
+    </div>
+  `;
+}
+
+function openPollComposer() {
+  if (!_chatId || !_partnerId) { toastWarn("Open the chat first"); return; }
+  const wrap = document.createElement("div");
+  wrap.className = "tc-modal";
+  wrap.innerHTML = `
+    <div class="tc-modal__panel" role="dialog" aria-modal="true" aria-label="New poll">
+      <div class="tc-modal__head">New poll</div>
+      <div class="tc-modal__body">
+        <label class="tc-field">
+          <span>Question</span>
+          <input id="pollQ" type="text" maxlength="160" placeholder="Pizza or pasta tonight?">
+        </label>
+        <label class="tc-field"><span>Option 1</span><input id="pollC0" type="text" maxlength="60" placeholder="Pizza"></label>
+        <label class="tc-field"><span>Option 2</span><input id="pollC1" type="text" maxlength="60" placeholder="Pasta"></label>
+        <label class="tc-field"><span>Option 3 (optional)</span><input id="pollC2" type="text" maxlength="60" placeholder=""></label>
+        <label class="tc-field"><span>Option 4 (optional)</span><input id="pollC3" type="text" maxlength="60" placeholder=""></label>
+      </div>
+      <div class="tc-modal__actions">
+        <button class="btn btn-ghost"   data-act="cancel">Cancel</button>
+        <button class="btn btn-primary" data-act="ok">Send poll</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener("click", close);
+  wrap.querySelector('[data-act="ok"]').addEventListener("click", async () => {
+    const q  = wrap.querySelector("#pollQ").value.trim();
+    const cs = [0,1,2,3].map(i => wrap.querySelector(`#pollC${i}`).value.trim()).filter(Boolean);
+    if (!q || cs.length < 2) { toastWarn("Need a question and at least 2 options"); return; }
+    const okBtn = wrap.querySelector('[data-act="ok"]');
+    okBtn.disabled = true;
+    await safe(() => sendPoll(_chatId, _partnerId, q, cs), "Couldn't send poll");
+    close();
+  });
+  wrap.querySelector("#pollQ")?.focus();
 }

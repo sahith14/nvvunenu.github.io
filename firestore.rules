@@ -77,9 +77,9 @@ service cloud.firestore {
         allow create: if inCouple(coupleId)
           && request.resource.data.sender == uid();
         allow update: if inCouple(coupleId)
-          // deliveredAt/seenAt/reactions writable by the non-sender too
+          // deliveredAt/seenAt/reactions/votes writable by the non-sender too
           && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['deliveredAt','seenAt','status','reactions']);
+             .hasOnly(['deliveredAt','seenAt','status','reactions','votes']);
         allow delete: if inCouple(coupleId)
           && resource.data.sender == uid();
       }
@@ -258,6 +258,9 @@ service cloud.firestore {
           && resource.data.from == uid();
       }
       match /dates/{ideaId} {
+        allow read, write: if inCouple(coupleId);
+      }
+      match /bucket/{itemId} {
         allow read, write: if inCouple(coupleId);
       }
     }

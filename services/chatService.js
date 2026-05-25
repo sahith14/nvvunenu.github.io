@@ -185,3 +185,53 @@ export function renderTicks(msg, myUid) {
   if (msg.deliveredAt) return `<span class="tick delivered">✔✔</span>`;
   return `<span class="tick sent">✔</span>`;
 }
+
+
+// =====================================================================
+// Polls — special message kind rendered as a poll bubble in chat.
+// Storage: messages doc with shape:
+//   { kind: "poll", sender, time, question, choices: [string],
+//     votes: { uid: choiceIndex }, reactions: {} }
+// =====================================================================
+export async function sendPoll(chatId, partnerId, question, choices) {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !chatId || !partnerId) return null;
+  const q = (question || "").trim();
+  const ch = (choices || []).map(s => String(s || "").trim()).filter(Boolean).slice(0, 4);
+  if (!q || ch.length < 2) return null;
+
+  const batch = writeBatch(db);
+  const msgRef  = doc(collection(db, "chats", chatId, "messages"));
+  const chatRef = doc(db, "chats", chatId);
+
+  batch.set(msgRef, {
+    kind: "poll",
+    sender: uid,
+    time: serverTimestamp(),
+    status: "sent",
+    deliveredAt: null, seenAt: null,
+    question: q,
+    choices: ch,
+    votes: {},
+    reactions: {}
+  });
+  batch.update(chatRef, {
+    lastMessage:        `📊 ${q.slice(0, 180)}`,
+    lastMessageTime:    serverTimestamp(),
+    lastMessageSender:  uid,
+    [`unread.${partnerId}`]: increment(1),
+    [`unread.${uid}`]:       0,
+    [`typing.${uid}`]:       false
+  });
+  await batch.commit();
+  return msgRef.id;
+}
+
+export async function votePoll(chatId, msgId, choiceIndex) {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !chatId || !msgId) return;
+  const ref = doc(db, "chats", chatId, "messages", msgId);
+  await updateDoc(ref, {
+    [`votes.${uid}`]: Number(choiceIndex)
+  });
+}

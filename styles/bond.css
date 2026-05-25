@@ -322,3 +322,40 @@
   padding: 14px 8px;
 }
 .bd-kindness__btn { width: 100%; }
+
+
+
+/* Pulse breakdown chips */
+.pulse-breakdown {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  margin-top: 14px;
+}
+.pulse-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255,255,255,.6);
+  border: 1px solid rgba(155,140,255,.18);
+  border-radius: 999px;
+  font-size: .75rem;
+  color: var(--muted, #6b5b9b);
+  opacity: .55;
+  transition: all .2s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.pulse-chip.is-active {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(255,126,182,.15), rgba(155,140,255,.15));
+  border-color: rgba(155,140,255,.4);
+  color: var(--text, #1a1235);
+}
+.pulse-chip__icon { font-size: 12px; }
+.pulse-chip__label { font-weight: 700; }
+.pulse-chip__num {
+  background: rgba(155,140,255,.14);
+  padding: 1px 8px; border-radius: 999px;
+  font-weight: 800; font-size: .6875rem;
+  color: var(--muted, #6b5b9b);
+}
+.pulse-chip.is-active .pulse-chip__num {
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  color: #fff;
+}

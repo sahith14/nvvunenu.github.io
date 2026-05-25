@@ -21,6 +21,7 @@ import {
   doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, orderBy, limit, getDocs,
   onSnapshot, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { computePulse, PULSE_LABELS } from "../services/bondPulseService.js";
 
 let _container = null;
 let _offState  = null;
@@ -361,6 +362,7 @@ function paintPaired(s) {
         <div class="pulse-orb"></div>
         <div class="pulse-label">Relationship Pulse</div>
         <div class="pulse-score" id="pulseScore">—</div>
+        <div class="pulse-breakdown" id="pulseBreakdown"></div>
       </div>
 
       <div class="bd-timeline">
@@ -463,13 +465,21 @@ function paintPaired(s) {
 
 async function loadPairedData(coupleId) {
   if (!coupleId) return;
-  // Pulse + languages
-  const bond = await safe(
-    () => getDoc(doc(db, "bonds", coupleId)).then((s) => s.exists() ? s.data() : null),
-    "Couldn't load bond data"
-  );
+  // Pulse — compute from real activity over last 14 days.
+  const me = getState().user || {};
+  const partnerId = getState().partnerId;
   const pulseEl = _container.querySelector("#pulseScore");
-  if (pulseEl) pulseEl.textContent = `${bond?.pulse ?? 75}%`;
+  if (pulseEl) pulseEl.textContent = "…";
+
+  // Fetch everything else in parallel
+  const [bond, pulseResult] = await Promise.all([
+    safe(() => getDoc(doc(db, "bonds", coupleId)).then((s) => s.exists() ? s.data() : null),
+         "Couldn't load bond data"),
+    safe(() => computePulse(coupleId, me.uid, partnerId), null)
+  ]);
+
+  if (pulseEl) pulseEl.textContent = `${pulseResult?.score ?? bond?.pulse ?? 75}%`;
+  paintPulseBreakdown(pulseResult);
   if (bond?.languages) {
     Object.entries(bond.languages).forEach(([key, val]) => {
       const el = _container.querySelector(`#lang${key.charAt(0).toUpperCase() + key.slice(1)}`);
@@ -866,4 +876,41 @@ function openKindnessModal(coupleId, myUid) {
       if (ok !== false) toastSuccess("Kind act logged 💛");
     }
   );
+}
+
+
+// =====================================================================
+// Pulse breakdown — chips showing where the score came from.
+// =====================================================================
+function paintPulseBreakdown(result) {
+  const host = _container?.querySelector("#pulseBreakdown");
+  if (!host) return;
+  if (!result || !result.breakdown) {
+    host.innerHTML = "";
+    return;
+  }
+  const raw = result.raw || {};
+  const rawForKey = (k) => ({
+    messages: raw.msgCount,
+    kindness: raw.kindnessCount,
+    dates:    raw.datesDoneCount,
+    moods:    raw.moodSharesCount,
+    letters:  raw.lettersCount,
+    qotw:     raw.qotwCount,
+    calls:    0,
+  }[k] ?? 0);
+
+  // Order by contribution
+  const entries = Object.entries(result.breakdown)
+    .sort((a, b) => b[1] - a[1]);
+
+  host.innerHTML = entries.map(([key, points]) => {
+    const meta = PULSE_LABELS[key] || { label: key, icon: "·" };
+    const n = rawForKey(key);
+    return `<div class="pulse-chip ${points > 0 ? "is-active" : ""}" title="${escape(meta.label)}: ${n} in 14 days">
+      <span class="pulse-chip__icon">${meta.icon}</span>
+      <span class="pulse-chip__label">${escape(meta.label)}</span>
+      <span class="pulse-chip__num">${n}</span>
+    </div>`;
+  }).join("");
 }
