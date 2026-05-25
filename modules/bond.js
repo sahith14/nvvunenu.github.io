@@ -855,6 +855,7 @@ function paintKindness(acts, myUid) {
   const recentEl = _container?.querySelector("#bdKindRecent");
   if (totalEl)  totalEl.textContent = String(total);
   if (streakEl) streakEl.textContent = String(streak);
+  maybeCelebrateFirstKindness(total);
   if (recentEl) {
     if (!recent.length) {
       recentEl.innerHTML = `<p class="bd-kindness__empty">Log a kind act to start your streak.</p>`;
@@ -1264,4 +1265,25 @@ function maybeCelebratePulseMilestone(score) {
     try { spawnHeartBurst(); } catch {}
     toastSuccess(labels[tier] || `Pulse milestone · ${tier}+`);
   }, 600);
+}
+
+
+// =====================================================================
+// First-kindness celebration — fires once per couple when their
+// kindness collection transitions from 0 logged to 1+.
+// =====================================================================
+function maybeCelebrateFirstKindness(total) {
+  if (!total) return;
+  const cid = getState()?.coupleId;
+  if (!cid) return;
+  const key = `nvvunenu.firstKindness.${cid}`;
+  let already = false;
+  try { already = localStorage.getItem(key) === "1"; } catch {}
+  if (already) return;
+  try { localStorage.setItem(key, "1"); } catch {}
+
+  setTimeout(() => {
+    try { spawnHeartBurst(); } catch {}
+    toastSuccess("First kind act logged 💛 — keep the warmth going");
+  }, 500);
 }
