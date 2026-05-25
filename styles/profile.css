@@ -316,3 +316,40 @@
   color: var(--text, #1a1235);
   background: rgba(255,255,255,.95);
 }
+
+
+
+/* Recent calls panel on Profile */
+.prof-calls { display: flex; flex-direction: column; gap: 6px; }
+.prof-calls__empty {
+  text-align: center; color: var(--muted, #6b5b9b);
+  padding: 18px 8px; font-size: .875rem;
+}
+.prof-call {
+  display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: center;
+  padding: 8px 12px;
+  background: rgba(255,255,255,.7);
+  border: 1px solid rgba(155,140,255,.14);
+  border-radius: 12px;
+}
+.prof-call__icon {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, rgba(255,126,182,.18), rgba(155,140,255,.18));
+  border: 1px solid rgba(155,140,255,.18);
+  font-size: 14px;
+}
+.prof-call__name {
+  font-weight: 700; font-size: .9375rem; color: var(--text, #1a1235);
+}
+.prof-call__dir {
+  font-size: 11px; margin-right: 4px;
+  color: var(--muted, #6b5b9b);
+}
+.prof-call.is-incoming .prof-call__dir { color: #2a9d70; }
+.prof-call.is-outgoing .prof-call__dir { color: #4f3d80; }
+.prof-call.is-missed   .prof-call__dir { color: #c2425a; }
+.prof-call__sub {
+  font-size: .75rem; color: var(--muted, #6b5b9b); margin-top: 2px;
+}
+.prof-call.is-missed { background: rgba(255,126,142,.06); border-color: rgba(255,126,142,.20); }

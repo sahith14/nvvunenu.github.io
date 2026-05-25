@@ -6,7 +6,7 @@
 // =====================================================================
 import { auth, db } from "../firebase.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAppState, getState } from "../state/appState.js";
 import { toast, toastSuccess, toastWarn, toastError, safe } from "../utils/toast.js";
 import { skeletonList } from "../utils/skeleton.js";
@@ -16,6 +16,7 @@ import { getSubscription, PLANS } from "../services/subscriptionService.js";
 
 let _container = null;
 let _offState  = null;
+let _unsubCalls = null;
 
 export function renderProfile(container) {
   _container = container;
@@ -33,7 +34,8 @@ export function renderProfile(container) {
 
 function cleanup() {
   try { _offState?.(); } catch {}
-  _offState = null; _container = null;
+  try { _unsubCalls?.(); } catch {}
+  _offState = null; _unsubCalls = null; _container = null;
 }
 
 // =========================================================================
@@ -131,6 +133,13 @@ function paint(s) {
         </div>
       </section>
 
+      <section class="card profile-section" id="callsRow">
+        <h3 class="profile-h">Recent calls</h3>
+        <div class="prof-calls" id="profCalls">
+          <div class="prof-calls__empty">No calls yet.</div>
+        </div>
+      </section>
+
       <section class="card profile-section">
         <h3 class="profile-h">Quick links</h3>
         <ul class="settings-list">
@@ -158,6 +167,7 @@ function paint(s) {
   `;
 
   wireActions();
+  loadRecentCalls(s);
 }
 
 function paintPlanRow(sub) {
@@ -640,4 +650,88 @@ function openBirthdayModal() {
     toast("Birthday removed");
     close();
   });
+}
+
+
+// =====================================================================
+// Recent calls — last 10 entries from couples/{cid}/callHistory
+// =====================================================================
+function loadRecentCalls(s) {
+  const host = _container?.querySelector("#profCalls");
+  if (!host) return;
+  if (!s.coupleId) {
+    host.innerHTML = `<div class="prof-calls__empty">Pair up to share call history.</div>`;
+    return;
+  }
+  const partnerName = s.partner?.displayName?.split(" ")[0] || s.partner?.username || "Partner";
+  try { _unsubCalls?.(); } catch {}
+  const q = query(
+    collection(db, "couples", s.coupleId, "callHistory"),
+    orderBy("at", "desc"),
+    limit(10),
+  );
+  _unsubCalls = onSnapshot(q, (snap) => {
+    const rows = [];
+    snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
+    paintRecentCalls(host, rows, partnerName);
+  }, (err) => {
+    host.innerHTML = `<div class="prof-calls__empty">Couldn't load.</div>`;
+  });
+}
+
+function paintRecentCalls(host, rows, partnerName) {
+  if (!rows.length) {
+    host.innerHTML = `<div class="prof-calls__empty">No calls yet — start one from chat.</div>`;
+    return;
+  }
+  // Filter out duplicate rows: each call writes one row per side, so we
+  // de-dupe by close-enough timestamps + partnerId + kind.
+  const seen = new Set();
+  const merged = [];
+  for (const r of rows) {
+    const t = r.at?.toMillis?.() || r.at?.seconds * 1000 || 0;
+    const key = `${Math.round(t / 5000)}|${r.kind}|${r.partnerId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(r);
+  }
+  host.innerHTML = merged.map((r) => {
+    const t = r.at?.toMillis?.() || r.at?.seconds * 1000 || 0;
+    const ago = t ? friendlyAgo(new Date(t)) : "";
+    const icon = r.kind === "video" ? "📹" : "📞";
+    let dirIcon, dirCls;
+    if (r.direction === "incoming") {
+      dirIcon = (r.durationSec > 0) ? "↙" : "🚫";
+      dirCls  = (r.durationSec > 0) ? "is-incoming" : "is-missed";
+    } else {
+      dirIcon = "↗";
+      dirCls  = "is-outgoing";
+    }
+    const dur = r.durationSec > 0
+      ? formatCallDuration(r.durationSec)
+      : (r.direction === "incoming" ? "Missed" : "No answer");
+    return `
+      <div class="prof-call ${dirCls}">
+        <span class="prof-call__icon">${icon}</span>
+        <div class="prof-call__body">
+          <div class="prof-call__name"><span class="prof-call__dir">${dirIcon}</span> ${escapeHtml(partnerName)}</div>
+          <div class="prof-call__sub">${escapeHtml(dur)} · ${escapeHtml(ago)}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function friendlyAgo(d) {
+  const sec = Math.max(1, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (sec < 60) return "just now";
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+  return `${Math.floor(sec / 86400)}d ago`;
+}
+function formatCallDuration(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m ${String(s).padStart(2, "0")}s`;
 }
