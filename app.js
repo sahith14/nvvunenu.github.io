@@ -36,6 +36,7 @@ import { startPresence, stopPresence } from './services/presenceService.js';
 import { initAppState, teardownAppState } from './state/appState.js';
 import { ensureUsername } from './services/feedService.js';
 import { bumpStreak } from './services/streakService.js';
+import { startNotifyService, stopNotifyService } from './services/notifyService.js';
 
 // Apply saved theme as early as possible to avoid flash of wrong theme.
 try { applyTheme(getStoredTheme()); } catch {}
@@ -78,6 +79,7 @@ onAuthStateChanged(auth, (user) => {
     teardownAppState();
     stopPresence();
     stopIncomingCallListener();
+    stopNotifyService();
     window.location.href = 'login.html';
     return;
   }
@@ -87,6 +89,7 @@ onAuthStateChanged(auth, (user) => {
   initAppState(user);
   startPresence();
   startIncomingCallListener();
+  startNotifyService();
   // ensure the user has a username for search/discoverability (idempotent)
   ensureUsername(user).catch(() => {});
   // Daily streak — increments at most once per calendar day.

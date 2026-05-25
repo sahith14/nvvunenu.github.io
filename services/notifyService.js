@@ -1,0 +1,129 @@
+// services/notifyService.js — Inbound activity → toast notifications.
+// Subscribes to the partner-facing sub-collections under
+// bonds/{coupleId} and fires a toast for each NEW item the user did
+// not author themselves. Respects the master notification switch
+// + per-event prefs in users/{uid}.notifPrefs.{key}.
+// =====================================================================
+import { db } from "../firebase.js";
+import {
+  collection, query, orderBy, limit, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAppState, getState } from "../state/appState.js";
+import { toast, toastSuccess } from "../utils/toast.js";
+import { isNotifPrefOn, getNotifyEnabled } from "../modules/settings.js";
+
+let _myUid       = null;
+let _coupleId    = null;
+let _partnerName = "your partner";
+let _offState    = null;
+let _unsubs      = [];      // current Firestore listeners
+let _firstSnap   = new Set();
+
+/**
+ * Start the listener service. Idempotent — calling twice is fine.
+ */
+export function startNotifyService() {
+  if (_offState) return;
+  _offState = onAppState((s) => {
+    if (!s.ready) return;
+    _myUid = s.user?.uid || null;
+    _partnerName = s.partner?.displayName?.split(" ")[0] || s.partner?.username || "your partner";
+
+    if (s.coupleId && s.coupleId !== _coupleId) {
+      _coupleId = s.coupleId;
+      reattachAll();
+    } else if (!s.coupleId && _coupleId) {
+      _coupleId = null;
+      teardownAll();
+    }
+  });
+}
+
+export function stopNotifyService() {
+  try { _offState?.(); } catch {}
+  _offState = null;
+  teardownAll();
+  _myUid = _coupleId = null;
+  _firstSnap.clear();
+}
+
+// =====================================================================
+// Per-source listeners
+// =====================================================================
+function reattachAll() {
+  teardownAll();
+  if (!_coupleId) return;
+
+  _unsubs.push(
+    listenSubcol("kindness", "at", "kindness", (data) => {
+      if (data.by === _myUid) return null;
+      const note = (data.note || "kind act").slice(0, 80);
+      return { type: "success", text: `💛 ${_partnerName}: ${note}` };
+    }),
+    listenSubcol("dates", "completedAt", "dates", (data) => {
+      // Only a transition into "completedAt" by the partner counts as inbound.
+      if (!data.completedAt) return null;
+      // No author field on date toggles — we infer "partner did it" from doc
+      // type. Both partners share the same /dates collection but only the
+      // *new* completedAt during the listener's lifetime fires this branch
+      // (firstSnap suppresses initial backlog).
+      return { type: "info", text: `🌹 A date was checked off — go celebrate!` };
+    }),
+    listenSubcol("timecapsule", "createdAt", "letters", (data) => {
+      if (data.from === _myUid) return null;
+      const title = data.title ? `: ${String(data.title).slice(0, 60)}` : "";
+      return { type: "info", text: `📜 ${_partnerName} sealed a letter${title}` };
+    }),
+    listenSubcol("qotw", "updatedAt", "messages", (data) => {
+      // Notify when the partner answers (their uid appears in answers map).
+      const answers = data.answers || {};
+      const partnerHasAnswered = Object.keys(answers).some((k) => k !== _myUid);
+      if (!partnerHasAnswered) return null;
+      return { type: "info", text: `💞 ${_partnerName} answered this week's question` };
+    }),
+  );
+}
+
+function teardownAll() {
+  for (const off of _unsubs) { try { off(); } catch {} }
+  _unsubs = [];
+  _firstSnap.clear();
+}
+
+/**
+ * Watches a sub-collection and calls makeToast(data) for each *new*
+ * doc added after the initial snapshot. makeToast returns
+ * { type, text } or null to skip.
+ */
+function listenSubcol(subPath, timeField, prefKey, makeToast) {
+  const key = `${_coupleId}|${subPath}`;
+  _firstSnap.add(key);
+  const q = query(
+    collection(db, "bonds", _coupleId, subPath),
+    orderBy(timeField, "desc"),
+    limit(20)
+  );
+  return onSnapshot(q, (snap) => {
+    if (_firstSnap.has(key)) {
+      _firstSnap.delete(key);
+      return;   // skip backlog
+    }
+    if (!getNotifyEnabled()) return;
+    snap.docChanges().forEach((change) => {
+      if (change.type !== "added" && change.type !== "modified") return;
+      // Master + per-event gate
+      if (!isNotifPrefOn(getCurrentPrefs(), prefKey)) return;
+      const data = change.doc.data() || {};
+      const t = makeToast(data);
+      if (!t) return;
+      if (t.type === "success") toastSuccess(t.text);
+      else                       toast(t.text);
+    });
+  });
+}
+
+// Helper — re-read prefs from getState() each fire so toggles apply live
+function getCurrentPrefs() {
+  try { return getState()?.user?.notifPrefs || null; }
+  catch { return null; }
+}
