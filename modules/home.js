@@ -421,6 +421,7 @@ async function sendKiss() {
       createdAt: serverTimestamp()
     });
   } catch (e) { /* swallow — UX still positive */ }
+  try { spawnHeartBurst(); } catch {}
   toastSuccess("💋 Kiss sent");
 }
 
