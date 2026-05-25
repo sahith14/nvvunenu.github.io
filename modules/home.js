@@ -89,6 +89,15 @@ export function renderHome(container) {
         <button class="btn anniv-banner__cta" id="annivBannerCta">Plan</button>
       </section>
 
+      <section class="anniv-banner anniv-banner--bday" id="bdayBanner" hidden>
+        <div class="anniv-banner__icon">🎂</div>
+        <div class="anniv-banner__body">
+          <div class="anniv-banner__title" id="bdayBannerTitle">Birthday coming up</div>
+          <div class="anniv-banner__sub"   id="bdayBannerSub">…</div>
+        </div>
+        <button class="btn anniv-banner__cta" id="bdayBannerCta">Plan</button>
+      </section>
+
       <section class="ai-recap" id="aiRecap">
         <div class="ai-recap__head">
           <span class="ai-recap__badge">✨ AI</span>
@@ -219,6 +228,7 @@ function paint(s) {
     totalDaysEl.textContent = startTs ? daysTogether({ toMillis: () => startTs }) : "—";
   }
   paintAnnivBanner(startTs);
+  paintBdayBanner(s.partner);
 }
 
 function paintMeta(meta, s) {
@@ -577,4 +587,65 @@ async function onCaptureFile(ev) {
     // Optional: jump to memories so the user can see it
     setTimeout(() => window.loadPage?.("memories"), 500);
   }
+}
+
+
+// =====================================================================
+// Partner birthday banner — within 14 days of partner.birthday (MM-DD)
+// =====================================================================
+function paintBdayBanner(partner) {
+  const banner = _container?.querySelector("#bdayBanner");
+  if (!banner) return;
+  const mmdd = partner?.birthday;
+  const days = bdayDaysAway(mmdd);
+  if (days === null || days > 14) { banner.hidden = true; return; }
+
+  const titleEl = _container.querySelector("#bdayBannerTitle");
+  const subEl   = _container.querySelector("#bdayBannerSub");
+  const ctaEl   = _container.querySelector("#bdayBannerCta");
+  const partnerName = partner?.displayName?.split(" ")[0] || partner?.username || "your partner";
+  const dateStr = formatBdayDate(mmdd);
+
+  let titleTxt, subTxt;
+  if (days === 0) {
+    titleTxt = `🎂 Happy birthday to ${partnerName}!`;
+    subTxt   = "Make today gentle and warm.";
+    banner.classList.add("is-today");
+  } else if (days === 1) {
+    titleTxt = `${partnerName}'s birthday is tomorrow`;
+    subTxt   = `${dateStr} · plan a small surprise.`;
+    banner.classList.remove("is-today");
+  } else {
+    titleTxt = `${days} days to ${partnerName}'s birthday`;
+    subTxt   = `${dateStr} · time to plan something kind.`;
+    banner.classList.remove("is-today");
+  }
+  if (titleEl) titleEl.textContent = titleTxt;
+  if (subEl)   subEl.textContent   = subTxt;
+  if (ctaEl) {
+    ctaEl.textContent = days === 0 ? "Send a kiss" : "Plan a date";
+    ctaEl.onclick = () => {
+      if (days === 0) sendKiss();
+      else            window.loadPage?.("dates");
+    };
+  }
+  banner.hidden = false;
+}
+
+function bdayDaysAway(mmdd) {
+  if (!mmdd) return null;
+  const m = /^(\d{2})-(\d{2})$/.exec(String(mmdd));
+  if (!m) return null;
+  const today = new Date();
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  let next = new Date(today.getFullYear(), Number(m[1]) - 1, Number(m[2]));
+  if (next < todayMid) next.setFullYear(today.getFullYear() + 1);
+  return Math.round((next - todayMid) / 86400000);
+}
+function formatBdayDate(mmdd) {
+  if (!mmdd) return "";
+  const m = /^(\d{2})-(\d{2})$/.exec(String(mmdd));
+  if (!m) return "";
+  const d = new Date(2024, Number(m[1]) - 1, Number(m[2]));
+  return d.toLocaleDateString(undefined, { month: "long", day: "numeric" });
 }

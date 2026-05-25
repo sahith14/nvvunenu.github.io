@@ -257,3 +257,20 @@
 @media (min-width: 900px) {
   .home-capture-fab { right: max(20px, calc(50% - 480px)); }
 }
+
+
+
+/* Variant: partner birthday banner — pink-purple-cyan gradient, distinguishes from anniversary's golden one */
+.anniv-banner.anniv-banner--bday {
+  background: linear-gradient(135deg, rgba(255,126,182,.20), rgba(155,140,255,.18), rgba(126,215,255,.18));
+  border-color: rgba(255,126,182,.4);
+  box-shadow: 0 12px 28px rgba(155,140,255,.16);
+}
+.anniv-banner.anniv-banner--bday .anniv-banner__icon {
+  background: linear-gradient(135deg, rgba(255,255,255,.85), rgba(255,200,220,.7));
+  border-color: rgba(255,126,182,.4);
+}
+.anniv-banner.anniv-banner--bday .anniv-banner__title {
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff,#7ed7ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
