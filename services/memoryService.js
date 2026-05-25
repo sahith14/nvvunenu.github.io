@@ -3,8 +3,8 @@
 // Media goes to Supabase Storage; Firestore stores the URL + metadata.
 // =====================================================================
 import {
-  collection, doc, addDoc, deleteDoc, query, orderBy, onSnapshot,
-  limit, startAfter, getDocs, serverTimestamp
+  collection, doc, addDoc, deleteDoc, updateDoc, query, orderBy, onSnapshot,
+  limit, startAfter, getDocs, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db, auth } from "../firebase.js";
 import { uploadMedia, compressImage, removeMedia } from "./storageService.js";
@@ -60,4 +60,18 @@ export async function fetchOlderMemories(coupleId, afterDoc, pageSize = PAGE) {
 export async function deleteMemory(coupleId, memory) {
   if (memory.mediaPath) await removeMedia(memory.mediaPath);
   await deleteDoc(doc(db, "memories", coupleId, "entries", memory.id));
+}
+
+
+// =====================================================================
+// Toggle favorite for the calling user. Stored as favoriteByUids: [uid].
+// Either partner can favorite a shared memory.
+// =====================================================================
+export async function toggleFavoriteMemory(coupleId, memoryId, isFavoriteNow) {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !coupleId || !memoryId) return;
+  const ref = doc(db, "memories", coupleId, "entries", memoryId);
+  await updateDoc(ref, {
+    favoriteByUids: isFavoriteNow ? arrayRemove(uid) : arrayUnion(uid),
+  });
 }

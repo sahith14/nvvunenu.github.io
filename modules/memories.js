@@ -8,7 +8,7 @@
 import { onAppState, getState } from "../state/appState.js";
 import { skeletonList } from "../utils/skeleton.js";
 import { toast, toastSuccess, toastWarn, toastError, safe } from "../utils/toast.js";
-import { addMemory, subscribeRecent, deleteMemory } from "../services/memoryService.js";
+import { addMemory, subscribeRecent, deleteMemory, toggleFavoriteMemory } from "../services/memoryService.js";
 
 let _container       = null;
 let _offState        = null;
@@ -97,6 +97,7 @@ function renderShell() {
         <div class="mem-view-toggle" role="tablist" aria-label="View">
           <button class="mem-view-btn active" data-view="timeline" role="tab">📜 Timeline</button>
           <button class="mem-view-btn"        data-view="photos"   role="tab">▦ Photos</button>
+          <button class="mem-view-btn"        data-view="favorites" role="tab">★ Favorites</button>
         </div>
       </div>
 
@@ -272,6 +273,24 @@ function renderShell() {
       .mem-card:hover .mem-card__del,
       .mem-card:focus-within .mem-card__del { opacity: 1; }
 
+      .mem-card__fav {
+        position: absolute; top: 10px; left: 10px;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(0,0,0,.45); color: rgba(255,255,255,.85);
+        border: 0; font-size: 17px; line-height: 1;
+        cursor: pointer; opacity: 0;
+        transition: opacity .2s, transform .15s, color .15s, background .15s;
+      }
+      .mem-card:hover .mem-card__fav,
+      .mem-card:focus-within .mem-card__fav,
+      .mem-card__fav.is-fav { opacity: 1; }
+      .mem-card__fav:hover { transform: scale(1.08); }
+      .mem-card__fav.is-fav {
+        background: linear-gradient(135deg, #ffd47a, #ff8a00);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(255,138,0,.45);
+      }
+
       /* PHOTOS GRID */
       .mem-grid {
         display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
@@ -437,7 +456,8 @@ function paintBody() {
       : renderEmpty("📸", "No memories yet", "Tap the + button to save your first moment together.");
     return;
   }
-  if (_view === "photos") return renderPhotosGrid(body);
+  if (_view === "photos")    return renderPhotosGrid(body);
+  if (_view === "favorites") return renderFavorites(body);
   return renderTimeline(body);
 }
 
@@ -485,6 +505,7 @@ function renderCardHTML(m) {
         </div>
       </div>
       <button class="mem-card__del" data-act="delete" data-id="${escapeAttr(m.id)}" aria-label="Delete">🗑</button>
+      <button class="mem-card__fav ${(m.favoriteByUids||[]).length ? 'is-fav':''}" data-act="favorite" data-id="${escapeAttr(m.id)}" aria-label="Favorite">${(m.favoriteByUids||[]).length ? '★' : '☆'}</button>
     </article>
   `;
 }
@@ -493,9 +514,25 @@ function wireCards(host) {
   host.querySelectorAll(".mem-card").forEach((el) => {
     el.addEventListener("click", (e) => {
       if (e.target.closest('[data-act="delete"]')) return;
+      if (e.target.closest('[data-act="favorite"]')) return;
       const id = el.dataset.id;
       const m = _allMemories.find((x) => x.id === id);
       if (m) openLightbox(m);
+    });
+  });
+  host.querySelectorAll('[data-act="favorite"]').forEach((b) => {
+    b.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const id = b.dataset.id;
+      const m = _allMemories.find((x) => x.id === id);
+      if (!m) return;
+      const myUid = getState().user?.uid;
+      const isFav = (m.favoriteByUids || []).includes(myUid);
+      const cid = getState().coupleId;
+      // Optimistic UI flip
+      b.classList.toggle("is-fav", !isFav);
+      b.textContent = !isFav ? "★" : "☆";
+      await safe(() => toggleFavoriteMemory(cid, id, isFav), "Couldn't update");
     });
   });
   host.querySelectorAll('[data-act="delete"]').forEach((b) => {
@@ -755,3 +792,23 @@ function escapeHtml(s) {
   }[c]));
 }
 function escapeAttr(s) { return String(s ?? "").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+
+
+
+// =====================================================================
+// Favorites view — only memories favorited by either partner.
+// =====================================================================
+function renderFavorites(host) {
+  const favs = (_filteredMemories || _allMemories).filter((m) =>
+    Array.isArray(m.favoriteByUids) && m.favoriteByUids.length > 0
+  );
+  if (!favs.length) {
+    host.innerHTML = renderEmpty("★", "No favorites yet",
+      "Tap the ☆ on any memory card to keep it close.");
+    return;
+  }
+  host.innerHTML = `<div class="mem-timeline">
+    ${favs.map((m) => renderCard(m)).join("")}
+  </div>`;
+  wireCards(host);
+}
