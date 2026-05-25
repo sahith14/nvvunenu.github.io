@@ -81,6 +81,15 @@ export function renderHome(container) {
         <div class="stat-card"><div class="num" id="memCount">—</div><div class="label">Memories</div></div>
       </section>
 
+      <section class="mood-nudge" id="moodNudge" hidden>
+        <div class="mood-nudge__icon">🌙</div>
+        <div class="mood-nudge__body">
+          <div class="mood-nudge__title">Share today's mood</div>
+          <div class="mood-nudge__sub">Keep the streak alive. A single tap is enough.</div>
+        </div>
+        <button class="btn mood-nudge__cta" id="moodNudgeBtn">Pick a mood</button>
+      </section>
+
       <section class="anniv-banner" id="annivBanner" hidden>
         <div class="anniv-banner__icon">🎂</div>
         <div class="anniv-banner__body">
@@ -230,6 +239,7 @@ function paint(s) {
   }
   paintAnnivBanner(startTs);
   paintBdayBanner(s.partner);
+  paintMoodNudge(s);
 }
 
 function paintMeta(meta, s) {
@@ -663,4 +673,29 @@ function formatBdayDate(mmdd) {
   if (!m) return "";
   const d = new Date(2024, Number(m[1]) - 1, Number(m[2]));
   return d.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+}
+
+
+// =====================================================================
+// Mood nudge card — surfaces only when today's moodLog entry is empty.
+// Tapping the CTA opens the existing mood picker modal.
+// =====================================================================
+function paintMoodNudge(s) {
+  const card = _container?.querySelector("#moodNudge");
+  if (!card) return;
+  const me = s?.user || {};
+  const today = todayKeyLocal();
+  const log = (me.moodLog && typeof me.moodLog === "object") ? me.moodLog : {};
+  const sharedToday = !!log[today];
+  if (sharedToday) { card.hidden = true; return; }
+  card.hidden = false;
+  const btn = _container.querySelector("#moodNudgeBtn");
+  if (btn) btn.onclick = () => openMoodPicker();
+}
+
+function todayKeyLocal(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }

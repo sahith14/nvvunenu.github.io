@@ -274,3 +274,44 @@
   background: linear-gradient(135deg,#ff7eb6,#9b8cff,#7ed7ff);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
+
+
+
+/* Mood nudge card on Home — appears when today's mood isn't logged */
+.mood-nudge {
+  display: grid; grid-template-columns: 44px 1fr auto; gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(155,140,255,.16), rgba(126,215,255,.16));
+  border: 1px solid rgba(155,140,255,.3);
+  position: relative; overflow: hidden;
+  animation: mood-nudge-glow 3.2s ease-in-out infinite;
+}
+@keyframes mood-nudge-glow {
+  0%, 100% { box-shadow: 0 4px 16px rgba(155,140,255,.10); }
+  50%      { box-shadow: 0 8px 28px rgba(155,140,255,.25); }
+}
+.mood-nudge__icon {
+  width: 44px; height: 44px; border-radius: 14px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, rgba(255,255,255,.85), rgba(155,140,255,.18));
+  border: 1px solid rgba(155,140,255,.3);
+  font-size: 22px;
+}
+.mood-nudge__title {
+  font-weight: 800;
+  background: linear-gradient(135deg,#9b8cff,#7ed7ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.mood-nudge__sub {
+  margin-top: 2px;
+  font-size: .8125rem; color: var(--muted, #6b5b9b); line-height: 1.4;
+}
+.mood-nudge__cta {
+  padding: 8px 14px; border-radius: 999px;
+  background: linear-gradient(135deg,#9b8cff,#7ed7ff) !important;
+  color: #fff !important; border: 0 !important;
+  font-weight: 700 !important; font-size: .8125rem;
+  cursor: pointer; box-shadow: 0 6px 14px rgba(155,140,255,.3);
+}
