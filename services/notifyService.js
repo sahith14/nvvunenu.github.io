@@ -125,6 +125,7 @@ function listenSubcol(subPath, timeField, prefKey, makeToast) {
       if (!t) return;
       playChime();
       pingTabTitle();
+      fireNative(`Nuvvu Nenu`, t.text);
       if (t.type === "success") toastSuccess(t.text);
       else                       toast(t.text);
     });
@@ -170,9 +171,11 @@ function listenMetaMoods() {
       if (at > last) {
         _lastMoodAt.set(uid, at);
         const emoji = m.emoji || "🌙";
+        const txt = `${emoji} ${_partnerName} shared a mood`;
         playChime();
         pingTabTitle();
-        toast(`${emoji} ${_partnerName} shared a mood`);
+        fireNative("Nuvvu Nenu", txt);
+        toast(txt);
       }
     }
   });
@@ -275,4 +278,51 @@ function resetTabTitle() {
     document.title = _origTitle;
     _origTitle = null;
   }
+}
+
+
+// =====================================================================
+// Browser-native Notification API — only fires when:
+//   • permission has been granted (request via askNativeNotifPermission)
+//   • the tab is hidden (otherwise the in-app toast is enough)
+//   • settings prefs allow notifications + this specific event
+// =====================================================================
+const NATIVE_ICON = "/nvvunenu.github.io/assets/icon-192.png"; // best-effort
+
+export async function askNativeNotifPermission() {
+  if (typeof Notification === "undefined") return "unsupported";
+  if (Notification.permission === "granted") return "granted";
+  if (Notification.permission === "denied")  return "denied";
+  try {
+    const result = await Notification.requestPermission();
+    return result;
+  } catch { return "denied"; }
+}
+
+export function nativeNotifSupported() {
+  return typeof Notification !== "undefined";
+}
+
+export function nativeNotifPermission() {
+  return typeof Notification === "undefined" ? "unsupported" : Notification.permission;
+}
+
+function fireNative(title, body) {
+  if (typeof Notification === "undefined") return;
+  if (Notification.permission !== "granted") return;
+  if (!document.hidden) return;            // toast already covers visible tab
+  try {
+    const n = new Notification(title, {
+      body: body || "",
+      tag:  "nuvvunenu",                   // collapse rapid-fire into one
+      renotify: false,
+      silent: true,                        // we play our own chime
+      icon:  NATIVE_ICON,
+    });
+    n.onclick = () => {
+      try { window.focus(); } catch {}
+      try { n.close(); } catch {}
+    };
+    setTimeout(() => { try { n.close(); } catch {} }, 7000);
+  } catch { /* non-fatal */ }
 }

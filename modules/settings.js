@@ -10,6 +10,7 @@ import { toast, toastSuccess, toastError, safe } from "../utils/toast.js";
 import { getSubscription, PLANS } from "../services/subscriptionService.js";
 import { db } from "../firebase.js";
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { askNativeNotifPermission, nativeNotifSupported, nativeNotifPermission } from "../services/notifyService.js";
 
 const THEME_KEY = "nvvunenu.theme";    // legacy — kept for cleanup only
 const NOTIFY_KEY = "nvvunenu.notify";  // "1" | "0"
@@ -93,6 +94,13 @@ function shell() {
             <span class="slider"></span>
           </label>
         </div>
+        <div class="settings-row" id="rowNativeNotif">
+          <div>
+            <div class="settings-label">Browser notifications</div>
+            <div class="settings-sub" id="nativeNotifSub">…</div>
+          </div>
+          <button class="btn btn-ghost" id="btnNativeNotif">Enable</button>
+        </div>
         <div class="settings-prefs" id="notifPrefs"></div>
       </div>
 
@@ -169,6 +177,7 @@ function paint(container, s, sub) {
   });
 
   paintNotifPrefs(container, s);
+  paintNativeNotifRow(container);
 
   // Account / Plan / Danger actions
   container.querySelector("#btnEditProfile").addEventListener("click", () => {
@@ -250,4 +259,43 @@ function escape(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[c]));
+}
+
+
+// =====================================================================
+// Browser-native notification permission row
+// =====================================================================
+function paintNativeNotifRow(container) {
+  const row    = container.querySelector("#rowNativeNotif");
+  const subEl  = container.querySelector("#nativeNotifSub");
+  const btn    = container.querySelector("#btnNativeNotif");
+  if (!row || !subEl || !btn) return;
+  if (!nativeNotifSupported()) {
+    subEl.textContent = "This browser doesn't support web notifications.";
+    btn.style.display = "none";
+    return;
+  }
+  const refresh = () => {
+    const p = nativeNotifPermission();
+    if (p === "granted") {
+      subEl.textContent = "Enabled — alerts ring even when the tab is hidden.";
+      btn.textContent = "Granted";
+      btn.disabled = true;
+    } else if (p === "denied") {
+      subEl.textContent = "Blocked. Enable from your browser site settings.";
+      btn.textContent = "Blocked";
+      btn.disabled = true;
+    } else {
+      subEl.textContent = "Get a real OS-level alert when partner activity arrives.";
+      btn.textContent = "Enable";
+      btn.disabled = false;
+    }
+  };
+  refresh();
+  btn.addEventListener("click", async () => {
+    const result = await askNativeNotifPermission();
+    refresh();
+    if (result === "granted") toast("Browser notifications enabled");
+    else if (result === "denied") toast("Permission blocked. Allow it from site settings.");
+  });
 }
