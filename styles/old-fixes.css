@@ -165,3 +165,54 @@ body:not(.auth-body) textarea:focus {
     left: calc(50% + 128px) !important;
   }
 }
+
+
+
+/* =====================================================================
+   Mobile bottom-nav — force 6 buttons to fit and be centered
+   ===================================================================== */
+@media (max-width: 900px) {
+  .bottom-nav {
+    position: fixed !important;
+    bottom: 10px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: calc(100vw - 32px) !important;
+    max-width: 420px !important;
+    margin: 0 !important;
+    padding: 6px 8px !important;
+    border-radius: 22px !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    gap: 4px !important;
+    overflow: visible !important;
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(20px) saturate(170%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(170%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), inset 0 0 6px rgba(255, 255, 255, 0.55) !important;
+  }
+  .bottom-nav button {
+    flex: 1 1 0 !important;          /* equal share, 6 buttons fit */
+    min-width: 0 !important;
+    max-width: 60px !important;
+    width: auto !important;
+    height: 40px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 18px !important;
+    border-radius: 14px !important;
+  }
+  /* Ensure body doesn't horizontally scroll on small screens */
+  html, body { overflow-x: hidden !important; }
+}
+
+/* Desktop: hide bottom-nav (side-nav takes over) */
+@media (min-width: 901px) {
+  .bottom-nav { display: none !important; }
+}
