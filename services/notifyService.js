@@ -122,6 +122,7 @@ function listenSubcol(subPath, timeField, prefKey, makeToast) {
       const data = change.doc.data() || {};
       const t = makeToast(data);
       if (!t) return;
+      playChime();
       if (t.type === "success") toastSuccess(t.text);
       else                       toast(t.text);
     });
@@ -167,8 +168,57 @@ function listenMetaMoods() {
       if (at > last) {
         _lastMoodAt.set(uid, at);
         const emoji = m.emoji || "🌙";
+        playChime();
         toast(`${emoji} ${_partnerName} shared a mood`);
       }
     }
   });
+}
+
+
+
+// =====================================================================
+// Soft 2-tone chime for inbound notifications.
+// Lazy-creates a single shared AudioContext, played gently so it never
+// startles. Respects { sound: false } in user prefs.
+// =====================================================================
+let _ac = null;
+function getAC() {
+  if (_ac) return _ac;
+  try {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return null;
+    _ac = new C();
+  } catch { _ac = null; }
+  return _ac;
+}
+
+export function playChime() {
+  if (!getNotifyEnabled()) return;
+  const prefs = getCurrentPrefs();
+  // 'sound' defaults true if undefined — opt-out only.
+  if (prefs && prefs.sound === false) return;
+
+  const ac = getAC();
+  if (!ac) return;
+  // Resume on user-driven contexts (browsers may suspend until interaction)
+  if (ac.state === "suspended") { try { ac.resume(); } catch {} }
+
+  const now = ac.currentTime;
+  // Two warm tones (E5 + A5), very soft envelope, short tail.
+  for (const [freq, delay] of [[659.25, 0], [880, 0.18]]) {
+    const osc  = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    const start = now + delay;
+    const peak  = 0.045;       // cap volume — soft on purpose
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(peak,  start + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
+    osc.start(start);
+    osc.stop(start + 0.5);
+  }
 }

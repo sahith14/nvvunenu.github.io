@@ -194,6 +194,7 @@ function paint(container, s, sub) {
 // Default = true for everything.
 // =====================================================================
 const NOTIF_PREFS = [
+  { key: "sound",     label: "Notification sound", sub: "A soft 2-tone bell when partner activity arrives.", icon: "🔔" },
   { key: "messages",  label: "Messages",        sub: "Toast when your partner sends a chat message.",      icon: "💬" },
   { key: "calls",     label: "Incoming calls",  sub: "Ringer + toast for voice & video calls.",            icon: "📞" },
   { key: "moods",     label: "Mood shares",     sub: "Toast when your partner shares a new mood.",         icon: "🌙" },
