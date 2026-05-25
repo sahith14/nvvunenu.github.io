@@ -31,6 +31,7 @@ import { startIncomingCallListener, stopIncomingCallListener } from './modules/i
 import { startPresence, stopPresence } from './services/presenceService.js';
 import { initAppState, teardownAppState } from './state/appState.js';
 import { ensureUsername } from './services/feedService.js';
+import { bumpStreak } from './services/streakService.js';
 
 // Apply saved theme as early as possible to avoid flash of wrong theme.
 try { applyTheme(getStoredTheme()); } catch {}
@@ -80,6 +81,8 @@ onAuthStateChanged(auth, (user) => {
   startIncomingCallListener();
   // ensure the user has a username for search/discoverability (idempotent)
   ensureUsername(user).catch(() => {});
+  // Daily streak — increments at most once per calendar day.
+  bumpStreak(user.uid).catch(() => {});
 
   loadPage('home');
 });

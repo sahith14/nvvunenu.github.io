@@ -104,6 +104,10 @@ function paint(s) {
             <span class="ic">📸</span><div><div class="row-label">Favorite memory</div>
             <div class="row-val">${escapeHtml(me.favMemory || "Not set")}</div></div>
             <span class="row-arrow">›</span></button></li>
+          <li><button data-edit="customStatus" class="identity-row">
+            <span class="ic">✨</span><div><div class="row-label">Custom status</div>
+            <div class="row-val">${escapeHtml(me.customStatus || "Tap to set")}</div></div>
+            <span class="row-arrow">›</span></button></li>
         </ul>
       </section>
 
@@ -249,10 +253,11 @@ function openModal({ title, body, primary = "Save", onSubmit, onMounted }) {
 }
 
 const FIELD_LABELS = {
-  loveStyle:   { label: "Love style",   placeholder: "Gentle, Passionate, Playful, Protective…" },
-  comfortSong: { label: "Comfort song", placeholder: "Artist — Song" },
-  currentMood: { label: "Current mood", placeholder: "🌙 Calm" },
-  favMemory:   { label: "Favorite memory", placeholder: "A line about a moment that means a lot…" }
+  loveStyle:    { label: "Love style",    placeholder: "Gentle, Passionate, Playful, Protective…" },
+  comfortSong:  { label: "Comfort song",  placeholder: "Artist — Song" },
+  currentMood:  { label: "Current mood",  placeholder: "🌙 Calm" },
+  favMemory:    { label: "Favorite memory", placeholder: "A line about a moment that means a lot…" },
+  customStatus: { label: "Custom status", placeholder: "✨ At the rooftop, missing them" },
 };
 
 function openEditFieldModal(field) {

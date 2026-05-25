@@ -18,14 +18,16 @@ import {
   pairWithInviteCode, unpair, getUser
 } from "../services/partnerService.js";
 import {
-  doc, getDoc, addDoc, collection, query, orderBy, limit, getDocs,
-  Timestamp
+  doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, orderBy, limit, getDocs,
+  onSnapshot, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let _container = null;
 let _offState  = null;
 let _searchDebounce = null;
 let _lastRenderedKey = null;
+let _unsubQotw      = null;
+let _unsubKindness  = null;
 
 export function renderBond(container) {
   _container = container;
@@ -42,7 +44,11 @@ export function renderBond(container) {
 
 function cleanup() {
   try { _offState?.(); } catch {}
+  try { _unsubQotw?.(); } catch {}
+  try { _unsubKindness?.(); } catch {}
   _offState = null;
+  _unsubQotw = null;
+  _unsubKindness = null;
   clearTimeout(_searchDebounce);
   _searchDebounce = null;
   _container = null;
@@ -65,6 +71,12 @@ function paintForState(s) {
   // Avoid wiping mid-typing in search if the high-level state hasn't changed
   if (key === _lastRenderedKey) return;
   _lastRenderedKey = key;
+
+  // Any prior view's live subscriptions should be torn down on transition.
+  try { _unsubQotw?.(); } catch {}
+  try { _unsubKindness?.(); } catch {}
+  _unsubQotw = null;
+  _unsubKindness = null;
 
   if (partnerId)     return paintPaired(s);
   if (incoming)      return paintIncoming(s);
@@ -351,6 +363,49 @@ function paintPaired(s) {
         <div class="pulse-score" id="pulseScore">—</div>
       </div>
 
+      <div class="bd-timeline">
+        <h3>Anniversary timeline</h3>
+        <div class="bd-timeline__strip" id="bdTimelineStrip"></div>
+      </div>
+
+      <div class="bd-qotw" id="bdQotw">
+        <div class="bd-qotw__head">
+          <span class="bd-qotw__chip">Question of the week</span>
+          <span class="bd-qotw__week" id="bdQotwWeek"></span>
+        </div>
+        <p class="bd-qotw__q" id="bdQotwPrompt">…</p>
+        <div class="bd-qotw__answers" id="bdQotwAnswers">
+          <div class="bd-qotw__row">
+            <span class="bd-qotw__who">You</span>
+            <span class="bd-qotw__a" id="bdQotwMine">Tap to answer</span>
+          </div>
+          <div class="bd-qotw__row">
+            <span class="bd-qotw__who" id="bdQotwPartnerLabel">${escape(partnerName)}</span>
+            <span class="bd-qotw__a" id="bdQotwTheirs">Hidden until you both answer</span>
+          </div>
+        </div>
+        <button class="btn btn-primary bd-qotw__btn" id="bdQotwBtn">Answer this week</button>
+      </div>
+
+      <div class="bd-kindness">
+        <div class="bd-kindness__head">
+          <span class="bd-kindness__icon">💛</span>
+          <h3>Kindness streak</h3>
+        </div>
+        <div class="bd-kindness__stats">
+          <div class="bd-kindness__stat">
+            <div class="bd-kindness__num" id="bdKindStreak">0</div>
+            <div class="bd-kindness__lbl">day streak</div>
+          </div>
+          <div class="bd-kindness__stat">
+            <div class="bd-kindness__num" id="bdKindTotal">0</div>
+            <div class="bd-kindness__lbl">acts logged</div>
+          </div>
+        </div>
+        <div class="bd-kindness__recent" id="bdKindRecent"></div>
+        <button class="btn btn-primary bd-kindness__btn" id="bdKindBtn">+ Log a kind act</button>
+      </div>
+
       <div class="love-langs">
         <h3>Love Languages</h3>
         <div class="lang-item"><span class="emoji">💬</span><div class="info"><div class="name">Words of Affirmation</div><div class="lang-bar"><div class="fill words"   id="langWords"   style="width:60%"></div></div></div></div>
@@ -396,6 +451,9 @@ function paintPaired(s) {
 
   // Wire bond data load
   loadPairedData(coupleId);
+  paintAnniversaryTimeline(me);
+  loadQotw(coupleId, me.uid, partnerName, s.partnerId);
+  loadKindness(coupleId, me.uid);
 
   // Goal / Countdown forms
   _container.querySelector("#btnAddGoal").addEventListener("click", () => openGoalForm(coupleId, me.uid));
@@ -579,4 +637,233 @@ function escape(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[c]));
+}
+
+
+
+// =====================================================================
+// Anniversary timeline — milestone badges + days elapsed
+// =====================================================================
+const ANNIV_MILESTONES = [
+  { days: 30,    label: "1 month",   icon: "🌱" },
+  { days: 100,   label: "100 days",  icon: "💯" },
+  { days: 180,   label: "6 months",  icon: "🌸" },
+  { days: 365,   label: "1 year",    icon: "💜" },
+  { days: 730,   label: "2 years",   icon: "✨" },
+  { days: 1095,  label: "3 years",   icon: "🌟" },
+  { days: 1825,  label: "5 years",   icon: "💎" },
+  { days: 3650,  label: "10 years",  icon: "👑" },
+];
+function paintAnniversaryTimeline(me) {
+  const strip = _container?.querySelector("#bdTimelineStrip");
+  if (!strip) return;
+  const startedAt = me.matchedAt?.toMillis?.() || me.matchedAt?.seconds * 1000 || null;
+  const days = startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 86400000)) : 0;
+  strip.innerHTML = ANNIV_MILESTONES.map((m) => {
+    const earned = days >= m.days;
+    return `<div class="bd-tl__step ${earned ? "is-earned" : ""}" title="${escape(m.label)}">
+      <div class="bd-tl__icon">${m.icon}</div>
+      <div class="bd-tl__lbl">${escape(m.label)}</div>
+      <div class="bd-tl__sub">${earned ? "earned" : `${m.days - days}d`}</div>
+    </div>`;
+  }).join("");
+}
+
+// =====================================================================
+// Question of the Week — weekly rotating prompt; both partners answer.
+// =====================================================================
+const QOTW_BANK = [
+  "What was the most ordinary moment that felt extraordinary together?",
+  "If we made a small ritual we'd never break, what should it be?",
+  "What's something kind I do that I might not realise matters to you?",
+  "When did you most feel chosen by me?",
+  "If we had a free Saturday, no plan, no phones — what's the dream?",
+  "What's a small thing about us I should never let go of?",
+  "Which inside joke do you want us to keep alive forever?",
+  "Where do you feel most at home with me?",
+  "What's a dream you've kept quiet that I should know about?",
+  "What's a fear I can carry beside you?",
+  "What's a lyric or line that reminds you of us?",
+  "What's the kindest thing you'd want me to do for you on a hard day?",
+  "What part of yourself has grown since we met?",
+  "What's something you'd love to learn together?",
+  "When did you last feel proud of us as a team?",
+  "What's a memory you'd live in for an afternoon if you could?",
+  "What's one comfort food you want me to know how to make for you?",
+  "If we could only keep five photos, which would you save?",
+  "What's a tiny luxury you'd love more of?",
+  "What's a place you'd love us to visit before the year ends?",
+  "How can I show up for you better this week?",
+  "What's a tradition from your family you'd love to keep with us?",
+  "What's something I do that makes you feel fully seen?",
+  "If we could replay one day exactly as it was, which?",
+  "What does forever feel like, in one sentence?",
+  "What promise to ourselves do we want to keep this season?",
+];
+function isoWeekKey(d = new Date()) {
+  const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = target.getUTCDay() || 7;
+  target.setUTCDate(target.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+  return `${target.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+function pickWeeklyQuestion(weekKey) {
+  // Stable mapping from weekKey to bank index
+  let h = 0; for (let i = 0; i < weekKey.length; i++) h = (h * 31 + weekKey.charCodeAt(i)) | 0;
+  return QOTW_BANK[Math.abs(h) % QOTW_BANK.length];
+}
+
+function loadQotw(coupleId, myUid, partnerName, partnerId) {
+  if (!coupleId) return;
+  const week = isoWeekKey();
+  const ref  = doc(db, "bonds", coupleId, "qotw", week);
+  const promptText = pickWeeklyQuestion(week);
+
+  // Pre-paint static fields immediately so the user isn't staring at "…"
+  const weekLbl = _container?.querySelector("#bdQotwWeek");
+  const promptEl = _container?.querySelector("#bdQotwPrompt");
+  if (weekLbl)  weekLbl.textContent  = week;
+  if (promptEl) promptEl.textContent = promptText;
+
+  // Subscribe so partner answers stream in
+  _unsubQotw = onSnapshot(ref, (snap) => {
+    const data = snap.data() || {};
+    const answers = data.answers || {};
+    const mine = answers[myUid] || "";
+    const theirs = partnerId ? (answers[partnerId] || "") : "";
+    const myEl  = _container?.querySelector("#bdQotwMine");
+    const trEl  = _container?.querySelector("#bdQotwTheirs");
+    const btn   = _container?.querySelector("#bdQotwBtn");
+    if (myEl) myEl.textContent = mine || "Tap to answer";
+    if (trEl) {
+      if (mine && theirs)        trEl.textContent = theirs;
+      else if (theirs && !mine)  trEl.textContent = "Hidden until you answer too";
+      else if (!theirs)          trEl.textContent = `${partnerName} hasn't answered yet`;
+    }
+    if (btn) btn.textContent = mine ? "Edit your answer" : "Answer this week";
+  });
+
+  // Wire button
+  const btn = _container?.querySelector("#bdQotwBtn");
+  if (btn) {
+    btn.onclick = () => openQotwModal(coupleId, myUid, week, promptText);
+  }
+}
+
+function openQotwModal(coupleId, myUid, week, promptText) {
+  const me = getState().user || {};
+  const cur = ""; // we'll re-fetch on save; modal starts empty unless we want to pre-fill
+  openModal(
+    "Question of the week",
+    `<p class="bond-qotw-prompt">${escape(promptText)}</p>
+     <textarea id="qotwAnswer" class="bd-qotw__input" rows="4" maxlength="600"
+       placeholder="Be honest. Be soft. Be you."></textarea>`,
+    "Save answer",
+    async (modalEl) => {
+      const val = modalEl.querySelector("#qotwAnswer").value.trim();
+      if (!val) { toastWarn("Type something first"); return false; }
+      const ok = await safe(() => setDoc(
+        doc(db, "bonds", coupleId, "qotw", week),
+        {
+          question: promptText,
+          answers: { [myUid]: val },
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      ), "Couldn't save your answer");
+      if (ok !== false) toastSuccess("Saved 💜");
+    }
+  );
+}
+
+// =====================================================================
+// Kindness streak — log acts; counter + last-7-day streak
+// =====================================================================
+function loadKindness(coupleId, myUid) {
+  if (!coupleId) return;
+  const col = collection(db, "bonds", coupleId, "kindness");
+  const q = query(col, orderBy("at", "desc"), limit(50));
+  _unsubKindness = onSnapshot(q, (snap) => {
+    const acts = [];
+    snap.forEach((d) => acts.push({ id: d.id, ...d.data() }));
+    paintKindness(acts, myUid);
+  });
+
+  const btn = _container?.querySelector("#bdKindBtn");
+  if (btn) btn.onclick = () => openKindnessModal(coupleId, myUid);
+}
+
+function paintKindness(acts, myUid) {
+  const total = acts.length;
+  const streak = computeKindnessStreak(acts);
+  const recent = acts.slice(0, 4);
+  const totalEl  = _container?.querySelector("#bdKindTotal");
+  const streakEl = _container?.querySelector("#bdKindStreak");
+  const recentEl = _container?.querySelector("#bdKindRecent");
+  if (totalEl)  totalEl.textContent = String(total);
+  if (streakEl) streakEl.textContent = String(streak);
+  if (recentEl) {
+    if (!recent.length) {
+      recentEl.innerHTML = `<p class="bd-kindness__empty">Log a kind act to start your streak.</p>`;
+    } else {
+      recentEl.innerHTML = recent.map((a) => {
+        const when = a.at?.toDate?.() || (a.at ? new Date(a.at) : null);
+        const ago = when ? friendlyAgo(when) : "just now";
+        const mine = a.by === myUid;
+        return `<div class="bd-kindness__row ${mine ? "is-mine" : ""}">
+          <span class="bd-kindness__bullet">💛</span>
+          <span class="bd-kindness__txt">${escape(a.note || "Kind act")}</span>
+          <span class="bd-kindness__ago">${escape(ago)}</span>
+        </div>`;
+      }).join("");
+    }
+  }
+}
+
+function computeKindnessStreak(acts) {
+  if (!acts.length) return 0;
+  const days = new Set();
+  for (const a of acts) {
+    const when = a.at?.toDate?.() || (a.at ? new Date(a.at) : null);
+    if (when) days.add(toDayKey(when));
+  }
+  let streak = 0;
+  let cursor = new Date();
+  while (days.has(toDayKey(cursor))) {
+    streak++;
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() - 1);
+  }
+  return streak;
+}
+function toDayKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function friendlyAgo(d) {
+  const sec = (Date.now() - d.getTime()) / 1000;
+  if (sec < 60) return "just now";
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+  return `${Math.floor(sec / 86400)}d ago`;
+}
+
+function openKindnessModal(coupleId, myUid) {
+  openModal(
+    "Log a kind act",
+    `<label class="bond-field"><span>What did you do?</span>
+      <input id="kindNote" type="text" maxlength="120" placeholder="Made them tea. Texted to check in." autocomplete="off">
+     </label>`,
+    "Add",
+    async (modalEl) => {
+      const note = modalEl.querySelector("#kindNote").value.trim();
+      if (!note) { toastWarn("Type a quick note"); return false; }
+      const ok = await safe(() => addDoc(collection(db, "bonds", coupleId, "kindness"), {
+        by: myUid, note, at: serverTimestamp()
+      }), "Couldn't save");
+      if (ok !== false) toastSuccess("Kind act logged 💛");
+    }
+  );
 }

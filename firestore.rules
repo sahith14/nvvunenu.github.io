@@ -237,6 +237,16 @@ service cloud.firestore {
       match /events/{eventId} {
         allow read, write: if inCouple(coupleId);
       }
+      match /qotw/{weekId} {
+        allow read, write: if inCouple(coupleId);
+      }
+      match /kindness/{actId} {
+        allow read:   if inCouple(coupleId);
+        allow create: if inCouple(coupleId)
+          && request.resource.data.by == uid();
+        allow delete: if inCouple(coupleId)
+          && resource.data.by == uid();
+      }
     }
 
     // ---------- subscriptions (per user) ----------
