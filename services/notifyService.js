@@ -42,6 +42,7 @@ export function startNotifyService() {
       teardownAll();
     }
     detectPresenceTransition(s);
+    celebratePairing(s);
   });
 }
 
@@ -449,4 +450,72 @@ function spawnFloatingHeart(emoji = "💜") {
     document.head.appendChild(s);
   }
   setTimeout(() => { try { el.remove(); } catch {} }, 3100);
+}
+
+
+// =====================================================================
+// Pairing celebration — fires once per device when a coupleId first
+// shows up in appState. Spawns a small heart-burst overlay + toast.
+// =====================================================================
+const PAIRING_KEY = "nvvunenu.pairingCelebrated";
+let _celebrating = false;
+
+function celebratePairing(s) {
+  if (!s?.coupleId || _celebrating) return;
+  let already = false;
+  try { already = localStorage.getItem(PAIRING_KEY) === s.coupleId; } catch {}
+  if (already) return;
+  _celebrating = true;
+  try { localStorage.setItem(PAIRING_KEY, s.coupleId); } catch {}
+
+  const partnerName = s?.partner?.displayName?.split(" ")[0] || s?.partner?.username || "your person";
+  setTimeout(() => {
+    spawnHeartBurst();
+    toastSuccess(`You're paired with ${partnerName} 💜`);
+    playChime();
+  }, 600);
+}
+
+function spawnHeartBurst() {
+  if (typeof document === "undefined") return;
+  const layer = document.createElement("div");
+  layer.className = "nv-heart-burst";
+  for (let i = 0; i < 14; i++) {
+    const span = document.createElement("span");
+    span.textContent = ["💜","💖","🥰","✨","💕"][i % 5];
+    span.style.setProperty("--dx", `${Math.round((Math.random() - .5) * 360)}px`);
+    span.style.setProperty("--dy", `${-180 - Math.random() * 220}px`);
+    span.style.setProperty("--rot", `${Math.round((Math.random() - .5) * 360)}deg`);
+    span.style.setProperty("--delay", `${(Math.random() * 0.25).toFixed(2)}s`);
+    span.style.setProperty("--scale", (.7 + Math.random() * .9).toFixed(2));
+    layer.appendChild(span);
+  }
+  document.body.appendChild(layer);
+
+  if (!document.getElementById("nv-heart-burst-style")) {
+    const s = document.createElement("style");
+    s.id = "nv-heart-burst-style";
+    s.textContent = `
+      .nv-heart-burst {
+        position: fixed; left: 50%; top: 60%;
+        transform: translate(-50%, -50%);
+        pointer-events: none; z-index: 9999;
+      }
+      .nv-heart-burst span {
+        position: absolute; top: 0; left: 0;
+        font-size: 28px; line-height: 1;
+        opacity: 0;
+        animation: nv-heart-fly 1.6s cubic-bezier(.22,1,.36,1) var(--delay,0s) forwards;
+        transform: scale(var(--scale,1));
+        text-shadow: 0 4px 14px rgba(255,126,182,.5);
+      }
+      @keyframes nv-heart-fly {
+        0%   { opacity: 0; transform: translate(0, 0) scale(.4) rotate(0); }
+        20%  { opacity: 1; transform: translate(0, -10px) scale(1) rotate(0); }
+        100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(var(--scale,1)) rotate(var(--rot)); }
+      }
+    `;
+    document.head.appendChild(s);
+  }
+  setTimeout(() => { try { layer.remove(); } catch {} }, 2000);
 }
