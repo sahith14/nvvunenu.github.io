@@ -579,6 +579,7 @@ async function onCaptureFile(ev) {
     date: today.toISOString().slice(0, 10),
     file,
     onProgress: () => {},
+    sourceKind: "camera",
   }), "Couldn't save memory");
 
   fab?.classList.remove("is-uploading");

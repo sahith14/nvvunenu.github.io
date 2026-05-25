@@ -13,7 +13,7 @@ const PAGE = 20;
 
 const path = (coupleId) => collection(db, "memories", coupleId, "entries");
 
-export async function addMemory({ coupleId, title, description, date, file, onProgress }) {
+export async function addMemory({ coupleId, title, description, date, file, onProgress, sourceKind = "gallery" }) {
   const uid = auth.currentUser?.uid;
   if (!uid || !coupleId) throw new Error("NO_AUTH_OR_COUPLE");
   if (!title?.trim()) throw new Error("NO_TITLE");
@@ -35,7 +35,8 @@ export async function addMemory({ coupleId, title, description, date, file, onPr
     mediaPath:   media?.path || null,  // for future delete
     mediaType:   media?.type || null,
     createdBy:   uid,
-    createdAt:   serverTimestamp()
+    createdAt:   serverTimestamp(),
+    sourceKind:  sourceKind || "gallery",
   });
 }
 

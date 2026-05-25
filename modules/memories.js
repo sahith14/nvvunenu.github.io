@@ -16,6 +16,7 @@ let _unsub           = null;
 let _lastCoupleId    = null;
 let _allMemories     = [];     // last snapshot, full array
 let _filteredMemories= [];     // after search filter
+let _sourceFilter    = "all";  // 'all' | 'camera' | 'chat' | 'gallery'
 let _searchTimer     = null;
 let _query           = "";
 let _view            = "timeline";   // 'timeline' | 'photos'
@@ -53,6 +54,7 @@ function cleanup() {
   _offState = _unsub = null;
   _container = null;
   _allMemories = []; _filteredMemories = []; _query = ""; _view = "timeline"; _lastCoupleId = null;
+  _sourceFilter = "all";
 }
 
 // =========================================================================
@@ -98,6 +100,12 @@ function renderShell() {
           <button class="mem-view-btn active" data-view="timeline" role="tab">📜 Timeline</button>
           <button class="mem-view-btn"        data-view="photos"   role="tab">▦ Photos</button>
           <button class="mem-view-btn"        data-view="favorites" role="tab">★ Favorites</button>
+        </div>
+        <div class="mem-source-chips" role="tablist" aria-label="Source">
+          <button class="mem-chip is-active" data-source="all">All</button>
+          <button class="mem-chip" data-source="camera">📷 Camera</button>
+          <button class="mem-chip" data-source="chat">💬 Chat</button>
+          <button class="mem-chip" data-source="gallery">🖼 Gallery</button>
         </div>
       </div>
 
@@ -224,6 +232,26 @@ function renderShell() {
       .mem-view-btn.active {
         background: linear-gradient(135deg,#ff7eb6,#9b8cff); color: #fff;
         box-shadow: 0 4px 12px rgba(255,126,182,.3);
+      }
+
+      /* SOURCE FILTER CHIPS */
+      .mem-source-chips {
+        display: flex; flex-wrap: wrap; gap: 6px;
+        margin-top: 6px;
+      }
+      .mem-chip {
+        padding: 4px 12px; border-radius: 999px;
+        background: rgba(255,255,255,.85);
+        border: 1px solid rgba(155,140,255,.2);
+        color: #4f3d80; font-weight: 600; font-size: .75rem;
+        font-family: inherit; cursor: pointer;
+        transition: all .15s var(--ease-out, cubic-bezier(.22,1,.36,1));
+      }
+      .mem-chip:hover { transform: translateY(-1px); border-color: #9b8cff; }
+      .mem-chip.is-active {
+        background: linear-gradient(135deg, rgba(255,126,182,.18), rgba(155,140,255,.18));
+        border-color: rgba(155,140,255,.5);
+        color: #1a1235;
       }
 
       /* TIMELINE */
@@ -394,6 +422,13 @@ function bind() {
       paintBody();
     });
   });
+  _container.querySelectorAll(".mem-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      _container.querySelectorAll(".mem-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+      _sourceFilter = chip.dataset.source || "all";
+      applyFilter();
+    });
+  });
 }
 
 // =========================================================================
@@ -431,11 +466,18 @@ function paintHero(s) {
 // Filtering and rendering dispatch
 // =========================================================================
 function applyFilter() {
+  let pool = _allMemories;
+  if (_sourceFilter && _sourceFilter !== "all") {
+    pool = pool.filter((m) => {
+      const sk = m.sourceKind || "gallery";
+      return sk === _sourceFilter;
+    });
+  }
   if (!_query) {
-    _filteredMemories = _allMemories;
+    _filteredMemories = pool;
   } else {
     const q = _query;
-    _filteredMemories = _allMemories.filter((m) => {
+    _filteredMemories = pool.filter((m) => {
       const t = (m.title || "").toLowerCase();
       const d = (m.description || "").toLowerCase();
       return t.includes(q) || d.includes(q);
