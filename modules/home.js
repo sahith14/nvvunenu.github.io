@@ -13,6 +13,7 @@ import {
 } from "../services/coupleService.js";
 import { formatActivity } from "../services/presenceService.js";
 import { addMemory } from "../services/memoryService.js";
+import { aiCall } from "../services/aiProvider.js";
 import {
   doc, addDoc, collection, serverTimestamp, setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -265,6 +266,7 @@ function paintRecap(meta, s) {
     return t ? Math.max(1, Math.floor((Date.now() - t) / 86_400_000)) : 0;
   })();
 
+  // Local heuristic — used when no AI provider is plugged in.
   const lines = [];
   if (days > 0)    lines.push(`You and ${partnerName} have shared ${days} day${days === 1 ? "" : "s"} together.`);
   if (streak >= 3) lines.push(`That's a ${streak}-day streak going strong 🔥`);
@@ -272,7 +274,19 @@ function paintRecap(meta, s) {
   else if (bond >= 50) lines.push("Steady week. A little surprise note could spark things.");
   else             lines.push("It's been quiet. Try a quick voice note or memory drop.");
 
+  // Paint the heuristic immediately so the card is never empty.
   body.innerHTML = lines.map((l) => `<span>${l}</span>`).join(" ");
+
+  // Then ask a real provider (if one is plugged in) for a richer recap.
+  const summary = {
+    partnerName, bondScore: bond, streak, daysTogether: days,
+    moods: meta?.moods || {},
+  };
+  aiCall("recapWeek", summary).then((text) => {
+    if (typeof text === "string" && text.trim()) {
+      body.innerHTML = `<span>${escapeHtml(text.trim())}</span>`;
+    }
+  }).catch(() => {});
 }
 
 function updateLastSeen(ts) {
