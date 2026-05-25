@@ -71,6 +71,11 @@ async function showList() {
         <button class="ig-tab ${activeTab==='explore'?'active':''}"   data-tab="explore">Explore</button>
       </div>
 
+      <div class="ig-pull" id="igPull" aria-hidden="true">
+        <div class="ig-pull__spinner">↻</div>
+        <div class="ig-pull__label">Pull to refresh</div>
+      </div>
+
       <div class="ig-posts" id="igPosts">
         <div class="ig-post-skeleton"></div>
         <div class="ig-post-skeleton"></div>
@@ -100,6 +105,33 @@ async function showList() {
         background:linear-gradient(135deg,#ff8fb1,#a78bfa);color:#fff;
         box-shadow:0 4px 12px rgba(255,143,177,.3);
       }
+      .ig-pull {
+        position: relative;
+        height: 0; overflow: visible;
+        text-align: center;
+        opacity: 0;
+        transform: translateY(-100%);
+      }
+      .ig-pull__spinner {
+        display: inline-grid; place-items: center;
+        width: 32px; height: 32px; margin: 8px auto 4px;
+        border-radius: 50%;
+        background: linear-gradient(135deg,#ff8fb1,#a78bfa);
+        color: #fff; font-size: 16px;
+        box-shadow: 0 4px 12px rgba(255,143,177,.4);
+      }
+      .ig-pull__label {
+        font-size: .6875rem; font-weight: 700;
+        letter-spacing: .4px; text-transform: uppercase;
+        color: rgba(0,0,0,.55);
+      }
+      .ig-pull.is-ready .ig-pull__spinner {
+        background: linear-gradient(135deg,#7effc2,#5ed3a3);
+      }
+      .ig-pull.is-spinning .ig-pull__spinner {
+        animation: ig-pull-spin .9s linear infinite;
+      }
+      @keyframes ig-pull-spin { to { transform: rotate(360deg); } }
     </style>
   `;
 
@@ -111,6 +143,8 @@ async function showList() {
   // Wire top-bar actions
   document.getElementById('igAddPost').onclick = pickAndPost;
   document.getElementById('igOpenDms').onclick = () => window.loadPage?.('chat');
+
+  attachPullToRefresh();
 
   await switchTab();
 }
@@ -545,4 +579,71 @@ function markStorySeen(key) {
   // Cap to last 200 to keep localStorage tidy.
   const trimmed = list.length > 200 ? list.slice(-200) : list;
   try { localStorage.setItem(SEEN_STORIES_KEY, JSON.stringify(trimmed)); } catch {}
+}
+
+
+// =====================================================================
+// Pull-to-refresh — drag the feed down at the top to reload.
+// =====================================================================
+function attachPullToRefresh() {
+  const feedRoot = containerEl?.querySelector('.ig-feed');
+  const pull     = containerEl?.querySelector('#igPull');
+  const posts    = containerEl?.querySelector('#igPosts');
+  if (!feedRoot || !pull || !posts) return;
+
+  // We track on the actual scroll surface — use the scrolling element.
+  const scroller = document.scrollingElement || document.documentElement;
+  let startY = 0;
+  let pulling = false;
+  let dy = 0;
+  let refreshing = false;
+  const THRESH = 70;
+
+  const reset = (animate = true) => {
+    pulling = false; dy = 0;
+    pull.style.transition = animate ? "transform .2s ease, opacity .2s" : "none";
+    pull.style.transform  = "translateY(-100%)";
+    pull.style.opacity    = "0";
+    pull.classList.remove("is-ready", "is-spinning");
+  };
+  reset(false);
+
+  feedRoot.addEventListener("touchstart", (e) => {
+    if (refreshing) return;
+    if ((scroller.scrollTop || 0) > 0) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+    pull.style.transition = "none";
+  }, { passive: true });
+
+  feedRoot.addEventListener("touchmove", (e) => {
+    if (!pulling || refreshing) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy <= 0) { reset(); return; }
+    // Damp the pull so it feels rubber-banded
+    const drag = Math.min(120, dy * 0.45);
+    pull.style.transform = `translateY(${drag - 20}px)`;
+    pull.style.opacity   = String(Math.min(1, drag / 50));
+    pull.classList.toggle("is-ready", drag >= THRESH);
+    pull.querySelector('.ig-pull__label').textContent =
+      drag >= THRESH ? "Release to refresh" : "Pull to refresh";
+  }, { passive: true });
+
+  feedRoot.addEventListener("touchend", async () => {
+    if (!pulling || refreshing) return;
+    const drag = Math.min(120, dy * 0.45);
+    if (drag < THRESH) { reset(); return; }
+    refreshing = true;
+    pulling = false;
+    // Spinner state
+    pull.style.transition = "transform .2s ease";
+    pull.style.transform  = "translateY(0)";
+    pull.style.opacity    = "1";
+    pull.classList.add("is-spinning");
+    pull.querySelector('.ig-pull__label').textContent = "Refreshing…";
+    try {
+      await switchTab();    // re-attach subscriptions, replays the latest data
+    } catch {}
+    setTimeout(() => { refreshing = false; reset(); }, 500);
+  });
 }
