@@ -92,6 +92,7 @@ function reattachAll() {
     }),
     listenMetaMoods(),
     listenChatMessages(),
+    listenKisses(),
   );
 }
 
@@ -528,4 +529,29 @@ function chatMutedNow() {
     const v = Number(localStorage.getItem("nvvunenu.chatMutedUntil") || 0);
     return v > Date.now();
   } catch { return false; }
+}
+
+
+// =====================================================================
+// Inbound kisses — burst hearts on partner's screen when one arrives.
+// =====================================================================
+function listenKisses() {
+  if (!_coupleId) return () => {};
+  let firstSnap = true;
+  const q = query(
+    collection(db, "couples", _coupleId, "kisses"),
+    orderBy("at", "desc"),
+    limit(3)
+  );
+  return onSnapshot(q, (snap) => {
+    if (firstSnap) { firstSnap = false; return; }
+    snap.docChanges().forEach((change) => {
+      if (change.type !== "added") return;
+      const m = change.doc.data() || {};
+      if (m.from === _myUid) return;     // skip my own send (already burst locally)
+      // No pref-gate — kisses are intentional gestures the partner just sent
+      try { spawnHeartBurst(); } catch {}
+      toast(`💋 ${_partnerName} sent a kiss`);
+    });
+  });
 }

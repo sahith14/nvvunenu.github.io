@@ -297,6 +297,14 @@ service cloud.firestore {
         allow delete: if inCouple(coupleId);
       }
 
+      // Kisses — visual heart-burst gesture across both screens
+      match /kisses/{kissId} {
+        allow read: if inCouple(coupleId);
+        allow create: if inCouple(coupleId)
+          && request.resource.data.from == uid();
+        allow delete: if inCouple(coupleId);
+      }
+
       // Call history — written when a call ends. Sender is the user
       // closing the UI (could be either side; both write their own row).
       match /callHistory/{callId} {

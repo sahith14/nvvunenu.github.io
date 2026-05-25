@@ -421,6 +421,14 @@ async function sendKiss() {
       createdAt: serverTimestamp()
     });
   } catch (e) { /* swallow — UX still positive */ }
+  // Couple-scoped kiss doc — gives partner a real-time burst on their screen.
+  if (s.coupleId) {
+    try {
+      await addDoc(collection(db, "couples", s.coupleId, "kisses"), {
+        from: s.user.uid, at: serverTimestamp()
+      });
+    } catch {}
+  }
   try { spawnHeartBurst(); } catch {}
   toastSuccess("💋 Kiss sent");
 }
