@@ -41,6 +41,7 @@ export function renderTogether(container) {
   _offState = onAppState((s) => {
     if (!s.ready) return;
     paintPartnerStrip(s);
+    paintBeacon(s);
   });
 
   return cleanup;
@@ -66,6 +67,15 @@ function renderShell() {
           <span class="tg-partner-strip__hint">Connecting…</span>
         </div>
       </header>
+
+      <button class="tg-beacon" id="tgBeacon" hidden>
+        <div class="tg-beacon__icon" id="tgBeaconIcon">·</div>
+        <div class="tg-beacon__body">
+          <div class="tg-beacon__title" id="tgBeaconTitle">…</div>
+          <div class="tg-beacon__sub"   id="tgBeaconSub">…</div>
+        </div>
+        <span class="tg-beacon__cta">Join →</span>
+      </button>
 
       <div class="tg-tiles" id="tgTiles">
         ${SUBS.map((s) => `
@@ -187,6 +197,44 @@ function renderShell() {
       .tg-subview__body {
         flex: 1; overflow: auto; padding: 18px;
         max-width: 880px; margin: 0 auto; width: 100%;
+      }
+      .tg-beacon {
+        display: grid; grid-template-columns: 44px 1fr auto; gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+        margin: 0 0 14px;
+        border-radius: 16px;
+        background: var(--tg-accent, linear-gradient(135deg,#ff7eb6,#9b8cff));
+        color: #fff;
+        border: 0; font-family: inherit;
+        text-align: left; cursor: pointer;
+        box-shadow: 0 12px 28px rgba(155,140,255,.32);
+        animation: tg-beacon-pulse 2.4s ease-in-out infinite;
+        transition: transform .15s;
+      }
+      .tg-beacon:hover  { transform: translateY(-1px); }
+      .tg-beacon:active { transform: scale(.99); }
+      .tg-beacon__icon {
+        width: 44px; height: 44px; border-radius: 14px;
+        display: grid; place-items: center;
+        background: rgba(255,255,255,.18);
+        font-size: 22px;
+      }
+      .tg-beacon__title {
+        font-weight: 800; font-size: 1rem;
+      }
+      .tg-beacon__sub {
+        margin-top: 2px;
+        font-size: .8125rem; opacity: .9; line-height: 1.4;
+      }
+      .tg-beacon__cta {
+        font-weight: 800; font-size: .8125rem;
+        padding: 6px 12px; border-radius: 999px;
+        background: rgba(255,255,255,.22);
+      }
+      @keyframes tg-beacon-pulse {
+        0%, 100% { box-shadow: 0 12px 28px rgba(155,140,255,.32); }
+        50%      { box-shadow: 0 18px 40px rgba(255,126,182,.55); }
       }
     </style>
   `;
@@ -615,4 +663,48 @@ function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   }[c]));
+}
+
+
+
+// =====================================================================
+// Beacon — when partner is in a Together sub-view, surface a soft
+// glowing card that links into the same view.
+// =====================================================================
+const ACTIVITY_TO_SUB = {
+  // partner.activity.type → SUBS key
+  watching:        "watch",
+  listening:       "music",
+  "screen-sharing": "screen",
+  sleeping:        "sleep",
+  gaming:          "play",
+};
+
+function paintBeacon(s) {
+  const beacon = _container?.querySelector("#tgBeacon");
+  if (!beacon) return;
+  const t = s.partner?.activity?.type;
+  const subKey = ACTIVITY_TO_SUB[t];
+  if (!subKey || _activeSub) {
+    // Hide if partner isn't in a sub-view OR if I'm already in one
+    beacon.hidden = true;
+    return;
+  }
+  const sub = SUBS.find((x) => x.key === subKey);
+  if (!sub) { beacon.hidden = true; return; }
+  beacon.hidden = false;
+  beacon.style.setProperty("--tg-accent", sub.accent);
+  const partnerName = s.partner?.displayName?.split(" ")[0] || s.partner?.username || "Partner";
+  const detail = s.partner.activity.detail
+    ? ` · ${String(s.partner.activity.detail).slice(0, 50)}`
+    : "";
+
+  const iconEl  = _container.querySelector("#tgBeaconIcon");
+  const titleEl = _container.querySelector("#tgBeaconTitle");
+  const subEl   = _container.querySelector("#tgBeaconSub");
+  if (iconEl)  iconEl.textContent  = sub.icon;
+  if (titleEl) titleEl.textContent = `${partnerName} is in ${sub.title}`;
+  if (subEl)   subEl.textContent   = `Tap to be there with them${detail}`;
+
+  beacon.onclick = () => openSubView(subKey);
 }
