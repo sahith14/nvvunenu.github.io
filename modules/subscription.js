@@ -54,10 +54,14 @@ function detectRegion() {
 
 function priceLabel(planId, region) {
   const def = PLANS[planId];
+  // Canonical INR price always wins when present (the spec calls out ₹414 / ₹1078).
+  if (typeof def?.priceINR === "number" && def.priceINR > 0) {
+    return `₹${def.priceINR}`;
+  }
+  if (def?.priceMonthly === 0) return "Free";
   const usd = def?.priceMonthly || 0;
   if (!usd) return "Free";
   const r = RATES[region] || FALLBACK;
-  // Show local currency rounded to integer when rate >= 1, else 2dp.
   const local = usd * r.rate;
   const rounded = local >= 50 ? Math.round(local) : Math.round(local * 100) / 100;
   return `${r.sym}${rounded}`;
@@ -68,15 +72,31 @@ const FEATURE_LABELS = [
   ["unlimitedPartnerMessages", "Unlimited messages with your partner"],
   ["voiceNotesPerDay",         "Voice notes"],
   ["videoCallsHd",             "HD video calls"],
+  ["screenShareHD",            "HD screen sharing"],
+  ["watchTogether",            "Watch together (synced YouTube)"],
+  ["syncedMusic",              "Synced music sessions"],
+  ["sharedMediaRooms",         "Shared media rooms"],
+  ["sharedPlaylists",          "Shared playlists"],
   ["sleepTogetherMode",        "Sleep Together mode"],
+  ["premiumGames",             "Premium couple games"],
+  ["liveStatusWidgets",        "Live status widgets"],
   ["premiumThemes",            "Premium themes"],
   ["coupleInsights",           "Couple insights"],
   ["memoriesMax",              "Memories"],
   ["monthlyRecap",             "Monthly recap"],
+  ["cloudSync",                "Cloud sync"],
   ["customAvatarFrames",       "Custom avatar frames"],
-  ["prioritySupport",          "Priority support"],
   ["cinematicRecaps",          "Cinematic recaps"],
-  ["relationshipCoach",        "Relationship coach"]
+  ["anniversaryFilms",         "Anniversary films"],
+  ["foreverVault",             "Forever vault"],
+  ["futureMessageCapsules",    "Future message capsules"],
+  ["futureTimeline",           "AI future timeline"],
+  ["emotionalAnalytics",       "Emotional analytics"],
+  ["relationshipDocumentaries","Relationship documentaries"],
+  ["relationshipCoach",        "AI relationship coach"],
+  ["exclusiveThemes",          "Exclusive themes"],
+  ["customDomains",            "Custom couple domain"],
+  ["prioritySupport",          "Priority support"]
 ];
 
 function describeFeature(planId, [key, label]) {

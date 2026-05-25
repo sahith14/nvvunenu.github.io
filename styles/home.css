@@ -123,3 +123,51 @@
   width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--violet);
   cursor:pointer;
 }
+
+
+
+/* =====================================================================
+   AI recap banner — sits between stats and quick-actions on Home
+   ===================================================================== */
+.ai-recap {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,126,182,.15), rgba(155,140,255,.18));
+  border: 1px solid rgba(155, 140, 255, 0.35);
+  border-radius: 22px;
+  padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 12px 36px rgba(143, 116, 255, 0.18);
+  overflow: hidden;
+}
+.ai-recap::before {
+  content: "";
+  position: absolute; inset: -50% -20% auto auto;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,126,182,.35), transparent 60%);
+  pointer-events: none;
+  filter: blur(20px);
+}
+.ai-recap__head { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
+.ai-recap__head h3 { font-size: 1rem; font-weight: 800; margin: 0; color: var(--nn-text, #1a1235); }
+.ai-recap__badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 999px;
+  background: linear-gradient(135deg, #ff7eb6, #9b8cff);
+  color: #fff; font-size: .6875rem; font-weight: 700; letter-spacing: .4px;
+  text-transform: uppercase;
+}
+.ai-recap__body {
+  font-size: .9375rem; line-height: 1.5; color: var(--nn-text-soft, #4f3d80);
+  position: relative; z-index: 1; margin: 0;
+}
+.ai-recap__body span:not(:last-child)::after { content: "  "; }
+.ai-recap__cta {
+  align-self: flex-start; margin-top: 4px; padding: 8px 14px !important;
+  font-size: .8125rem !important; position: relative; z-index: 1;
+}
+
+/* Wider mood grid for 12 emojis (4 columns) */
+.hm-mood-grid { grid-template-columns: repeat(4, 1fr) !important; }
+@media (max-width: 380px) {
+  .hm-mood-grid { grid-template-columns: repeat(3, 1fr) !important; }
+}

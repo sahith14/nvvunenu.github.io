@@ -11,17 +11,24 @@ import {
   initCoupleMeta, subscribeCoupleMeta, sendThinkingOfYou,
   updateMood, daysTogether
 } from "../services/coupleService.js";
+import { formatActivity } from "../services/presenceService.js";
 import {
   doc, addDoc, collection, serverTimestamp, setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const MOODS = [
-  { emoji: "😊", label: "Happy"   },
-  { emoji: "🥰", label: "Loving"  },
-  { emoji: "🙂", label: "Calm"    },
-  { emoji: "😴", label: "Tired"   },
-  { emoji: "😤", label: "Stressed"},
-  { emoji: "😔", label: "Low"     },
+  { emoji: "😊", label: "Happy"             },
+  { emoji: "🥰", label: "Loving"            },
+  { emoji: "🥺", label: "Miss You"          },
+  { emoji: "💭", label: "Thinking of you"   },
+  { emoji: "🙂", label: "Calm"              },
+  { emoji: "✨", label: "Vibing"            },
+  { emoji: "😴", label: "Sleeping"          },
+  { emoji: "💼", label: "Busy"              },
+  { emoji: "🎮", label: "Gaming"            },
+  { emoji: "🥹", label: "Need Attention"    },
+  { emoji: "😤", label: "Angry"             },
+  { emoji: "😔", label: "Low"               },
 ];
 
 let _container = null;
@@ -72,9 +79,21 @@ export function renderHome(container) {
         <div class="stat-card"><div class="num" id="memCount">—</div><div class="label">Memories</div></div>
       </section>
 
+      <section class="ai-recap" id="aiRecap">
+        <div class="ai-recap__head">
+          <span class="ai-recap__badge">✨ AI</span>
+          <h3>This week with you</h3>
+        </div>
+        <p class="ai-recap__body" id="aiRecapBody">
+          We're crunching the numbers on your week together. Recaps appear here every Sunday with a snapshot of your highlights.
+        </p>
+        <button class="btn btn-ghost ai-recap__cta" id="aiRecapCta">Open Memories</button>
+      </section>
+
       <section class="quick-actions" id="quickActions">
+        <button class="quick-action" id="qaTogether"><span class="icon">🫧</span><span class="label">Together</span></button>
         <button class="quick-action" id="qaKiss"><span class="icon">💋</span><span class="label">Send Kiss</span></button>
-        <button class="quick-action" id="qaCall"><span class="icon">🌙</span><span class="label">Sleep Call</span></button>
+        <button class="quick-action" id="qaCall"><span class="icon">🌙</span><span class="label">Sleep Mode</span></button>
         <button class="quick-action" id="qaMemory"><span class="icon">📸</span><span class="label">Add Memory</span></button>
         <button class="quick-action" id="qaNote"><span class="icon">💌</span><span class="label">Surprise Note</span></button>
         <button class="quick-action" id="qaPlay"><span class="icon">🎮</span><span class="label">Play Game</span></button>
@@ -147,7 +166,12 @@ function paint(s) {
     card.style.cursor = "default";
     nameEl.textContent = partner.displayName || partner.username || "Partner";
     const presence = partner.status || {};
-    statusEl.textContent = presence.online ? "Online now" : "Offline";
+    const activityFmt = formatActivity(partner.activity);
+    if (activityFmt) {
+      statusEl.textContent = `${activityFmt.icon} ${activityFmt.text}`;
+    } else {
+      statusEl.textContent = presence.online ? "Online now" : "Offline";
+    }
     if (orbEl) orbEl.classList.toggle("online", !!presence.online);
     updateLastSeen(presence.lastSeen);
     pokeEl.hidden = false;
@@ -199,6 +223,30 @@ function paintMeta(meta, s) {
   // Track our own lastPoke for cooldown UI
   const lp = meta?.lastPokeAt?.[s.user?.uid];
   _lastPokeAt = lp?.toMillis?.() || 0;
+
+  // AI recap heuristic — local, no API. Picks a template based on stats.
+  paintRecap(meta, s);
+}
+
+function paintRecap(meta, s) {
+  const body = _container?.querySelector("#aiRecapBody");
+  if (!body) return;
+  const partnerName = s.partner?.displayName?.split(" ")[0] || s.partner?.username || "your partner";
+  const bond = meta?.bondScore ?? 50;
+  const streak = meta?.streak ?? 0;
+  const days = (() => {
+    const t = s.user?.togetherSince?.toMillis?.() ?? s.user?.matchedAt?.toMillis?.();
+    return t ? Math.max(1, Math.floor((Date.now() - t) / 86_400_000)) : 0;
+  })();
+
+  const lines = [];
+  if (days > 0)    lines.push(`You and ${partnerName} have shared ${days} day${days === 1 ? "" : "s"} together.`);
+  if (streak >= 3) lines.push(`That's a ${streak}-day streak going strong 🔥`);
+  if (bond >= 75)  lines.push("Your bond score is glowing — keep it up.");
+  else if (bond >= 50) lines.push("Steady week. A little surprise note could spark things.");
+  else             lines.push("It's been quiet. Try a quick voice note or memory drop.");
+
+  body.innerHTML = lines.map((l) => `<span>${l}</span>`).join(" ");
 }
 
 function updateLastSeen(ts) {
@@ -250,12 +298,14 @@ function wireCheckinCard() {
 }
 
 function wireQuickActions() {
+  _container.querySelector("#qaTogether").addEventListener("click", () => window.loadPage?.("together"));
   _container.querySelector("#qaKiss").addEventListener("click", sendKiss);
-  _container.querySelector("#qaCall").addEventListener("click", () => window.loadPage?.("space"));
-  _container.querySelector("#qaMemory").addEventListener("click", () => window.loadPage?.("moments"));
+  _container.querySelector("#qaCall").addEventListener("click", () => window.loadPage?.("together"));
+  _container.querySelector("#qaMemory").addEventListener("click", () => window.loadPage?.("memories"));
   _container.querySelector("#qaNote").addEventListener("click", openSurpriseNote);
-  _container.querySelector("#qaPlay").addEventListener("click", () => window.loadPage?.("space"));
+  _container.querySelector("#qaPlay").addEventListener("click", () => window.loadPage?.("together"));
   _container.querySelector("#qaBond").addEventListener("click", () => window.loadPage?.("bond"));
+  _container.querySelector("#aiRecapCta")?.addEventListener("click", () => window.loadPage?.("memories"));
 }
 
 // ---------- Actions ----------
