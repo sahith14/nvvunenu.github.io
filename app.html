@@ -13,18 +13,17 @@
   <!-- Font Awesome (used by nav + buttons across pages) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-  <!-- Apply saved theme BEFORE stylesheets render to avoid flash.
-       Default is the cute pastel light theme; user can switch to dark in settings. -->
+  <!-- Always cute pastel theme. Dark mode is disabled for now. -->
   <script>
     (function () {
       try {
-        var t = localStorage.getItem('nvvunenu.theme') || 'cute';
-        if (t !== 'dark') t = 'cute';
-        document.documentElement.classList.add('theme-' + t);
+        document.documentElement.classList.add('theme-cute');
         document.addEventListener('DOMContentLoaded', function () {
-          document.body.classList.add('theme-' + t);
+          document.body.classList.add('theme-cute');
+          // wipe any legacy theme key so a refresh stays cute
+          try { localStorage.removeItem('nvvunenu.theme'); } catch (e) {}
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', t === 'dark' ? '#0F1117' : '#fff5fa');
+          if (meta) meta.setAttribute('content', '#fff5fa');
         });
       } catch (e) {}
     })();

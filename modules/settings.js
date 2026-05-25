@@ -9,26 +9,21 @@ import { onAppState } from "../state/appState.js";
 import { toast, toastSuccess, toastError, safe } from "../utils/toast.js";
 import { getSubscription, PLANS } from "../services/subscriptionService.js";
 
-const THEME_KEY = "nvvunenu.theme";    // "cute" | "dark"
+const THEME_KEY = "nvvunenu.theme";    // legacy — kept for cleanup only
 const NOTIFY_KEY = "nvvunenu.notify";  // "1" | "0"
 
-export function getStoredTheme() {
-  try {
-    const v = localStorage.getItem(THEME_KEY) || "cute";
-    return v === "dark" ? "dark" : "cute";
-  } catch { return "cute"; }
-}
-export function applyTheme(theme) {
-  const t = theme === "dark" ? "dark" : "cute";
-  // Clear any prior theme classes (legacy: theme-light)
+// Dark mode is removed for now. applyTheme is a no-op that just ensures
+// the cute pastel theme is the only thing active.
+export function getStoredTheme() { return "cute"; }
+export function applyTheme() {
   document.body.classList.remove("theme-light", "theme-dark", "theme-cute");
   document.documentElement.classList.remove("theme-light", "theme-dark", "theme-cute");
-  document.body.classList.add("theme-" + t);
-  document.documentElement.classList.add("theme-" + t);
-  // Update mobile status-bar color
+  document.body.classList.add("theme-cute");
+  document.documentElement.classList.add("theme-cute");
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", t === "dark" ? "#0F1117" : "#fff5fa");
-  try { localStorage.setItem(THEME_KEY, t); } catch {}
+  if (meta) meta.setAttribute("content", "#fff5fa");
+  // Clear any prior dark setting so a refresh doesn't restore it.
+  try { localStorage.removeItem(THEME_KEY); } catch {}
 }
 
 export function getNotifyEnabled() {
@@ -57,25 +52,10 @@ export async function renderSettings(container) {
 }
 
 function shell() {
-  const t = getStoredTheme();
   const n = getNotifyEnabled();
   return `
     <section class="settings-page">
       <h1 class="page-title">Settings</h1>
-
-      <div class="card settings-section" id="setAppearance">
-        <h3 class="settings-h">Appearance</h3>
-        <div class="settings-row">
-          <div>
-            <div class="settings-label">Theme</div>
-            <div class="settings-sub">Choose how Nuvvu Nenu looks.</div>
-          </div>
-          <div class="seg" role="tablist" aria-label="Theme">
-            <button class="seg-btn ${t==='cute'?'active':''}" data-theme="cute" role="tab">🌸 Cute</button>
-            <button class="seg-btn ${t==='dark'?'active':''}" data-theme="dark" role="tab">🌙 Dark</button>
-          </div>
-        </div>
-      </div>
 
       <div class="card settings-section" id="setAccount">
         <h3 class="settings-h">Account</h3>
@@ -172,17 +152,6 @@ function paint(container, s, sub) {
   container.querySelector("#planSub").textContent =
     planId === "free" ? "You're on the Free plan."
     : `$${def.priceMonthly.toFixed(2)} / month — thanks for supporting us 💕`;
-
-  // Theme buttons
-  container.querySelectorAll(".seg-btn[data-theme]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const t = btn.dataset.theme;
-      applyTheme(t);
-      container.querySelectorAll(".seg-btn[data-theme]").forEach((b) =>
-        b.classList.toggle("active", b === btn));
-      toast(`Theme: ${t}`);
-    });
-  });
 
   // Notifications
   container.querySelector("#toggleNotify").addEventListener("change", (e) => {
