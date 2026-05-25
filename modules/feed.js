@@ -1,12 +1,10 @@
 // =====================================================================
-// modules/feed.js — Public feed UI.
-// Internal views (no router pages, just swap content):
-//   1. list   — Following | Explore tabs, composer, post cards, search
-//   2. post   — single post detail with comments thread
-//   3. user   — public profile of any user (their posts grid + follow)
+// modules/feed.js — Instagram-style public feed.
+// Renders with .ig-* classes so styles/cute/ig.css applies.
+// Real Firestore data (no mock); double-tap-to-like with heart pop;
+// comment bottom-sheet; stories strip; following/explore tabs.
 // =====================================================================
-import { db, auth } from '../firebase.js';
-import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { auth } from '../firebase.js';
 import {
   createPost, deletePost, getPost,
   subscribeFeed, subscribeExplore, subscribeUserPosts,
@@ -14,15 +12,21 @@ import {
   follow, unfollow, isFollowing,
   searchUsers, subscribeUserDoc
 } from '../services/feedService.js';
+import { toast, toastError, toastSuccess, safe } from '../utils/toast.js';
 
-let unsubFeed     = null;
-let unsubComments = null;
-let unsubProfile  = null;
+let unsubFeed         = null;
+let unsubComments     = null;
+let unsubProfile      = null;
 let unsubProfilePosts = null;
 
 let containerEl = null;
 let activeTab   = 'following';   // following | explore
-let searchTimer = null;
+let currentMode = 'list';        // list | post | user
+
+const PRAVATAR_FALLBACK = (uid) =>
+  (typeof window !== 'undefined' && typeof window.avatarFor === 'function')
+    ? window.avatarFor({ uid })
+    : `https://ui-avatars.com/api/?background=ff8fb1&color=fff&name=${encodeURIComponent((uid || 'U').slice(0, 2))}`;
 
 // =========================================================================
 // PUBLIC ENTRY
@@ -40,89 +44,84 @@ export function teardownFeed() {
 }
 
 // =========================================================================
-// LIST VIEW (feed)
+// LIST VIEW (Instagram feed)
 // =========================================================================
 async function showList() {
   teardownFeed();
+  currentMode = 'list';
   const me = auth.currentUser;
   if (!me) return;
 
   containerEl.innerHTML = `
-    <div class="feed-page">
-      <header class="feed-header">
-        <div class="feed-title">Feed</div>
-        <div class="feed-search-wrap">
-          <input class="feed-search" id="feedSearch" placeholder="Search @username" autocomplete="off">
-          <div class="feed-search-results hidden" id="feedSearchResults"></div>
+    <div class="ig-feed">
+      <header class="ig-top">
+        <h1 class="ig-logo">Nuvvu Nenu</h1>
+        <div class="ig-top-actions">
+          <button id="igAddPost"   title="New post" aria-label="New post"><i class="fas fa-plus-square"></i></button>
+          <button id="igOpenDms"   title="Messages" aria-label="Messages"><i class="far fa-paper-plane"></i></button>
         </div>
       </header>
 
-      <div class="feed-composer">
-        <div class="feed-composer-head">
-          <div class="feed-avatar" id="composerAvatar">💜</div>
-          <textarea id="composerText" class="feed-composer-input" placeholder="Share a moment…" rows="2"></textarea>
-        </div>
-        <div class="feed-composer-actions">
-          <label class="feed-composer-photo">
-            <input type="file" id="composerImage" accept="image/*" hidden>
-            <span>📷 Photo</span>
-          </label>
-          <span class="feed-composer-preview" id="composerPreview"></span>
-          <button class="btn btn-primary feed-composer-post" id="btnPost">Post</button>
-        </div>
+      <div class="ig-stories" id="igStories">
+        ${renderStoryAddSkeleton()}
       </div>
 
-      <div class="feed-tabs">
-        <button class="feed-tab ${activeTab==='following'?'active':''}" data-tab="following">Following</button>
-        <button class="feed-tab ${activeTab==='explore'?'active':''}"   data-tab="explore">Explore</button>
+      <div class="ig-tabs">
+        <button class="ig-tab ${activeTab==='following'?'active':''}" data-tab="following">Following</button>
+        <button class="ig-tab ${activeTab==='explore'?'active':''}"   data-tab="explore">Explore</button>
       </div>
 
-      <div class="feed-list" id="feedList">
-        <div class="feed-blank">Loading…</div>
+      <div class="ig-posts" id="igPosts">
+        <div class="ig-post-skeleton"></div>
+        <div class="ig-post-skeleton"></div>
       </div>
+
+      <div class="comment-sheet hidden" id="commentSheet" aria-hidden="true"></div>
+
+      <input type="file" id="igFilePicker" accept="image/*" hidden>
     </div>
+
+    <style>
+      .ig-tabs{
+        display:flex;gap:14px;padding:10px 16px;
+        border-bottom:1px solid rgba(0,0,0,.06);
+        background:rgba(255,255,255,.65);
+        position:sticky;top:54px;z-index:18;
+        backdrop-filter:blur(18px);
+      }
+      body.theme-dark .ig-tabs{background:rgba(10,10,15,.7);border-bottom-color:rgba(255,255,255,.08)}
+      .ig-tab{
+        background:transparent;border:0;padding:8px 14px;border-radius:999px;
+        font-weight:600;color:#7c6f8e;cursor:pointer;font-family:inherit;font-size:.92rem;
+        transition:all .2s;
+      }
+      .ig-tab:hover{color:#a78bfa}
+      .ig-tab.active{
+        background:linear-gradient(135deg,#ff8fb1,#a78bfa);color:#fff;
+        box-shadow:0 4px 12px rgba(255,143,177,.3);
+      }
+    </style>
   `;
 
-  // hydrate composer avatar (from appState — no extra Firestore read)
-  const meData = (typeof window !== 'undefined' && window.appState?.user) || {};
-  const avatarEl = document.getElementById('composerAvatar');
-  if (avatarEl && meData.photoURL) avatarEl.innerHTML = `<img src="${meData.photoURL}" alt="">`;
-
-  // wire tabs
-  containerEl.querySelectorAll('.feed-tab').forEach((t) => {
+  // Wire tabs
+  containerEl.querySelectorAll('.ig-tab').forEach((t) => {
     t.onclick = () => { activeTab = t.dataset.tab; switchTab(); };
   });
 
-  // wire composer
-  document.getElementById('btnPost').onclick = handlePost;
-
-  document.getElementById('composerImage').onchange = (e) => {
-    const f = e.target.files?.[0];
-    document.getElementById('composerPreview').textContent = f ? `📎 ${f.name}` : '';
-  };
-
-  // wire search
-  const searchEl = document.getElementById('feedSearch');
-  searchEl.addEventListener('input', onSearchInput);
-  searchEl.addEventListener('focus', onSearchInput);
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.feed-search-wrap')) {
-      document.getElementById('feedSearchResults')?.classList.add('hidden');
-    }
-  });
+  // Wire top-bar actions
+  document.getElementById('igAddPost').onclick = pickAndPost;
+  document.getElementById('igOpenDms').onclick = () => window.loadPage?.('chat');
 
   await switchTab();
 }
 
 async function switchTab() {
-  // toggle visual tab state
-  containerEl.querySelectorAll('.feed-tab').forEach((t) => {
+  containerEl.querySelectorAll('.ig-tab').forEach((t) => {
     t.classList.toggle('active', t.dataset.tab === activeTab);
   });
   unsubFeed?.(); unsubFeed = null;
 
   const me = auth.currentUser;
-  // Read 'following' from appState (already live-synced) instead of refetching.
   const following = (typeof window !== 'undefined' && window.appState?.user?.following) || [];
 
   if (activeTab === 'following') {
@@ -133,72 +132,261 @@ async function switchTab() {
 }
 
 function renderPosts(posts, isFollowingTab) {
-  const list = document.getElementById('feedList');
+  const list = document.getElementById('igPosts');
   if (!list) return;
+
+  // Refresh stories from the same posts source (recent posters as stories)
+  renderStoriesFromPosts(posts);
+
   if (!posts.length) {
-    list.innerHTML = isFollowingTab
-      ? `<div class="feed-blank">Follow people on Explore to see their posts here ✨</div>`
-      : `<div class="feed-blank">No posts yet — be the first 💜</div>`;
+    list.innerHTML = `
+      <div class="ig-empty">
+        <h3>${isFollowingTab ? "Your feed is empty" : "No posts yet"}</h3>
+        <p>${isFollowingTab ? "Follow people on Explore to see their posts here ✨" : "Be the first to share a moment 💜"}</p>
+        ${isFollowingTab
+          ? `<button class="ig-cta" onclick="document.querySelector('.ig-tab[data-tab=&quot;explore&quot;]').click()">Open Explore</button>`
+          : `<button class="ig-cta" id="igEmptyAdd">+ Share your first post</button>`}
+      </div>`;
+    document.getElementById('igEmptyAdd')?.addEventListener('click', pickAndPost);
     return;
   }
   list.innerHTML = posts.map(renderPostCard).join('');
-  attachPostCardHandlers();
+  attachPostHandlers(posts);
 }
 
-// =========================================================================
-// POST CARD
-// =========================================================================
+// ---------- Stories strip ----------
+function renderStoryAddSkeleton() {
+  return `
+    <div class="ig-story add" id="igStoryAdd">
+      <div class="ig-story-ring add">
+        <img src="${PRAVATAR_FALLBACK(auth.currentUser?.uid || 'me')}" alt="">
+        <div class="ig-story-plus">+</div>
+      </div>
+      <p>Your story</p>
+    </div>
+    <div class="story-skeleton"></div>
+    <div class="story-skeleton"></div>
+    <div class="story-skeleton"></div>
+  `;
+}
+
+function renderStoriesFromPosts(posts) {
+  const stripEl = document.getElementById('igStories');
+  if (!stripEl) return;
+
+  // Take up to 8 unique recent owners
+  const seen = new Set();
+  const stories = [];
+  for (const p of posts) {
+    if (!p.owner || seen.has(p.owner)) continue;
+    seen.add(p.owner);
+    stories.push({
+      uid: p.owner,
+      name: (p.ownerName || p.ownerUsername || 'someone').split(' ')[0],
+      img: p.ownerPhoto || PRAVATAR_FALLBACK(p.owner),
+      hasUnseen: true   // visual flag — could use a "seen" set later
+    });
+    if (stories.length >= 8) break;
+  }
+
+  stripEl.innerHTML = `
+    <div class="ig-story" id="igStoryAdd">
+      <div class="ig-story-ring add">
+        <img src="${(window.appState?.user?.photoURL) || PRAVATAR_FALLBACK(auth.currentUser?.uid)}" alt="">
+        <div class="ig-story-plus">+</div>
+      </div>
+      <p>Your story</p>
+    </div>
+    ${stories.map((s) => `
+      <button class="ig-story" data-uid="${s.uid}">
+        <div class="ig-story-ring ${s.hasUnseen ? 'active' : ''}">
+          <img src="${s.img}" alt="" referrerpolicy="no-referrer">
+        </div>
+        <p>${escapeHtml(s.name)}</p>
+      </button>
+    `).join('')}
+  `;
+
+  // Tapping "Your story" routes to /moments to add a memory
+  stripEl.querySelector('#igStoryAdd')?.addEventListener('click', () => {
+    if (typeof window.loadPage === 'function') window.loadPage('moments');
+  });
+  stripEl.querySelectorAll('.ig-story[data-uid]').forEach((s) => {
+    s.addEventListener('click', () => showUser(s.dataset.uid));
+  });
+}
+
+// ---------- Post card ----------
 function renderPostCard(p) {
   const me = auth.currentUser?.uid;
   const liked = (p.likes || []).includes(me);
-  const time = p.createdAt?.toDate ? timeAgo(p.createdAt.toDate()) : '';
-  const avatar = p.ownerPhoto
-    ? `<img src="${p.ownerPhoto}" alt="">`
-    : '💜';
-  const handle = p.ownerUsername ? `@${p.ownerUsername}` : '';
+  const time  = p.createdAt?.toDate ? timeAgo(p.createdAt.toDate()) : '';
+  const handle = p.ownerUsername ? `@${p.ownerUsername}` : (p.ownerName || 'Someone');
+  const photo = p.ownerPhoto || PRAVATAR_FALLBACK(p.owner);
+  const text = p.text || '';
 
   return `
-    <article class="post-card" data-post="${p.id}" data-owner="${p.owner}">
-      <header class="post-head">
-        <button class="post-avatar" data-action="user" data-uid="${p.owner}">${avatar}</button>
-        <div class="post-meta">
-          <button class="post-name" data-action="user" data-uid="${p.owner}">${escapeHtml(p.ownerName || 'Someone')}</button>
-          <div class="post-sub">${escapeHtml(handle)}${handle && time ? ' · ' : ''}${time}</div>
-        </div>
-        ${p.owner === me ? `<button class="post-more" data-action="delete" data-id="${p.id}" title="Delete">⋯</button>` : ''}
+    <article class="ig-post" data-post="${p.id}" data-owner="${p.owner}">
+      <header class="ig-post-head">
+        <button class="ig-post-user" data-action="user" data-uid="${p.owner}">
+          <div class="ig-avatar-ring"><img src="${photo}" alt="" referrerpolicy="no-referrer"></div>
+          <div class="ig-post-user-info">
+            <div class="ig-post-uname">${escapeHtml(p.ownerUsername || p.ownerName || 'someone')}</div>
+            <div class="ig-post-loc">${escapeHtml(p.ownerName && p.ownerUsername ? p.ownerName : '')}</div>
+          </div>
+        </button>
+        ${p.owner === me ? `<button class="ig-more" data-action="delete" data-id="${p.id}" aria-label="More">⋯</button>` : ''}
       </header>
 
-      ${p.imageUrl ? `<button class="post-image" data-action="open" data-id="${p.id}"><img src="${p.imageUrl}" alt="" loading="lazy"></button>` : ''}
+      ${p.imageUrl ? `
+        <div class="ig-post-media" data-media="${p.id}">
+          <img class="ig-post-img" src="${p.imageUrl}" alt="" loading="lazy" referrerpolicy="no-referrer">
+          <div class="ig-heart-pop" id="heartPop-${p.id}">❤</div>
+        </div>` : `
+        <div class="ig-post-text-only" style="padding:14px;font-size:.95rem;line-height:1.45;">${escapeHtml(text)}</div>
+      `}
 
-      ${p.text ? `<div class="post-text" data-action="open" data-id="${p.id}">${escapeHtml(p.text)}</div>` : ''}
+      <div class="ig-post-actions">
+        <div class="ig-post-actions-left">
+          <button class="ig-act ${liked ? 'liked' : ''}" data-action="like" data-id="${p.id}" aria-label="Like">
+            <i class="${liked ? 'fas' : 'far'} fa-heart"></i>
+          </button>
+          <button class="ig-act" data-action="open" data-id="${p.id}" aria-label="Comments"><i class="far fa-comment"></i></button>
+          <button class="ig-act" data-action="share" data-id="${p.id}" aria-label="Share"><i class="far fa-paper-plane"></i></button>
+        </div>
+        <button class="ig-act" data-action="save" data-id="${p.id}" aria-label="Save"><i class="far fa-bookmark"></i></button>
+      </div>
 
-      <footer class="post-actions">
-        <button class="post-action ${liked ? 'liked' : ''}" data-action="like" data-id="${p.id}">
-          ${liked ? '❤️' : '🤍'} <span>${p.likeCount || 0}</span>
-        </button>
-        <button class="post-action" data-action="open" data-id="${p.id}">
-          💬 <span>${p.commentCount || 0}</span>
-        </button>
-      </footer>
+      <div class="ig-post-likes">${(p.likeCount || 0).toLocaleString()} likes</div>
+
+      ${text && p.imageUrl ? `<div class="ig-post-caption"><strong data-action="user" data-uid="${p.owner}">${escapeHtml(p.ownerUsername || p.ownerName || 'someone')}</strong>${escapeHtml(text)}</div>` : ''}
+
+      ${p.commentCount ? `<button class="ig-post-view-comments" data-action="open" data-id="${p.id}">View all ${p.commentCount} comments</button>` : ''}
+      <div class="ig-post-time">${time}</div>
     </article>
   `;
 }
 
-function attachPostCardHandlers() {
+function attachPostHandlers(posts) {
+  // Click handlers
   containerEl.querySelectorAll('[data-action]').forEach((el) => {
     el.onclick = async (e) => {
       e.stopPropagation();
       const a = el.dataset.action;
       const id = el.dataset.id;
       const uid = el.dataset.uid;
-      if (a === 'like')   { await toggleLike(id); }
-      if (a === 'open')   { showPost(id); }
-      if (a === 'user')   { showUser(uid); }
-      if (a === 'delete') {
-        confirmDeletePost(id);
-      }
+      if (a === 'like')   { await onLike(id, el); }
+      else if (a === 'open') { showPost(id); }
+      else if (a === 'user') { showUser(uid); }
+      else if (a === 'delete') { confirmDeletePost(id); }
+      else if (a === 'share') { sharePost(id); }
+      else if (a === 'save')  { el.classList.toggle('saved'); toast(el.classList.contains('saved') ? 'Saved' : 'Removed'); }
     };
   });
+
+  // Double-tap to like on the image
+  containerEl.querySelectorAll('.ig-post-media').forEach((media) => {
+    let lastTap = 0;
+    const id = media.dataset.media;
+    media.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastTap < 320) {
+        triggerHeartPop(id);
+        ensureLiked(id);
+      }
+      lastTap = now;
+    });
+  });
+}
+
+async function onLike(postId, btn) {
+  const nowLiked = await safe(() => toggleLike(postId), "Couldn't like");
+  if (nowLiked === null) return;
+  btn.classList.toggle('liked', !!nowLiked);
+  btn.firstElementChild.className = nowLiked ? 'fas fa-heart' : 'far fa-heart';
+  // Bump the visible count
+  const article = btn.closest('.ig-post');
+  const likesEl = article?.querySelector('.ig-post-likes');
+  if (likesEl) {
+    const m = likesEl.textContent.match(/[\d,]+/);
+    const cur = m ? parseInt(m[0].replace(/,/g, ''), 10) : 0;
+    likesEl.textContent = `${(cur + (nowLiked ? 1 : -1)).toLocaleString()} likes`;
+  }
+  if (nowLiked) triggerHeartPop(postId);
+}
+
+async function ensureLiked(postId) {
+  // Always toggle so a tap on already-liked doesn't unlike on dbl tap
+  const article = containerEl.querySelector(`.ig-post[data-post="${postId}"]`);
+  const btn = article?.querySelector('.ig-act[data-action="like"]');
+  if (!btn) return;
+  if (btn.classList.contains('liked')) return; // already liked
+  await onLike(postId, btn);
+}
+
+function triggerHeartPop(postId) {
+  const el = document.getElementById('heartPop-' + postId);
+  if (!el) return;
+  el.classList.remove('pop');
+  // restart animation
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+
+function sharePost(postId) {
+  const url = location.origin + location.pathname + '#post:' + postId;
+  if (navigator.share) {
+    navigator.share({ title: 'Nuvvu Nenu', url }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(url).then(() => toast('Link copied'));
+  }
+}
+
+// ---------- New post flow (top + button or empty CTA) ----------
+async function pickAndPost() {
+  const inp = document.getElementById('igFilePicker');
+  if (!inp) return;
+  inp.value = '';
+  inp.onchange = async () => {
+    const file = inp.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toastError('Image too big (max 8MB)'); return; }
+
+    // Quick caption modal
+    openCaptionModal(async (caption) => {
+      const ok = await safe(() => createPost({ text: caption, file }), "Couldn't post");
+      if (ok) toastSuccess('Posted ✨');
+    });
+  };
+  inp.click();
+}
+
+function openCaptionModal(onSubmit) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bond-modal';
+  wrap.innerHTML = `
+    <div class="bond-modal__panel" role="dialog" aria-modal="true">
+      <div class="bond-modal__head">Add a caption</div>
+      <div class="bond-modal__body">
+        <label class="bond-field"><span>Caption (optional)</span>
+          <textarea id="capInput" rows="3" maxlength="500" placeholder="Say something about it…"></textarea></label>
+      </div>
+      <div class="bond-modal__actions">
+        <button class="btn btn-ghost"   data-act="cancel">Skip</button>
+        <button class="btn btn-primary" data-act="ok">Share</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener('click', () => { close(); onSubmit(''); });
+  wrap.querySelector('[data-act="ok"]').addEventListener('click', async () => {
+    const v = wrap.querySelector('#capInput').value.trim();
+    close();
+    onSubmit(v);
+  });
+  setTimeout(() => wrap.querySelector('#capInput')?.focus(), 60);
 }
 
 function confirmDeletePost(postId) {
@@ -223,248 +411,83 @@ function confirmDeletePost(postId) {
   wrap.querySelector('[data-act="ok"]').addEventListener('click', async () => {
     const ok = wrap.querySelector('[data-act="ok"]');
     ok.disabled = true;
-    try { await deletePost(postId); window.showToast?.('Post deleted'); close(); }
-    catch (e) { ok.disabled = false; window.showToast?.("Couldn't delete"); }
+    const out = await safe(() => deletePost(postId), "Couldn't delete");
+    if (out !== null) { toast('Post deleted'); close(); }
+    else ok.disabled = false;
   });
 }
 
 // =========================================================================
-// COMPOSER
+// COMMENT BOTTOM-SHEET (replaces the post-detail page for inline browsing)
 // =========================================================================
-async function handlePost() {
-  const text = document.getElementById('composerText')?.value || '';
-  const file = document.getElementById('composerImage')?.files?.[0] || null;
-  const btn = document.getElementById('btnPost');
-  if (!text.trim() && !file) { window.showToast?.('Write something or add a photo'); return; }
-  btn.disabled = true; btn.textContent = 'Posting…';
-  try {
-    await createPost({ text, file });
-    document.getElementById('composerText').value = '';
-    document.getElementById('composerImage').value = '';
-    document.getElementById('composerPreview').textContent = '';
-    window.showToast?.('Posted ✨');
-  } catch (e) {
-    if (e?.message === 'FILE_TOO_LARGE') window.showToast?.('Image too large (max 5MB)');
-    else window.showToast?.('Could not post');
-    console.warn(e);
-  } finally {
-    btn.disabled = false; btn.textContent = 'Post';
-  }
-}
+function showPost(postId) {
+  const sheet = document.getElementById('commentSheet');
+  if (!sheet) return;
+  unsubComments?.(); unsubComments = null;
 
-// =========================================================================
-// SEARCH
-// =========================================================================
-function onSearchInput() {
-  const v = document.getElementById('feedSearch').value;
-  const box = document.getElementById('feedSearchResults');
-  clearTimeout(searchTimer);
-  if (!v.trim()) { box.classList.add('hidden'); box.innerHTML = ''; return; }
-  searchTimer = setTimeout(async () => {
-    const cleaned = v.trim().replace(/^@/, '');
-    const results = await searchUsers(cleaned);
-    if (!results.length) {
-      box.innerHTML = `<div class="feed-search-empty">No users</div>`;
-    } else {
-      box.innerHTML = results.map((u) => `
-        <button class="feed-search-row" data-uid="${u.uid}">
-          <span class="feed-search-avatar">${u.photoURL ? `<img src="${u.photoURL}">` : '💜'}</span>
-          <span class="feed-search-info">
-            <span class="feed-search-name">${escapeHtml(u.displayName || u.username)}</span>
-            <span class="feed-search-handle">@${escapeHtml(u.username || '')}</span>
-          </span>
-        </button>
-      `).join('');
-      box.querySelectorAll('.feed-search-row').forEach((r) => {
-        r.onclick = () => { showUser(r.dataset.uid); box.classList.add('hidden'); };
-      });
-    }
-    box.classList.remove('hidden');
-  }, 250);
-}
-
-// =========================================================================
-// POST DETAIL VIEW
-// =========================================================================
-async function showPost(postId) {
-  teardownFeed();
-  const post = await getPost(postId);
-  if (!post) { window.showToast?.('Post not found'); showList(); return; }
-
-  const me = auth.currentUser?.uid;
-  const liked = (post.likes || []).includes(me);
-  const avatar = post.ownerPhoto ? `<img src="${post.ownerPhoto}">` : '💜';
-  const time = post.createdAt?.toDate ? timeAgo(post.createdAt.toDate()) : '';
-  const handle = post.ownerUsername ? `@${post.ownerUsername}` : '';
-
-  containerEl.innerHTML = `
-    <div class="feed-page">
-      <header class="feed-subhead">
-        <button class="feed-back" id="postBack">‹</button>
-        <span>Post</span>
+  sheet.classList.remove('hidden');
+  sheet.setAttribute('aria-hidden', 'false');
+  sheet.innerHTML = `
+    <div class="comment-sheet-inner">
+      <header class="comment-sheet-header">
+        <div class="sheet-grip"></div>
+        <h3>Comments</h3>
+        <button class="sheet-close" id="commentClose" aria-label="Close">✕</button>
       </header>
-
-      <article class="post-card detail" data-post="${post.id}">
-        <header class="post-head">
-          <button class="post-avatar" id="postOwnerAvatar">${avatar}</button>
-          <div class="post-meta">
-            <button class="post-name" id="postOwnerName">${escapeHtml(post.ownerName || 'Someone')}</button>
-            <div class="post-sub">${escapeHtml(handle)}${handle && time ? ' · ' : ''}${time}</div>
-          </div>
-        </header>
-        ${post.imageUrl ? `<div class="post-image"><img src="${post.imageUrl}" alt=""></div>` : ''}
-        ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
-        <footer class="post-actions">
-          <button class="post-action ${liked ? 'liked' : ''}" id="postLike">
-            ${liked ? '❤️' : '🤍'} <span id="postLikeCount">${post.likeCount || 0}</span>
-          </button>
-          <span class="post-action"><span>💬 <span id="postCommentCount">${post.commentCount || 0}</span></span></span>
-        </footer>
-      </article>
-
-      <div class="post-comments" id="postComments"></div>
-
-      <div class="post-comment-composer">
-        <input id="commentInput" class="composer-input" placeholder="Write a comment…">
-        <button class="composer-send" id="commentSend">➤</button>
-      </div>
+      <div class="comments-list" id="commentsList"><div class="muted">Loading…</div></div>
+      <form class="comment-input-row" id="commentForm">
+        <input id="commentInput" placeholder="Add a comment…" autocomplete="off">
+        <button type="submit">Post</button>
+      </form>
     </div>
   `;
 
-  document.getElementById('postBack').onclick = () => showList();
-  document.getElementById('postOwnerAvatar').onclick = () => showUser(post.owner);
-  document.getElementById('postOwnerName').onclick   = () => showUser(post.owner);
+  const close = () => {
+    sheet.classList.add('hidden');
+    sheet.setAttribute('aria-hidden', 'true');
+    sheet.innerHTML = '';
+    unsubComments?.(); unsubComments = null;
+  };
+  document.getElementById('commentClose').onclick = close;
+  sheet.addEventListener('click', (e) => { if (e.target === sheet) close(); });
 
-  // like button
-  const likeBtn = document.getElementById('postLike');
-  likeBtn.onclick = async () => {
-    const nowLiked = await toggleLike(post.id);
-    likeBtn.classList.toggle('liked', nowLiked);
-    likeBtn.firstChild.textContent = nowLiked ? '❤️ ' : '🤍 ';
-    const cur = parseInt(document.getElementById('postLikeCount').textContent || '0');
-    document.getElementById('postLikeCount').textContent = cur + (nowLiked ? 1 : -1);
+  const form = document.getElementById('commentForm');
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const inp = document.getElementById('commentInput');
+    const v = inp.value.trim();
+    if (!v) return;
+    inp.value = '';
+    await safe(() => addComment(postId, v), "Couldn't post comment");
   };
 
-  // comment composer
-  const commentInput = document.getElementById('commentInput');
-  document.getElementById('commentSend').onclick = async () => {
-    const t = commentInput.value.trim();
-    if (!t) return;
-    commentInput.value = '';
-    await addComment(post.id, t);
-  };
-  commentInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('commentSend').click(); });
-
-  unsubComments = subscribeComments(post.id, (comments) => {
-    const list = document.getElementById('postComments');
+  unsubComments = subscribeComments(postId, (comments) => {
+    const list = document.getElementById('commentsList');
     if (!list) return;
-    if (!comments.length) { list.innerHTML = `<div class="feed-blank small">Be the first to comment</div>`; return; }
+    if (!comments.length) { list.innerHTML = `<div class="muted">Be the first to comment</div>`; return; }
     list.innerHTML = comments.map((c) => {
       const ts = c.createdAt?.toDate ? timeAgo(c.createdAt.toDate()) : '';
-      const av = c.authorPhoto ? `<img src="${c.authorPhoto}">` : '💜';
-      const handle = c.authorUsername ? `@${c.authorUsername}` : '';
+      const av = c.authorPhoto || PRAVATAR_FALLBACK(c.author);
       return `
-        <div class="comment-row">
-          <button class="comment-avatar" data-uid="${c.author}">${av}</button>
-          <div class="comment-body">
-            <div class="comment-head">
-              <span class="comment-name">${escapeHtml(c.authorName || 'Someone')}</span>
-              <span class="comment-handle">${escapeHtml(handle)}</span>
-              <span class="comment-time">${ts}</span>
-            </div>
-            <div class="comment-text">${escapeHtml(c.text)}</div>
+        <div class="ig-comment">
+          <img class="ig-comment-avatar" src="${av}" alt="" referrerpolicy="no-referrer">
+          <div class="ig-comment-body">
+            <p><strong>${escapeHtml(c.authorUsername || c.authorName || 'someone')}</strong>${escapeHtml(c.text)}</p>
+            <div class="ig-comment-meta">${ts}</div>
           </div>
         </div>
       `;
     }).join('');
-    list.querySelectorAll('.comment-avatar').forEach((b) => {
-      b.onclick = () => showUser(b.dataset.uid);
-    });
-    document.getElementById('postCommentCount').textContent = comments.length;
   });
 }
 
 // =========================================================================
-// USER PROFILE VIEW (public)
+// USER PROFILE VIEW (kept for in-feed taps; routes to /profileView for full)
 // =========================================================================
-async function showUser(targetUid) {
+function showUser(targetUid) {
   if (!targetUid) return;
-  teardownFeed();
-
-  containerEl.innerHTML = `
-    <div class="feed-page">
-      <header class="feed-subhead">
-        <button class="feed-back" id="userBack">‹</button>
-        <span>Profile</span>
-      </header>
-      <div class="user-profile" id="userProfile">
-        <div class="feed-blank">Loading…</div>
-      </div>
-      <div class="user-posts" id="userPostsGrid"></div>
-    </div>
-  `;
-  document.getElementById('userBack').onclick = () => showList();
-
-  unsubProfile = subscribeUserDoc(targetUid, async (u) => {
-    const card = document.getElementById('userProfile');
-    if (!card) return;
-    if (!u) { card.innerHTML = `<div class="feed-blank">User not found</div>`; return; }
-    const me = auth.currentUser?.uid;
-    const isMe = me === targetUid;
-    const followers = u.followerCount ?? (u.followers?.length || 0);
-    const following = u.followingCount ?? (u.following?.length || 0);
-    const amFollowing = (u.followers || []).includes(me);
-
-    card.innerHTML = `
-      <div class="user-card">
-        <div class="user-avatar">${u.photoURL ? `<img src="${u.photoURL}">` : '💜'}</div>
-        <div class="user-info">
-          <div class="user-name">${escapeHtml(u.displayName || u.username || 'User')}</div>
-          <div class="user-handle">@${escapeHtml(u.username || '')}</div>
-          ${u.bio ? `<div class="user-bio">${escapeHtml(u.bio)}</div>` : ''}
-          <div class="user-stats">
-            <span><b id="followerCount">${followers}</b> followers</span>
-            <span><b>${following}</b> following</span>
-          </div>
-        </div>
-      </div>
-      ${isMe ? '' : `
-        <button class="btn ${amFollowing ? 'btn-ghost' : 'btn-primary'} user-follow-btn" id="followBtn">
-          ${amFollowing ? 'Following' : 'Follow'}
-        </button>`}
-    `;
-
-    if (!isMe) {
-      document.getElementById('followBtn').onclick = async () => {
-        const btn = document.getElementById('followBtn');
-        btn.disabled = true;
-        try {
-          if (amFollowing) await unfollow(targetUid);
-          else             await follow(targetUid);
-        } catch (e) { console.warn(e); window.showToast?.('Action failed'); }
-        finally { btn.disabled = false; }
-      };
-    }
-  });
-
-  unsubProfilePosts = subscribeUserPosts(targetUid, (posts) => {
-    const grid = document.getElementById('userPostsGrid');
-    if (!grid) return;
-    if (!posts.length) { grid.innerHTML = `<div class="feed-blank small">No posts yet</div>`; return; }
-    grid.innerHTML = `
-      <div class="user-post-grid">
-        ${posts.map((p) => `
-          <button class="user-post-cell" data-id="${p.id}">
-            ${p.imageUrl
-              ? `<img src="${p.imageUrl}" alt="">`
-              : `<span class="user-post-text">${escapeHtml((p.text || '').slice(0, 80))}</span>`}
-          </button>`).join('')}
-      </div>
-    `;
-    grid.querySelectorAll('.user-post-cell').forEach((c) => {
-      c.onclick = () => showPost(c.dataset.id);
-    });
-  });
+  window.__viewUserUid = targetUid;
+  if (typeof window.loadPage === 'function') window.loadPage('profileView');
 }
 
 // =========================================================================
@@ -478,13 +501,13 @@ function escapeHtml(s) {
 
 function timeAgo(d) {
   const s = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (s < 60)        return `${s}s`;
-  if (s < 3600)      return `${Math.floor(s/60)}m`;
-  if (s < 86400)     return `${Math.floor(s/3600)}h`;
-  if (s < 86400*7)   return `${Math.floor(s/86400)}d`;
+  if (s < 60)        return `${s}s ago`;
+  if (s < 3600)      return `${Math.floor(s/60)}m ago`;
+  if (s < 86400)     return `${Math.floor(s/3600)}h ago`;
+  if (s < 86400*7)   return `${Math.floor(s/86400)}d ago`;
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-// expose for cross-module use (e.g. profile page jumping into feed)
+// expose for cross-module (profile module's "View public" links here)
 window.openFeedUser = showUser;
 window.openFeedPost = showPost;
