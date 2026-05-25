@@ -324,3 +324,37 @@
 .chat-page[data-chat-theme="midnight"] .chat-poll__total {
   color: #c8baff;
 }
+
+
+
+/* Now-listening pill in chat header */
+.chat-listening {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 4px; padding: 3px 10px;
+  background: linear-gradient(135deg, rgba(126,255,194,.18), rgba(155,140,255,.18));
+  border: 1px solid rgba(126,255,194,.35);
+  border-radius: 999px;
+  font-size: .6875rem; font-weight: 700;
+  color: var(--text, #1a1235);
+  width: fit-content;
+}
+.chat-listening__dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #1ed760;
+  box-shadow: 0 0 8px rgba(30,215,96,.7);
+  animation: chat-listening-pulse 1.4s ease-in-out infinite;
+}
+@keyframes chat-listening-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(.85); opacity: .7; }
+}
+.chat-listening__icon { font-size: 11px; }
+.chat-listening__txt {
+  white-space: nowrap; max-width: 180px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.chat-page[data-chat-theme="midnight"] .chat-listening {
+  background: rgba(255,255,255,.10);
+  border-color: rgba(126,255,194,.45);
+  color: #f4efff;
+}

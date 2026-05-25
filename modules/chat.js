@@ -166,6 +166,11 @@ function paintShell() {
           <div class="chat-peer-info">
             <div class="chat-peer-name">${escapeHtml(_partnerName)}</div>
             <div class="chat-peer-status" id="chatPeerStatus">…</div>
+            <div class="chat-listening" id="chatListening" hidden>
+              <span class="chat-listening__dot"></span>
+              <span class="chat-listening__icon">🎵</span>
+              <span class="chat-listening__txt">listening</span>
+            </div>
             <div class="chat-mood-widget" id="chatMoodWidget" hidden>
               <span class="chat-mood-pair" id="chatMoodPair" aria-hidden="true"></span>
               <span class="chat-mood-label" id="chatMoodLabel">Moods syncing…</span>
@@ -220,6 +225,8 @@ function paintShell() {
 function updateHeaderPresence(partner) {
   const el = _container?.querySelector('#chatPeerStatus');
   if (!el) return;
+  // Drive the now-listening pill regardless of online status
+  paintListeningPill(partner?.activity);
   if (!partner) { el.textContent = "Offline"; return; }
   const presence = partner.status || {};
   if (presence.online) { el.textContent = "Online 💚"; return; }
@@ -229,6 +236,18 @@ function updateHeaderPresence(partner) {
     return;
   }
   el.textContent = "Offline";
+}
+
+function paintListeningPill(activity) {
+  const pill = _container?.querySelector('#chatListening');
+  if (!pill) return;
+  const isListening = activity?.type === "listening";
+  pill.hidden = !isListening;
+  if (isListening) {
+    const detail = String(activity.detail || "").trim();
+    const txt = pill.querySelector('.chat-listening__txt');
+    if (txt) txt.textContent = detail ? detail.slice(0, 60) : "listening together";
+  }
 }
 
 // =========================================================================
