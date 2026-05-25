@@ -6,7 +6,7 @@
 // =====================================================================
 import { auth, db } from "../firebase.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAppState, getState } from "../state/appState.js";
 import { toast, toastSuccess, toastWarn, toastError, safe } from "../utils/toast.js";
 import { skeletonList } from "../utils/skeleton.js";
@@ -712,7 +712,7 @@ function paintRecentCalls(host, rows, partnerName) {
       ? formatCallDuration(r.durationSec)
       : (r.direction === "incoming" ? "Missed" : "No answer");
     return `
-      <button class="prof-call ${dirCls}" type="button" data-kind="${escapeHtml(r.kind || 'audio')}" data-partner="${escapeHtml(r.partnerId || '')}">
+      <button class="prof-call ${dirCls}" type="button" data-id="${escapeHtml(r.id || '')}" data-kind="${escapeHtml(r.kind || 'audio')}" data-partner="${escapeHtml(r.partnerId || '')}">
         <span class="prof-call__icon">${icon}</span>
         <div class="prof-call__body">
           <div class="prof-call__name"><span class="prof-call__dir">${dirIcon}</span> ${escapeHtml(partnerName)}</div>
@@ -723,9 +723,35 @@ function paintRecentCalls(host, rows, partnerName) {
     `;
   }).join("");
 
-  // Wire callback clicks
+  // Wire callback clicks + long-press to delete
   host.querySelectorAll(".prof-call").forEach((row) => {
-    row.addEventListener("click", () => {
+    let timer = null;
+    let suppressClick = false;
+
+    const start = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        suppressClick = true;
+        confirmDeleteCall(row);
+      }, 500);
+    };
+    const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+
+    row.addEventListener("touchstart",  start, { passive: true });
+    row.addEventListener("touchend",    cancel);
+    row.addEventListener("touchcancel", cancel);
+    row.addEventListener("touchmove",   cancel);
+    row.addEventListener("mousedown",   (e) => { if (e.button === 0) start(); });
+    row.addEventListener("mouseup",     cancel);
+    row.addEventListener("mouseleave",  cancel);
+    row.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      confirmDeleteCall(row);
+    });
+
+    row.addEventListener("click", (e) => {
+      if (suppressClick) { suppressClick = false; e.preventDefault(); return; }
       const kind = row.dataset.kind || "audio";
       const partnerId = row.dataset.partner;
       if (!partnerId) return;
@@ -747,4 +773,42 @@ function formatCallDuration(sec) {
   const s = sec % 60;
   if (m === 0) return `${s}s`;
   return `${m}m ${String(s).padStart(2, "0")}s`;
+}
+
+
+// =====================================================================
+// Long-press a recent-call row → confirm + delete from history
+// =====================================================================
+function confirmDeleteCall(row) {
+  const id = row.dataset.id;
+  if (!id) return;
+  const cid = getState().coupleId;
+  if (!cid) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "tc-modal";
+  wrap.innerHTML = `
+    <div class="tc-modal__panel" role="dialog" aria-modal="true" aria-label="Remove call">
+      <div class="tc-modal__head">Remove this call?</div>
+      <div class="tc-modal__body">
+        <p>Only this row from your call history will be deleted. Your partner's history is unaffected.</p>
+      </div>
+      <div class="tc-modal__actions">
+        <button class="btn btn-ghost"  data-act="cancel">Cancel</button>
+        <button class="btn btn-danger" data-act="ok">Remove</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener("click", close);
+  wrap.querySelector('[data-act="ok"]').addEventListener("click", async () => {
+    const okBtn = wrap.querySelector('[data-act="ok"]');
+    okBtn.disabled = true;
+    await safe(() => deleteDoc(doc(db, "couples", cid, "callHistory", id)),
+      "Couldn't remove");
+    toast("Call removed from history");
+    close();
+  });
 }
