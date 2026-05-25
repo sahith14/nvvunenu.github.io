@@ -3,29 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-  <meta name="theme-color" content="#0F1117">
+  <meta name="theme-color" content="#fff5fa">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Nuvvu Nenu</title>
   <link rel="manifest" href="manifest.json">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Apply saved theme BEFORE stylesheets render to avoid flash -->
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome (used by nav + buttons across pages) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Apply saved theme BEFORE stylesheets render to avoid flash.
+       Default is the cute pastel light theme; user can switch to dark in settings. -->
   <script>
     (function () {
       try {
-        var t = localStorage.getItem('nvvunenu.theme') || 'dark';
+        var t = localStorage.getItem('nvvunenu.theme') || 'cute';
+        if (t !== 'dark') t = 'cute';
         document.documentElement.classList.add('theme-' + t);
-        // Also tag body as soon as it exists
         document.addEventListener('DOMContentLoaded', function () {
           document.body.classList.add('theme-' + t);
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', t === 'light' ? '#F7F8FB' : '#0F1117');
+          if (meta) meta.setAttribute('content', t === 'dark' ? '#0F1117' : '#fff5fa');
         });
       } catch (e) {}
     })();
   </script>
 
-  <!-- Core design system -->
+  <!-- Core (modern) — will be overridden by /styles/cute/* below -->
   <link rel="stylesheet" href="styles/core.css">
   <link rel="stylesheet" href="styles/theme.css">
   <link rel="stylesheet" href="styles/motion.css">
@@ -40,37 +45,58 @@
   <link rel="stylesheet" href="styles/bond.css">
   <link rel="stylesheet" href="styles/profile.css">
   <link rel="stylesheet" href="styles/premium.css">
-
-  <!-- New feature styles -->
   <link rel="stylesheet" href="styles/chat.css">
   <link rel="stylesheet" href="styles/call.css">
   <link rel="stylesheet" href="styles/feed.css">
   <link rel="stylesheet" href="styles/profileView.css">
+
+  <!-- Cute overlay layer (BROKEN-snapshot visual identity) — LOADED LAST,
+       full of !important rules that override the base theme to give the
+       pastel pink/purple glass aesthetic with FA-icon nav + bouncy buttons. -->
+  <link rel="stylesheet" href="styles/cute/cute.css">
+  <link rel="stylesheet" href="styles/cute/premium-glass.css">
+  <link rel="stylesheet" href="styles/cute/feed-extra.css">
+  <link rel="stylesheet" href="styles/cute/messages-extra.css">
+  <link rel="stylesheet" href="styles/cute/partner-extra.css">
+  <link rel="stylesheet" href="styles/cute/profile-extra.css">
+  <link rel="stylesheet" href="styles/cute/search-extra.css">
+  <link rel="stylesheet" href="styles/cute/settings-extra.css">
+  <link rel="stylesheet" href="styles/cute/space-polish.css">
+  <link rel="stylesheet" href="styles/cute/upgrade.css">
+  <link rel="stylesheet" href="styles/cute/layout.css">
 </head>
 <body>
   <div id="app">
-    <header class="app-header" id="appHeader">
-      <span class="ah-brand">Nuvvu Nenu</span>
-      <button class="ah-btn" data-page="search"   onclick="loadPage('search')"   title="Search"   aria-label="Search">🔍</button>
-      <button class="ah-btn" data-page="bond"     onclick="loadPage('bond')"     title="Bond"     aria-label="Bond" id="hdrBond">💞</button>
-      <button class="ah-btn" data-page="settings" onclick="loadPage('settings')" title="Settings" aria-label="Settings">⚙️</button>
-    </header>
-
     <div class="app-shell"><div id="page"></div></div>
 
-    <nav class="bottom-nav" id="nav">
-      <button data-page="home"    onclick="loadPage('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-      <button data-page="feed"    onclick="loadPage('feed')"><span class="nav-icon">🌐</span><span class="nav-label">Feed</span></button>
-      <button data-page="space"   onclick="loadPage('space')"><span class="nav-icon">✨</span><span class="nav-label">Space</span></button>
-      <button data-page="chat"    onclick="loadPage('chat')"><span class="nav-icon">💌</span><span class="nav-label">Chat</span></button>
-      <button data-page="moments" onclick="loadPage('moments')"><span class="nav-icon">📸</span><span class="nav-label">Moments</span></button>
-      <button data-page="profile" onclick="loadPage('profile')"><span class="nav-icon">🫧</span><span class="nav-label">You</span></button>
+    <!-- Desktop side / top navigation (md+ screens) -->
+    <nav class="desktop-nav" id="navDesktop">
+      <button data-page="home"    onclick="loadPage('home')"   ><i class="fas fa-home"></i><span>Home</span></button>
+      <button data-page="feed"    onclick="loadPage('feed')"   ><i class="fas fa-globe"></i><span>Feed</span></button>
+      <button data-page="search"  onclick="loadPage('search')" ><i class="fas fa-search"></i><span>Search</span></button>
+      <button data-page="space"   onclick="loadPage('space')"  ><i class="fas fa-star"></i><span>Space</span></button>
+      <button data-page="chat"    onclick="loadPage('chat')"   ><i class="fas fa-envelope"></i><span>Messages</span></button>
+      <button data-page="moments" onclick="loadPage('moments')"><i class="fas fa-camera"></i><span>Moments</span></button>
+      <button data-page="bond"    onclick="loadPage('bond')"   ><i class="fas fa-heart"></i><span>Partner</span></button>
+      <button data-page="profile" onclick="loadPage('profile')"><i class="fas fa-user"></i><span>Profile</span></button>
+      <button data-page="settings"onclick="loadPage('settings')"><i class="fas fa-gear"></i><span>Settings</span></button>
     </nav>
 
-    <div id="toast" class="toast"></div>
+    <!-- Mobile bottom navigation -->
+    <nav class="bottom-nav" id="navBottom">
+      <button data-page="home"    onclick="loadPage('home')"   ><i class="fas fa-home"></i></button>
+      <button data-page="feed"    onclick="loadPage('feed')"   ><i class="fas fa-globe"></i></button>
+      <button data-page="space"   onclick="loadPage('space')"  ><i class="fas fa-star"></i></button>
+      <button data-page="chat"    onclick="loadPage('chat')"   ><i class="fas fa-envelope"></i></button>
+      <button data-page="moments" onclick="loadPage('moments')"><i class="fas fa-camera"></i></button>
+      <button data-page="profile" onclick="loadPage('profile')"><i class="fas fa-user"></i></button>
+    </nav>
+
+    <!-- Toast (used by utils/toast.js) -->
+    <div id="toast" class="toast global-toast"></div>
   </div>
 
-  <!-- Modular bootstrap -->
+  <!-- Bootstrap -->
   <script type="module" src="./app.js"></script>
 </body>
 </html>

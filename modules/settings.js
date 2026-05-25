@@ -9,20 +9,25 @@ import { onAppState } from "../state/appState.js";
 import { toast, toastSuccess, toastError, safe } from "../utils/toast.js";
 import { getSubscription, PLANS } from "../services/subscriptionService.js";
 
-const THEME_KEY = "nvvunenu.theme";    // "dark" | "light"
+const THEME_KEY = "nvvunenu.theme";    // "cute" | "dark"
 const NOTIFY_KEY = "nvvunenu.notify";  // "1" | "0"
 
 export function getStoredTheme() {
-  try { return localStorage.getItem(THEME_KEY) || "dark"; }
-  catch { return "dark"; }
+  try {
+    const v = localStorage.getItem(THEME_KEY) || "cute";
+    return v === "dark" ? "dark" : "cute";
+  } catch { return "cute"; }
 }
 export function applyTheme(theme) {
-  const t = theme === "light" ? "light" : "dark";
-  document.body.classList.toggle("theme-light", t === "light");
-  document.body.classList.toggle("theme-dark",  t === "dark");
+  const t = theme === "dark" ? "dark" : "cute";
+  // Clear any prior theme classes (legacy: theme-light)
+  document.body.classList.remove("theme-light", "theme-dark", "theme-cute");
+  document.documentElement.classList.remove("theme-light", "theme-dark", "theme-cute");
+  document.body.classList.add("theme-" + t);
+  document.documentElement.classList.add("theme-" + t);
   // Update mobile status-bar color
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", t === "light" ? "#F7F8FB" : "#0F1117");
+  if (meta) meta.setAttribute("content", t === "dark" ? "#0F1117" : "#fff5fa");
   try { localStorage.setItem(THEME_KEY, t); } catch {}
 }
 
@@ -66,8 +71,8 @@ function shell() {
             <div class="settings-sub">Choose how Nuvvu Nenu looks.</div>
           </div>
           <div class="seg" role="tablist" aria-label="Theme">
-            <button class="seg-btn ${t==='dark'?'active':''}"  data-theme="dark"  role="tab">🌙 Dark</button>
-            <button class="seg-btn ${t==='light'?'active':''}" data-theme="light" role="tab">☀️ Light</button>
+            <button class="seg-btn ${t==='cute'?'active':''}" data-theme="cute" role="tab">🌸 Cute</button>
+            <button class="seg-btn ${t==='dark'?'active':''}" data-theme="dark" role="tab">🌙 Dark</button>
           </div>
         </div>
       </div>

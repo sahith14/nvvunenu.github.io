@@ -3,60 +3,140 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-  <title>Nuvvu Nenu — Sign Up</title>
-  <meta name="theme-color" content="#0F1117">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>Sign up — Nuvvu Nenu</title>
+  <meta name="theme-color" content="#fff5fa">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Inter',system-ui,sans-serif;min-height:100dvh;background:#0F1117;color:#F5F7FA;display:flex;align-items:center;justify-content:center;padding:24px}
-    .container{width:100%;max-width:380px;text-align:center}
-    .logo{font-size:48px;margin-bottom:8px}
-    h1{font-size:1.75rem;font-weight:800;background:linear-gradient(135deg,#FF7EB6,#9B8CFF);-webkit-background-clip:text;background-clip:text;color:transparent}
-    .sub{color:#98A2B3;font-size:.875rem;margin-top:4px;margin-bottom:32px}
-    .form-group{margin-bottom:16px;text-align:left}
-    .form-group label{display:block;font-size:.75rem;color:#98A2B3;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
-    .form-group input{width:100%;padding:14px 16px;background:#1E2230;border:1px solid rgba(255,255,255,.06);border-radius:14px;color:#F5F7FA;font-size:.9375rem;font-family:inherit;transition:border-color .2s}
-    .form-group input:focus{border-color:rgba(155,140,255,.4);outline:none}
-    .btn{width:100%;padding:14px;border-radius:99px;border:none;font-weight:600;font-size:.9375rem;cursor:pointer;font-family:inherit;transition:all .2s;margin-top:8px}
-    .btn-primary{background:linear-gradient(135deg,#FF7EB6,#9B8CFF);color:#fff;box-shadow:0 4px 16px rgba(255,126,182,.3)}
-    .btn-primary:active{transform:scale(.97)}
-    .btn-google{background:#1E2230;color:#F5F7FA;border:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;gap:8px}
-    .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#98A2B3;font-size:.75rem}
-    .divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.06)}
-    .rel-types{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
-    .rel-btn{padding:10px;background:#1E2230;border:1px solid rgba(255,255,255,.06);border-radius:12px;font-size:.8125rem;color:#98A2B3;cursor:pointer;transition:all .2s;font-family:inherit}
-    .rel-btn.active{border-color:rgba(155,140,255,.4);color:#9B8CFF;background:rgba(155,140,255,.08)}
-    .footer{margin-top:24px;font-size:.8125rem;color:#98A2B3}
-    .footer a{color:#9B8CFF;font-weight:500;text-decoration:none}
-    .error{color:#FF7EB6;font-size:.8125rem;margin-top:8px;display:none}
+    body.auth-body{
+      font-family:'Inter','Quicksand',system-ui,sans-serif;
+      min-height:100dvh;
+      background:linear-gradient(180deg,#fff5fa 0%,#f6f0ff 100%) fixed;
+      display:flex;align-items:center;justify-content:center;padding:24px;color:#3d2f55;
+      position:relative;overflow:hidden;
+    }
+    .auth-hearts{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+    .auth-hearts span{
+      position:absolute;bottom:-40px;font-size:20px;opacity:0;
+      animation:authFloat linear infinite;
+      filter:drop-shadow(0 2px 6px rgba(255,143,177,.45));
+    }
+    @keyframes authFloat{
+      0%{transform:translateY(0) rotate(0) scale(.6);opacity:0}
+      10%{opacity:.85}50%{transform:translateY(-50vh) rotate(15deg) scale(1)}
+      90%{opacity:.55}100%{transform:translateY(-110vh) rotate(-12deg) scale(.8);opacity:0}
+    }
+
+    .auth-card{
+      width:100%;max-width:400px;text-align:center;position:relative;z-index:1;
+      background:rgba(255,255,255,.78);
+      backdrop-filter:blur(20px) saturate(1.4);
+      -webkit-backdrop-filter:blur(20px) saturate(1.4);
+      border:1px solid rgba(255,200,216,.55);
+      border-radius:28px;padding:32px 24px;
+      box-shadow:0 14px 38px rgba(255,143,177,.22),0 4px 14px rgba(167,139,250,.14);
+    }
+    .logo-orb{
+      width:84px;height:84px;border-radius:50%;margin:0 auto 14px;
+      background:radial-gradient(circle,rgba(255,143,177,.55),rgba(167,139,250,.25) 60%,transparent 80%);
+      animation:authBreathe 3.5s ease-in-out infinite;
+      box-shadow:0 0 40px rgba(255,143,177,.45);
+      display:grid;place-items:center;font-size:38px;
+    }
+    @keyframes authBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+    h2{font-size:1.6rem;font-weight:800;
+       background:linear-gradient(135deg,#ff8fb1,#a78bfa);
+       -webkit-background-clip:text;background-clip:text;color:transparent;
+    }
+    .sub{color:#7c6f8e;font-size:.9rem;margin-top:6px;margin-bottom:22px}
+
+    .field{text-align:left;margin-bottom:12px}
+    label{display:block;font-size:.7rem;color:#7c6f8e;letter-spacing:.5px;margin-bottom:6px;text-transform:uppercase;font-weight:700}
+    input{
+      width:100%;height:46px;padding:0 16px;
+      background:rgba(255,255,255,.7);
+      border:2px solid rgba(216,201,255,.55);
+      border-radius:18px;font-size:.95rem;color:#3d2f55;font-family:inherit;
+      transition:all .2s;box-shadow:inset 0 2px 6px rgba(0,0,0,.02);
+    }
+    input:focus{outline:none;border-color:#a78bfa;box-shadow:0 0 0 4px rgba(167,139,250,.15)}
+
+    .rel-types{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+    .rel-btn{
+      padding:11px 8px;background:rgba(255,255,255,.65);
+      border:2px solid rgba(216,201,255,.5);border-radius:16px;
+      font-size:.8rem;color:#7c6f8e;cursor:pointer;font-family:inherit;
+      transition:all .2s cubic-bezier(.34,1.56,.64,1);font-weight:600;
+    }
+    .rel-btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.85)}
+    .rel-btn.active{
+      border-color:rgba(167,139,250,.6);
+      background:linear-gradient(135deg,#ffe5ee,#f0e5ff);
+      color:#7c4dff;box-shadow:0 4px 12px rgba(255,143,177,.18);
+    }
+
+    .btn{
+      width:100%;height:46px;border-radius:999px;border:none;font-weight:700;
+      font-size:.95rem;cursor:pointer;font-family:inherit;
+      transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .2s,filter .2s;
+      margin-top:8px;
+    }
+    .btn-primary{background:linear-gradient(135deg,#ff8fb1,#a78bfa);color:#fff;box-shadow:0 8px 22px rgba(255,143,177,.4)}
+    .btn-primary:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 12px 28px rgba(167,139,250,.45);filter:brightness(1.05)}
+    .btn-primary:active{transform:scale(.94)}
+    .btn-google{background:rgba(255,255,255,.85);border:1.5px solid rgba(216,201,255,.6);color:#3d2f55;display:flex;align-items:center;justify-content:center;gap:10px}
+    .btn-google:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 8px 22px rgba(167,139,250,.18)}
+    .btn-google:active{transform:scale(.94)}
+
+    .or{display:flex;align-items:center;gap:10px;margin:18px 0;color:#9a8db4;font-size:.75rem;font-weight:600;letter-spacing:.6px}
+    .or::before,.or::after{content:'';flex:1;height:1px;background:rgba(167,139,250,.25)}
+
+    .switch{margin-top:18px;font-size:.85rem;color:#7c6f8e}
+    .switch a{color:#a78bfa;font-weight:700;text-decoration:none}
+    .switch a:hover{color:#ff8fb1}
+    .error{color:#e54e6e;font-size:.85rem;margin-top:10px;display:none;font-weight:600}
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="logo">💜</div>
-    <h1>Nuvvu Nenu</h1>
-    <p class="sub">Create your private space together</p>
+<body class="auth-body">
+  <div class="auth-hearts" aria-hidden="true">
+    <span style="left:8%;animation-duration:9s">💕</span>
+    <span style="left:22%;animation-duration:11s;animation-delay:1s">💜</span>
+    <span style="left:38%;animation-duration:10s;animation-delay:2s">🌸</span>
+    <span style="left:55%;animation-duration:13s;animation-delay:3s">✨</span>
+    <span style="left:72%;animation-duration:9s;animation-delay:1.5s">💖</span>
+    <span style="left:88%;animation-duration:12s;animation-delay:2.5s">🦋</span>
+  </div>
+
+  <div class="auth-card glass">
+    <div class="logo-orb">💜</div>
+    <h2>Create your space ✨</h2>
+    <p class="sub">A private place for the two of you.</p>
+
     <form id="form" onsubmit="handleSignup(event)">
-      <div class="form-group"><label>Your Name</label><input type="text" id="name" placeholder="Your first name" required></div>
-      <div class="form-group"><label>Email</label><input type="email" id="email" placeholder="your@email.com" required></div>
-      <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="••••••••" required minlength="6"></div>
-      <div class="form-group"><label>Relationship Type</label>
+      <div class="field"><label>Your name</label><input type="text" id="name" placeholder="Your first name" required></div>
+      <div class="field"><label>Email</label><input type="email" id="email" placeholder="your@email.com" required></div>
+      <div class="field"><label>Password</label><input type="password" id="password" placeholder="••••••••" required minlength="6"></div>
+      <div class="field">
+        <label>Relationship type</label>
         <div class="rel-types">
           <button type="button" class="rel-btn" onclick="selectType(this,'long-distance')">🌍 Long Distance</button>
           <button type="button" class="rel-btn" onclick="selectType(this,'nearby')">📍 Nearby</button>
           <button type="button" class="rel-btn" onclick="selectType(this,'married')">💍 Married</button>
-          <button type="button" class="rel-btn" onclick="selectType(this,'dating')">💕 Dating</button>
+          <button type="button" class="rel-btn active" onclick="selectType(this,'dating')">💕 Dating</button>
         </div>
       </div>
       <p class="error" id="error"></p>
-      <button type="submit" class="btn btn-primary">Create Account</button>
+      <button type="submit" class="btn btn-primary">Create account</button>
     </form>
-    <div class="divider">or</div>
+
+    <div class="or">OR</div>
+
     <button class="btn btn-google" onclick="handleGoogle()">
-      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-      Continue with Google
+      <i class="fab fa-google" style="color:#a78bfa"></i> Continue with Google
     </button>
-    <p class="footer">Already have an account? <a href="login.html">Log in</a></p>
+
+    <p class="switch">Already have an account? <a href="login.html">Log in</a></p>
   </div>
 
   <script type="module">
@@ -69,22 +149,42 @@
     let relType = 'dating';
 
     window.selectType = function(btn, type) {
-      document.querySelectorAll('.rel-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.rel-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active'); relType = type;
     };
     window.handleSignup = async function(e) {
       e.preventDefault();
       const err = document.getElementById('error');
+      err.style.display = 'none';
       try {
         const cred = await createUserWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value);
-        await updateProfile(cred.user, {displayName: document.getElementById('name').value});
-        await setDoc(doc(db,'users',cred.user.uid),{displayName:document.getElementById('name').value,email:document.getElementById('email').value,relationshipType:relType,createdAt:serverTimestamp(),togetherSince:serverTimestamp()});
+        await updateProfile(cred.user, { displayName: document.getElementById('name').value });
+        await setDoc(doc(db,'users',cred.user.uid), {
+          displayName: document.getElementById('name').value,
+          email: document.getElementById('email').value,
+          relationshipType: relType,
+          createdAt: serverTimestamp(),
+          togetherSince: serverTimestamp()
+        });
         window.location.href = 'app.html';
-      } catch(ex) { err.style.display='block'; err.textContent=ex.code==='auth/email-already-in-use'?'Email already in use':'Signup failed'; }
+      } catch (ex) {
+        err.style.display = 'block';
+        err.textContent = ex?.code === 'auth/email-already-in-use' ? 'Email already in use' : (ex?.message || 'Signup failed');
+      }
     };
     window.handleGoogle = async function() {
-      try { const r=await signInWithPopup(auth,provider); await setDoc(doc(db,'users',r.user.uid),{displayName:r.user.displayName,email:r.user.email,relationshipType:relType,createdAt:serverTimestamp(),togetherSince:serverTimestamp()},{merge:true}); window.location.href='app.html'; }
-      catch(ex) { document.getElementById('error').style.display='block'; document.getElementById('error').textContent='Google signup failed'; }
+      const err = document.getElementById('error');
+      try {
+        const r = await signInWithPopup(auth, provider);
+        await setDoc(doc(db,'users',r.user.uid), {
+          displayName: r.user.displayName,
+          email: r.user.email,
+          relationshipType: relType,
+          createdAt: serverTimestamp(),
+          togetherSince: serverTimestamp()
+        }, { merge: true });
+        window.location.href = 'app.html';
+      } catch (ex) { err.style.display='block'; err.textContent='Google signup failed'; }
     };
   </script>
 </body>

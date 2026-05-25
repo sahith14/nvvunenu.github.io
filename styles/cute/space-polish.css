@@ -1,0 +1,658 @@
+/* =====================================================================
+   BondSync — Space UI Polish
+   Loaded AFTER styles-spaces.css; never breaks existing class names.
+   ===================================================================== */
+
+/* -------- 1. Dynamic background glow -------- */
+.space-container {
+  position: relative;
+  min-height: 100vh;
+}
+.space-container::before {
+  content: "";
+  position: fixed;
+  inset: -10%;
+  z-index: -1;
+  background:
+    radial-gradient(60% 50% at 20% 20%, rgba(168, 85, 247, 0.28), transparent 60%),
+    radial-gradient(50% 40% at 80% 30%, rgba(59, 130, 246, 0.22), transparent 60%),
+    radial-gradient(55% 45% at 50% 80%, rgba(236, 72, 153, 0.22), transparent 65%);
+  filter: blur(60px);
+  animation: sp-bg-drift 18s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes sp-bg-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(2%, -2%) scale(1.05); }
+}
+
+/* -------- 2. Sticky header + depth -------- */
+.space-header {
+  position: sticky;
+  top: 8px;
+  z-index: 60;
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 30px rgba(30, 20, 70, 0.12);
+}
+
+/* -------- 3. Live status dot (animated) -------- */
+.sp-live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2a235a;
+}
+.sp-live-status .sp-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #3ddc97;
+  box-shadow: 0 0 0 0 rgba(61, 220, 151, 0.6);
+  animation: sp-pulse 1.8s infinite;
+}
+.sp-live-status[data-state="connecting"] .sp-dot { background: #f7b32b; animation-duration: 1s; }
+.sp-live-status[data-state="offline"]    .sp-dot { background: #9ca3af; animation: none; box-shadow: none; }
+@keyframes sp-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(61,220,151,0.6); }
+  70%  { box-shadow: 0 0 0 10px rgba(61,220,151,0); }
+  100% { box-shadow: 0 0 0 0 rgba(61,220,151,0); }
+}
+
+/* -------- 4. Game grid (responsive auto-fit) -------- */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  padding: 6px 2px;
+}
+@media (min-width: 640px)  { .game-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); } }
+@media (min-width: 1024px) { .game-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 18px; } }
+
+/* -------- 5. Game cards: glass + gradient per nth-child -------- */
+.game-card, .game-item {
+  position: relative;
+  isolation: isolate;
+  padding: 22px 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px rgba(20, 12, 50, 0.12);
+  color: #2a235a;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform 0.22s cubic-bezier(.22,1,.36,1),
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+  animation: sp-card-in 0.45s ease both;
+}
+.game-card::before, .game-item::before {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: -1;
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
+}
+.game-card::after, .game-item::after {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.18) 100%);
+  pointer-events: none;
+}
+
+/* Unique gradients via nth-child */
+.game-grid > :nth-child(6n+1)::before { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.game-grid > :nth-child(6n+2)::before { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+.game-grid > :nth-child(6n+3)::before { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.game-grid > :nth-child(6n+4)::before { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+.game-grid > :nth-child(6n+5)::before { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+.game-grid > :nth-child(6n+6)::before { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+
+/* Gradient cards: force readable white text */
+.game-grid > .game-card, .game-grid > .game-item,
+.game-grid > .game-card h4, .game-grid > .game-item h4,
+.game-grid > .game-card p,  .game-grid > .game-item p {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* -------- 6. Icon system -------- */
+.game-card .game-icon, .game-item .game-icon {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  font-size: 22px;
+  margin-bottom: 12px;
+  opacity: 0.95;
+  transition: transform 0.25s cubic-bezier(.22,1,.36,1);
+}
+/* If using data-icon attr (no inner .game-icon) */
+.game-item[data-icon]:not(:has(.game-icon))::before {
+  content: attr(data-icon);
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 22px;
+  margin-bottom: 12px;
+  opacity: 0.95;
+  position: static;
+  inset: auto;
+}
+
+.game-card h4, .game-item h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.game-card p, .game-item p {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.85;
+  line-height: 1.35;
+}
+
+/* -------- 7. Card interactions: press, hover, active -------- */
+@media (hover: hover) {
+  .game-card:hover, .game-item:hover {
+    transform: translateY(-4px) scale(1.015);
+    box-shadow: 0 16px 40px rgba(20, 12, 50, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  .game-card:hover .game-icon, .game-item:hover .game-icon {
+    transform: scale(1.1) rotate(-3deg);
+  }
+  .game-card:hover::after, .game-item:hover::after { opacity: 0.4; }
+}
+.game-card:active, .game-item:active {
+  transform: scale(0.97);
+  transition-duration: 0.08s;
+}
+
+.game-card.is-active, .game-item.is-active {
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.35),
+    0 16px 40px rgba(99, 102, 241, 0.4);
+  animation: sp-active-glow 2.4s ease-in-out infinite;
+}
+@keyframes sp-active-glow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(255,255,255,0.35), 0 16px 40px rgba(99,102,241,0.4); }
+  50%      { box-shadow: 0 0 0 3px rgba(255,255,255,0.5),  0 20px 50px rgba(236,72,153,0.45); }
+}
+
+/* Card fade-in stagger */
+@keyframes sp-card-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.game-grid > :nth-child(1) { animation-delay: 0.00s; }
+.game-grid > :nth-child(2) { animation-delay: 0.06s; }
+.game-grid > :nth-child(3) { animation-delay: 0.12s; }
+.game-grid > :nth-child(4) { animation-delay: 0.18s; }
+.game-grid > :nth-child(5) { animation-delay: 0.24s; }
+.game-grid > :nth-child(6) { animation-delay: 0.30s; }
+
+/* -------- 8. Requires-Partner lock -------- */
+.game-card.requires-partner, .game-item.requires-partner {
+  filter: saturate(0.6) brightness(0.92);
+  cursor: not-allowed;
+}
+.game-card.requires-partner::before, .game-item.requires-partner::before { opacity: 0.45; }
+.game-card.requires-partner:hover, .game-item.requires-partner:hover {
+  transform: none;
+  box-shadow: 0 8px 24px rgba(20, 12, 50, 0.12);
+}
+
+.sp-lock-badge {
+  position: absolute;
+  top: 10px; right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(6px);
+  z-index: 2;
+  pointer-events: none;
+}
+.sp-lock-badge i { font-size: 10px; }
+
+/* -------- 9. Shake animation -------- */
+@keyframes sp-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+.sp-shake { animation: sp-shake 0.42s cubic-bezier(.36,.07,.19,.97); }
+
+/* -------- 10. Skeleton loader -------- */
+.sp-skeleton {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 12px 0;
+}
+.sp-skeleton__header {
+  height: 72px; border-radius: 18px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.10) 0%,
+    rgba(255,255,255,0.25) 50%,
+    rgba(255,255,255,0.10) 100%);
+  background-size: 200% 100%;
+  animation: sp-shimmer 1.4s linear infinite;
+}
+.sp-skeleton__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+.sp-skeleton__card {
+  height: 130px; border-radius: 22px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.08) 0%,
+    rgba(255,255,255,0.22) 50%,
+    rgba(255,255,255,0.08) 100%);
+  background-size: 200% 100%;
+  animation: sp-shimmer 1.4s linear infinite;
+}
+@keyframes sp-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* -------- 11. Smart empty states -------- */
+.sp-empty {
+  padding: 32px 20px;
+  text-align: center;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px dashed rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(10px);
+  color: #2a235a;
+  animation: sp-card-in 0.4s ease both;
+}
+.sp-empty .sp-empty__icon { font-size: 40px; margin-bottom: 10px; }
+.sp-empty h4 { margin: 0 0 4px; font-size: 17px; font-weight: 700; }
+.sp-empty p  { margin: 0; font-size: 13px; opacity: 0.75; }
+.sp-empty__cta {
+  margin-top: 14px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.sp-empty__cta:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(139,92,246,0.4); }
+
+/* -------- 12. Typing indicator -------- */
+.sp-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 12px;
+  color: #2a235a;
+}
+.sp-typing__dots { display: inline-flex; gap: 3px; }
+.sp-typing__dots span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+  animation: sp-typing-bounce 1.2s infinite;
+}
+.sp-typing__dots span:nth-child(2) { animation-delay: 0.15s; }
+.sp-typing__dots span:nth-child(3) { animation-delay: 0.30s; }
+@keyframes sp-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0);    opacity: 0.4; }
+  30%           { transform: translateY(-3px); opacity: 1; }
+}
+
+/* -------- 13. Toast (space-scoped, non-blocking) -------- */
+.sp-toast-host {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.sp-toast {
+  min-width: 200px; max-width: 86vw;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(20, 14, 40, 0.88);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  animation: sp-toast-in 0.28s ease both, sp-toast-out 0.28s ease 2.6s both;
+  pointer-events: auto;
+}
+.sp-toast[data-type="success"] { background: linear-gradient(135deg,#10b981,#059669); }
+.sp-toast[data-type="error"]   { background: linear-gradient(135deg,#ef4444,#b91c1c); }
+@keyframes sp-toast-in  { from { opacity: 0; transform: translateY(-10px) scale(0.95); } to { opacity: 1; transform: none; } }
+@keyframes sp-toast-out { to   { opacity: 0; transform: translateY(-10px) scale(0.95); } }
+
+/* -------- 14. Mini floating music player -------- */
+.sp-mini-music {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--bottom-nav-height, 72px) + 16px + env(safe-area-inset-bottom));
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(20, 14, 40, 0.85);
+  color: #fff;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+  transform: translateY(120%);
+  transition: transform 0.35s cubic-bezier(.22,1,.36,1);
+  max-width: 260px;
+}
+.sp-mini-music.is-visible { transform: translateY(0); }
+.sp-mini-music__title { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-mini-music__btn {
+  width: 32px; height: 32px; border: 0; border-radius: 50%;
+  background: rgba(255,255,255,0.18); color: #fff; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease;
+}
+.sp-mini-music__btn:hover { background: rgba(255,255,255,0.3); }
+
+/* -------- 15. Custom volume slider -------- */
+.sp-volume { display: inline-flex; align-items: center; gap: 8px; }
+.sp-volume input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 90px; height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 999px;
+  outline: none;
+}
+.sp-volume input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.sp-volume input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+/* -------- 16. Video placeholder (waiting for partner) -------- */
+.sp-video-wait {
+  position: relative;
+  width: 100%; aspect-ratio: 16 / 10;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(236,72,153,0.2));
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px;
+  color: #fff;
+}
+.sp-video-wait__avatar {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.4);
+  animation: sp-avatar-breathe 2.4s ease-in-out infinite;
+}
+.sp-video-wait__label { font-size: 13px; opacity: 0.9; }
+@keyframes sp-avatar-breathe {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0    rgba(255,255,255,0.4); }
+  50%      { transform: scale(1.05); box-shadow: 0 0 0 18px rgba(255,255,255,0);   }
+}
+
+/* -------- 17. Snap scroll between panels (horizontal) -------- */
+.sp-panels {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 14px;
+  padding: 4px 2px 10px;
+  scrollbar-width: none;
+}
+.sp-panels::-webkit-scrollbar { display: none; }
+.sp-panels > * {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+}
+@media (min-width: 768px) { .sp-panels > * { flex: 0 0 48%; } }
+
+/* -------- 18. Pull-to-refresh (visual only) -------- */
+.sp-pull {
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translate(-50%, calc(-100% - 4px));
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px);
+  color: #2a235a;
+  font-size: 12px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+.sp-pull.is-active { opacity: 1; transform: translate(-50%, 8px); }
+
+/* -------- 19. Score tracker -------- */
+.sp-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 600;
+  color: #2a235a;
+}
+.sp-score .sp-score__val { color: #8b5cf6; font-weight: 800; }
+
+/* -------- 20. Activity timer -------- */
+.sp-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.sp-timer::before { content: "⏱"; font-size: 12px; }
+
+/* -------- 21. Games (TTT / Connect4 / Chess) boards -------- */
+.sp-game-root {
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.25);
+  animation: sp-card-in 0.4s ease both;
+}
+.sp-game-root__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.sp-game-root__head h4 { margin: 0; font-weight: 700; }
+
+.sp-ttt {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-width: 340px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+.sp-ttt__cell {
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(32px, 8vw, 52px);
+  font-weight: 800;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.22);
+  backdrop-filter: blur(6px);
+  color: #2a235a;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  user-select: none;
+}
+.sp-ttt__cell:hover { background: rgba(255,255,255,0.35); transform: scale(1.04); }
+.sp-ttt__cell.is-win { background: linear-gradient(135deg,#10b981,#059669); color: #fff; }
+
+.sp-c4 {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 10px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #1e40af, #2563eb);
+  max-width: 420px;
+  margin: 0 auto;
+}
+.sp-c4__cell {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0;
+}
+.sp-c4__cell:hover { background: rgba(255,255,255,0.3); transform: scale(1.04); }
+.sp-c4__cell.is-red    { background: radial-gradient(circle at 30% 30%, #f87171, #b91c1c); }
+.sp-c4__cell.is-yellow { background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04); }
+.sp-c4__cell.is-win    { box-shadow: 0 0 0 3px #fff inset, 0 0 20px rgba(255,255,255,0.8); }
+
+.sp-chess {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0;
+  max-width: 420px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+.sp-chess__sq {
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(18px, 5vw, 30px);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+.sp-chess__sq.is-light { background: #f1e4d0; }
+.sp-chess__sq.is-dark  { background: #a57557; }
+.sp-chess__sq.is-sel   { box-shadow: 0 0 0 3px #8b5cf6 inset; }
+.sp-chess__sq.is-hint  { position: relative; }
+.sp-chess__sq.is-hint::after {
+  content: ""; position: absolute; inset: 35%;
+  border-radius: 50%; background: rgba(139,92,246,0.5);
+}
+
+.sp-game-reset {
+  padding: 8px 16px;
+  border: 0; border-radius: 999px;
+  background: rgba(255,255,255,0.2);
+  color: #2a235a; font-weight: 600; cursor: pointer;
+  transition: background 0.15s ease;
+}
+.sp-game-reset:hover { background: rgba(255,255,255,0.35); }
+
+.sp-turn {
+  font-size: 13px; font-weight: 600; color: #2a235a;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.sp-turn__badge {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.3); font-size: 13px;
+}
+
+/* -------- 22. Video call (local + remote) -------- */
+.sp-call {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #0b0d12;
+  aspect-ratio: 16 / 10;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+}
+.sp-call__remote { width: 100%; height: 100%; object-fit: cover; }
+.sp-call__local {
+  position: absolute;
+  right: 12px; bottom: 12px;
+  width: 25%; max-width: 140px; min-width: 90px;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.7);
+  object-fit: cover;
+  background: #000;
+}
+.sp-call__controls {
+  position: absolute;
+  bottom: 12px; left: 12px;
+  display: flex; gap: 8px;
+}
+.sp-call__btn {
+  width: 44px; height: 44px; border: 0; border-radius: 50%;
+  background: rgba(0,0,0,0.55); color: #fff; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.sp-call__btn:hover { transform: scale(1.08); background: rgba(0,0,0,0.75); }
+.sp-call__btn.is-danger { background: #ef4444; }
+.sp-call__btn.is-danger:hover { background: #dc2626; }
+
+/* -------- 23. Layout container safety (no overflow, fills height) -------- */
+.space-container { min-height: calc(100vh - var(--bottom-nav-height, 72px)); overflow-x: hidden; }
+.space-room { animation: sp-card-in 0.5s ease both; }
+.activities-grid { gap: 14px; }
+@media (max-width: 720px) {
+  .space-room { grid-template-columns: 1fr; }
+}
+
+/* -------- 24. Reduce motion -------- */
+@media (prefers-reduced-motion: reduce) {
+  .space-container::before,
+  .game-card, .game-item, .sp-game-root,
+  .space-room, .sp-empty, .sp-toast, .game-card .game-icon,
+  .sp-live-status .sp-dot {
+    animation: none !important;
+    transition: none !important;
+  }
+}

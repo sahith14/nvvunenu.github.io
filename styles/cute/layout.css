@@ -1,0 +1,116 @@
+/* =====================================================================
+   styles/cute/layout.css — responsive layout for the dual nav.
+   On mobile (<=900px): bottom-nav visible, desktop-nav hidden.
+   On desktop (>=901px): desktop-nav as a left sidebar, bottom-nav hidden.
+   Loaded LAST in the cute layer so it takes precedence over the base nav.css.
+   ===================================================================== */
+
+/* Mobile defaults */
+.desktop-nav { display: none !important; }
+.bottom-nav  { display: flex !important; }
+
+#app { position: relative; min-height: 100dvh; }
+.app-shell { padding-bottom: 92px; min-height: 100dvh; }
+#page {
+  max-width: 540px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 16px 14px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Bottom nav (mobile) — pill-shaped, glass, floating */
+.bottom-nav {
+  position: fixed; left: 50%; bottom: 12px;
+  transform: translateX(-50%);
+  width: calc(100% - 24px); max-width: 480px;
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 8px 10px;
+  border-radius: 28px;
+  z-index: 200;
+  /* the glass background comes from cute.css */
+}
+.bottom-nav button {
+  flex: 1; min-width: 0;
+  height: 44px;
+  border: 0; background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  color: #7c6f8e;
+  cursor: pointer;
+  border-radius: 999px;
+  position: relative;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1), color .2s;
+}
+.bottom-nav button i { font-size: 18px; line-height: 1; }
+.bottom-nav button:hover { color: #a78bfa; }
+.bottom-nav button.active { color: #ff8fb1; transform: translateY(-2px) scale(1.12); }
+
+/* Desktop sidebar */
+@media (min-width: 901px) {
+  .bottom-nav  { display: none !important; }
+  .desktop-nav { display: flex !important; }
+
+  .desktop-nav {
+    position: fixed; top: 16px; left: 16px;
+    flex-direction: column; gap: 4px;
+    padding: 14px 10px;
+    z-index: 100;
+    width: 200px;
+    border-radius: 24px;
+    /* glass + box-shadow come from cute.css */
+  }
+  .desktop-nav button {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    background: transparent; color: #7c6f8e;
+    border: 0; border-radius: 999px;
+    font-size: .95rem; font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .2s;
+  }
+  .desktop-nav button i { width: 20px; text-align: center; font-size: 16px; }
+  .desktop-nav button:hover {
+    background: rgba(255, 200, 216, 0.25);
+    color: #ff8fb1;
+  }
+  .desktop-nav button.active {
+    background: linear-gradient(135deg, #ff8fb1, #a78bfa) !important;
+    color: white !important;
+    box-shadow: 0 6px 14px rgba(255, 143, 177, 0.3);
+  }
+  .desktop-nav button.active i { color: white; }
+
+  .app-shell { padding-left: 232px; padding-bottom: 24px; }
+  #page { max-width: 720px; padding: 24px 24px 24px 8px; }
+}
+
+/* Make sure cute hearts BG sits behind everything but app content */
+#cuteHeartsBg { z-index: 0 !important; }
+#app { z-index: 1; }
+
+/* Cute body baseline — ensures even pages/modules without their own bg
+   show the pastel gradient (cute.css already does this for body, but
+   we also want a fallback if a page accidentally sets a dark bg). */
+body, html { color: #3d2f55; }
+body.theme-dark { color: #f6f0ff; }
+
+/* Toast tweak — cute.css uses .global-toast; align with our #toast id */
+#toast.toast.global-toast {
+  position: fixed; left: 50%; bottom: 96px;
+  transform: translateX(-50%) translateY(20px);
+  opacity: 0; pointer-events: none;
+  z-index: 9999;
+  transition: all .35s cubic-bezier(.22,1,.36,1);
+  max-width: calc(100% - 32px); text-align: center;
+}
+#toast.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (min-width: 901px) {
+  #toast.toast.global-toast { bottom: 24px; left: calc(50% + 116px); }
+}

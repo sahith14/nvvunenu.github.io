@@ -4,50 +4,78 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
   <title>Nuvvu Nenu</title>
-  <meta name="theme-color" content="#0F1117">
+  <meta name="theme-color" content="#fff5fa">
   <link rel="manifest" href="manifest.json">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Inter',system-ui,sans-serif;min-height:100dvh;overflow:hidden;background:#0F1117;color:#F5F7FA;display:flex;align-items:center;justify-content:center}
-    .splash{text-align:center;animation:fadeIn 1.2s cubic-bezier(.22,1,.36,1)}
-    .bg-gradient{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(155,140,255,.12),rgba(255,126,182,.06) 40%,transparent 70%);animation:breathe 6s ease-in-out infinite}
-    .stars{position:fixed;inset:0;overflow:hidden}
-    .star{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;opacity:0;animation:twinkle 3s ease-in-out infinite}
-    .splash-content{position:relative;z-index:1}
-    .logo-orb{width:100px;height:100px;border-radius:50%;margin:0 auto 24px;background:radial-gradient(circle,rgba(155,140,255,.5),rgba(255,126,182,.3));animation:breathe 4s ease-in-out infinite;box-shadow:0 0 60px rgba(155,140,255,.3)}
-    .title{font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,#FF7EB6,#9B8CFF);-webkit-background-clip:text;background-clip:text;color:transparent}
-    .tagline{font-size:.9375rem;color:#98A2B3;margin-top:8px;opacity:0;animation:fadeIn 1s .6s forwards}
-    .loading-phrase{margin-top:48px;font-size:.8125rem;color:#98A2B3;min-height:20px;opacity:0;animation:fadeIn .6s 1.5s forwards;transition:opacity .3s}
-    .progress-bar{width:160px;height:3px;background:rgba(255,255,255,.06);border-radius:99px;margin:16px auto 0;overflow:hidden;opacity:0;animation:fadeIn .4s 1.8s forwards}
-    .progress-bar .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#FF7EB6,#9B8CFF);animation:progress 2.5s 2s cubic-bezier(.22,1,.36,1) forwards}
-    @keyframes breathe{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.06);opacity:1}}
+    body{
+      font-family:'Inter','Quicksand',system-ui,sans-serif;min-height:100dvh;
+      background:linear-gradient(180deg,#fff5fa 0%,#f6f0ff 100%) fixed;
+      color:#3d2f55;display:flex;align-items:center;justify-content:center;overflow:hidden;
+    }
+    .hearts{position:fixed;inset:0;overflow:hidden}
+    .hearts span{
+      position:absolute;bottom:-40px;font-size:22px;opacity:0;
+      animation:float linear infinite;
+      filter:drop-shadow(0 2px 6px rgba(255,143,177,.45));
+    }
+    @keyframes float{
+      0%{transform:translateY(0) rotate(0) scale(.6);opacity:0}
+      10%{opacity:.85}50%{transform:translateY(-50vh) rotate(15deg) scale(1)}
+      90%{opacity:.55}100%{transform:translateY(-110vh) rotate(-12deg) scale(.8);opacity:0}
+    }
+    .splash{text-align:center;animation:fadeIn 1.2s cubic-bezier(.22,1,.36,1);position:relative;z-index:1}
+    .logo-orb{
+      width:120px;height:120px;border-radius:50%;margin:0 auto 24px;
+      background:radial-gradient(circle,rgba(255,143,177,.55),rgba(167,139,250,.25) 60%,transparent 80%);
+      animation:breathe 4s ease-in-out infinite;
+      box-shadow:0 0 60px rgba(255,143,177,.45);
+      display:grid;place-items:center;font-size:54px;
+    }
+    @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+    .title{
+      font-size:2.6rem;font-weight:800;letter-spacing:.4px;
+      background:linear-gradient(135deg,#ff8fb1,#a78bfa);
+      -webkit-background-clip:text;background-clip:text;color:transparent;
+    }
+    .tagline{font-size:1rem;color:#7c6f8e;margin-top:8px;opacity:0;animation:fadeIn 1s .6s forwards}
+    .loading-phrase{margin-top:42px;font-size:.85rem;color:#9787ad;min-height:20px;opacity:0;animation:fadeIn .6s 1.5s forwards;transition:opacity .3s}
+    .progress-bar{width:180px;height:4px;background:rgba(167,139,250,.18);border-radius:99px;margin:16px auto 0;overflow:hidden;opacity:0;animation:fadeIn .4s 1.8s forwards}
+    .progress-bar .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#ff8fb1,#a78bfa);animation:progress 2.5s 2s cubic-bezier(.22,1,.36,1) forwards}
     @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes twinkle{0%,100%{opacity:0}50%{opacity:.7}}
     @keyframes progress{to{width:100%}}
     .fade-out{animation:fadeOut .6s forwards}
     @keyframes fadeOut{to{opacity:0;transform:scale(1.05)}}
   </style>
 </head>
 <body>
-  <div class="bg-gradient"></div>
-  <div class="stars" id="stars"></div>
-  <div class="splash" id="splash">
-    <div class="splash-content">
-      <div class="logo-orb"></div>
-      <h1 class="title">Nuvvu Nenu</h1>
-      <p class="tagline">A place for two hearts.</p>
-      <p class="loading-phrase" id="phrase"></p>
-      <div class="progress-bar"><div class="fill"></div></div>
-    </div>
+  <div class="hearts" aria-hidden="true">
+    <span style="left:6%;animation-duration:9s">💕</span>
+    <span style="left:14%;animation-duration:11s;animation-delay:.5s">💜</span>
+    <span style="left:24%;animation-duration:10s;animation-delay:1s">🌸</span>
+    <span style="left:34%;animation-duration:13s;animation-delay:1.5s">✨</span>
+    <span style="left:44%;animation-duration:9s;animation-delay:.7s">💖</span>
+    <span style="left:54%;animation-duration:12s;animation-delay:2s">🦋</span>
+    <span style="left:64%;animation-duration:10s;animation-delay:2.4s">💗</span>
+    <span style="left:74%;animation-duration:11s;animation-delay:1.2s">💝</span>
+    <span style="left:84%;animation-duration:9s;animation-delay:.3s">🌷</span>
+    <span style="left:92%;animation-duration:12s;animation-delay:1.8s">🌺</span>
   </div>
+
+  <div class="splash" id="splash">
+    <div class="logo-orb">💜</div>
+    <h1 class="title">Nuvvu Nenu</h1>
+    <p class="tagline">A place for two hearts.</p>
+    <p class="loading-phrase" id="phrase"></p>
+    <div class="progress-bar"><div class="fill"></div></div>
+  </div>
+
   <script>
-    const starsEl=document.getElementById('stars');
-    for(let i=0;i<40;i++){const s=document.createElement('div');s.className='star';s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*2}s`;starsEl.appendChild(s)}
-    const phrases=['Preparing your space…','Collecting your memories…','Building your world together…'];
-    const el=document.getElementById('phrase');let i=0;
+    const phrases = ['Preparing your space…','Collecting your memories…','Building your world together…'];
+    const el = document.getElementById('phrase'); let i = 0;
     function next(){if(i<phrases.length){el.style.opacity='0';setTimeout(()=>{el.textContent=phrases[i++];el.style.opacity='1'},200)}}
-    next();setInterval(next,1000);
+    next(); setInterval(next, 1000);
     setTimeout(()=>{document.getElementById('splash').classList.add('fade-out');setTimeout(()=>{window.location.href='login.html'},600)},4000);
   </script>
 </body>

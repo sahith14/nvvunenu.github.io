@@ -1,0 +1,726 @@
+/* =====================================================================
+   styles-cute.css — Cute couple-app polish layer.
+   Loaded LAST so it overrides earlier styles.
+   Adds: pastel gradients, heart particles, button bounce, glow rings,
+   page transitions, cute modals, sparkle hover, soft shadows.
+   ===================================================================== */
+
+/* ---------- Cute palette ---------- */
+:root {
+  --cute-pink: #ff8fb1;
+  --cute-pink-soft: #ffc8d8;
+  --cute-purple: #a78bfa;
+  --cute-purple-soft: #d8c9ff;
+  --cute-lavender: #f6f0ff;
+  --cute-peach: #ffd2c1;
+  --cute-mint: #c8f7e2;
+  --cute-yellow: #fff3b0;
+  --cute-shadow: 0 8px 24px rgba(255, 143, 177, 0.18);
+  --cute-shadow-hover: 0 14px 34px rgba(167, 139, 250, 0.28);
+  --cute-radius: 22px;
+  --cute-radius-sm: 14px;
+  --cute-gradient: linear-gradient(135deg, #ffc8d8 0%, #d8c9ff 50%, #c8f7e2 100%);
+  --cute-gradient-hot: linear-gradient(135deg, #ff8fb1 0%, #a78bfa 100%);
+  --cute-gradient-soft: linear-gradient(180deg, #fff5fa 0%, #f6f0ff 100%);
+}
+
+body.theme-dark {
+  --cute-lavender: #1a1424;
+  --cute-gradient-soft: linear-gradient(180deg, #1a1424 0%, #0f0a1a 100%);
+}
+
+/* ---------- Body background with floating gradient ---------- */
+body {
+  background: var(--cute-gradient-soft) fixed !important;
+  font-family: 'Inter', 'Quicksand', -apple-system, sans-serif !important;
+}
+
+body.theme-love {
+  background: linear-gradient(135deg, #ffe5ee 0%, #f0e5ff 50%, #fff0f5 100%) fixed !important;
+}
+
+/* ---------- Floating hearts background ---------- */
+#cuteHeartsBg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+#cuteHeartsBg .cute-heart {
+  position: absolute;
+  bottom: -40px;
+  font-size: 22px;
+  opacity: 0;
+  animation: cuteFloatUp linear infinite;
+  filter: drop-shadow(0 2px 6px rgba(255, 143, 177, 0.4));
+}
+@keyframes cuteFloatUp {
+  0%   { transform: translateY(0) rotate(0deg) scale(0.6); opacity: 0; }
+  10%  { opacity: 0.8; }
+  50%  { transform: translateY(-50vh) rotate(15deg) scale(1); }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-110vh) rotate(-12deg) scale(0.8); opacity: 0; }
+}
+
+/* ---------- Click sparkle burst ---------- */
+.cute-spark {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  font-size: 18px;
+  animation: cuteSpark 700ms ease-out forwards;
+}
+@keyframes cuteSpark {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.4); opacity: 0; }
+}
+
+/* ---------- Brand rail bling ---------- */
+.brand-rail {
+  background: var(--cute-gradient) !important;
+  box-shadow: var(--cute-shadow) !important;
+  border-radius: 0 24px 24px 0;
+}
+.brand-mark {
+  font-size: 28px !important;
+  animation: cutePulse 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 4px 10px rgba(255, 143, 177, 0.6));
+}
+@keyframes cutePulse {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50%      { transform: scale(1.15) rotate(-6deg); }
+}
+.brand-text strong {
+  background: var(--cute-gradient-hot);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* ---------- Glass cards (soft pastel) ---------- */
+.glass, .glass-premium {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255, 200, 216, 0.5) !important;
+  border-radius: var(--cute-radius) !important;
+  box-shadow: var(--cute-shadow) !important;
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.25s;
+}
+body.theme-dark .glass, body.theme-dark .glass-premium {
+  background: rgba(40, 30, 60, 0.55) !important;
+  border-color: rgba(167, 139, 250, 0.3) !important;
+}
+.glass:hover, .glass-premium:hover { box-shadow: var(--cute-shadow-hover) !important; }
+
+/* ---------- Buttons: bouncy + gradient ---------- */
+button:not(.tick):not(.drawer-close):not(.dm-back) {
+  border-radius: 999px !important;
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s, filter 0.2s !important;
+  position: relative;
+  overflow: hidden;
+}
+button:not(.tick):not(.drawer-close):not(.dm-back):active {
+  transform: scale(0.92) !important;
+}
+button:not(.tick):not(.drawer-close):not(.dm-back):hover {
+  filter: brightness(1.05);
+}
+
+/* Primary call-to-action buttons */
+.followBtn, .request-btn, .edit-btn, .sub-btn,
+.mem-add-btn, .composer-actions button:first-child,
+.space-btn, .call-btn, .accept {
+  background: var(--cute-gradient-hot) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 600 !important;
+  padding: 10px 20px !important;
+  box-shadow: 0 6px 16px rgba(255, 143, 177, 0.4);
+}
+.followBtn:hover, .request-btn:hover, .edit-btn:hover, .sub-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 10px 24px rgba(167, 139, 250, 0.5);
+}
+
+/* Ripple effect on button click */
+button.cute-ripple {
+  position: relative;
+}
+button .cute-ripple-dot {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: scale(0);
+  animation: cuteRipple 0.6s linear;
+  pointer-events: none;
+}
+@keyframes cuteRipple {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ---------- Navigation: cute nav with hearts ---------- */
+.bottom-nav, .desktop-nav {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border-radius: 28px !important;
+  box-shadow: 0 -8px 28px rgba(167, 139, 250, 0.15) !important;
+  border: 1px solid rgba(216, 201, 255, 0.4) !important;
+}
+body.theme-dark .bottom-nav, body.theme-dark .desktop-nav {
+  background: rgba(30, 20, 45, 0.85) !important;
+  border-color: rgba(167, 139, 250, 0.2) !important;
+}
+.bottom-nav button, .desktop-nav button {
+  transition: all 0.25s cubic-bezier(.34,1.56,.64,1) !important;
+  color: #7c6f8e !important;
+}
+.bottom-nav button.active, .desktop-nav button.active {
+  color: var(--cute-pink) !important;
+  transform: translateY(-2px) scale(1.15) !important;
+  filter: drop-shadow(0 4px 8px rgba(255, 143, 177, 0.5));
+}
+.bottom-nav button.active::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px; height: 6px;
+  background: var(--cute-gradient-hot);
+  border-radius: 50%;
+  animation: cutePulse 1s ease-in-out infinite;
+}
+.bottom-nav button:hover, .desktop-nav button:hover {
+  transform: translateY(-3px) scale(1.1);
+  color: var(--cute-purple) !important;
+}
+
+/* ---------- Feature drawer: cute grid ---------- */
+.feature-drawer {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 240, 248, 0.4) !important;
+}
+.drawer-content {
+  background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,240,248,0.95) 100%) !important;
+  border-radius: 28px 28px 0 0 !important;
+  animation: cuteSlideUp 0.4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes cuteSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.drawer-header h3 {
+  background: var(--cute-gradient-hot);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+}
+.drawer-item {
+  background: white !important;
+  border: 2px solid transparent !important;
+  border-radius: 20px !important;
+  padding: 18px 8px !important;
+  transition: all 0.25s cubic-bezier(.34,1.56,.64,1) !important;
+  box-shadow: 0 4px 12px rgba(255, 143, 177, 0.12);
+}
+.drawer-item:hover {
+  transform: translateY(-4px) scale(1.05) !important;
+  border-color: var(--cute-pink-soft) !important;
+  box-shadow: 0 12px 24px rgba(255, 143, 177, 0.25) !important;
+  background: linear-gradient(135deg, #fff5fa, #f0e5ff) !important;
+}
+.di-icon {
+  display: block;
+  font-size: 30px !important;
+  margin-bottom: 4px;
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+.drawer-item:hover .di-icon {
+  transform: scale(1.25) rotate(-8deg);
+}
+.di-label { color: #6b5b80 !important; font-weight: 600; }
+body.theme-dark .drawer-item { background: rgba(50, 40, 70, 0.7) !important; }
+body.theme-dark .di-label { color: #d8c9ff !important; }
+
+/* ---------- Feed cards (Instagram-style cuteness) ---------- */
+.post-card, .ig-post, .feed-post {
+  border-radius: var(--cute-radius) !important;
+  overflow: hidden;
+  box-shadow: var(--cute-shadow) !important;
+  margin-bottom: 18px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.post-card:hover, .ig-post:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--cute-shadow-hover) !important;
+}
+
+/* Heart like-button explosion */
+.like-btn, .post-actions button {
+  transition: transform 0.2s cubic-bezier(.34,1.56,.64,1) !important;
+}
+.like-btn:active, .post-actions button:active {
+  transform: scale(1.4) !important;
+}
+.like-btn.liked, .post-actions button.liked {
+  color: var(--cute-pink) !important;
+  animation: cuteHeartBeat 0.5s ease-out;
+}
+@keyframes cuteHeartBeat {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.5); }
+  60%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* ---------- Avatars: cute ring ---------- */
+.dm-avatar, .profile-avatar, .partner-avatar, .user-avatar, .recent-avatar, .call-avatar {
+  border: 3px solid transparent !important;
+  background-image: linear-gradient(white, white), var(--cute-gradient-hot) !important;
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
+}
+.dm-avatar:hover, .profile-avatar:hover {
+  transform: scale(1.08) rotate(-3deg);
+}
+.ig-avatar-ring {
+  background: conic-gradient(from 0deg, #ff8fb1, #a78bfa, #c8f7e2, #ffd2c1, #ff8fb1) !important;
+  border-radius: 50% !important;
+  animation: cuteSpin 8s linear infinite;
+}
+@keyframes cuteSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Online dot pulse */
+.online-dot {
+  background: #34d399 !important;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  animation: cuteOnlinePulse 1.8s infinite;
+}
+@keyframes cuteOnlinePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
+  70%  { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+/* ---------- Messages: bubble polish ---------- */
+.msg {
+  border-radius: 22px !important;
+  padding: 10px 16px !important;
+  max-width: 75%;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(167, 139, 250, 0.12) !important;
+  animation: cuteMsgIn 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+.msg.me {
+  background: var(--cute-gradient-hot) !important;
+  color: white !important;
+  border-bottom-right-radius: 6px !important;
+}
+.msg.them {
+  background: white !important;
+  color: #3d2f55 !important;
+  border-bottom-left-radius: 6px !important;
+  border: 1px solid rgba(255, 200, 216, 0.5) !important;
+}
+body.theme-dark .msg.them {
+  background: rgba(50, 40, 70, 0.9) !important;
+  color: #f6f0ff !important;
+}
+@keyframes cuteMsgIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.day-sep {
+  text-align: center;
+  margin: 14px 0;
+  font-size: 12px;
+  color: #9787ad;
+}
+.day-sep::before, .day-sep::after {
+  content: "✿";
+  margin: 0 8px;
+  color: var(--cute-pink);
+}
+.reaction {
+  display: inline-block;
+  background: white;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-right: 3px;
+  animation: cutePop 0.4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes cutePop {
+  0%   { transform: scale(0); }
+  60%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Typing indicator with cute dots */
+#typingIndicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+}
+#typingIndicator::before {
+  content: "•••";
+  letter-spacing: 4px;
+  color: var(--cute-pink);
+  animation: cuteDots 1.4s infinite;
+  font-size: 22px;
+  line-height: 1;
+}
+@keyframes cuteDots {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
+
+/* ---------- Page transitions ---------- */
+#page > * {
+  animation: cutePageIn 0.45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes cutePageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Inputs: cute pill style ---------- */
+input[type="text"], input[type="email"], input[type="password"],
+input[type="url"], input[type="date"], textarea, select,
+.search-input, .join-input, #msgInput, #partnerSearch, #dmSearchInput {
+  border-radius: 18px !important;
+  border: 2px solid rgba(216, 201, 255, 0.5) !important;
+  padding: 12px 18px !important;
+  background: white !important;
+  transition: all 0.25s !important;
+  font-family: inherit !important;
+}
+input:focus, textarea:focus {
+  border-color: var(--cute-purple) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15) !important;
+}
+body.theme-dark input, body.theme-dark textarea {
+  background: rgba(40, 30, 60, 0.7) !important;
+  color: #f6f0ff !important;
+  border-color: rgba(167, 139, 250, 0.3) !important;
+}
+
+/* ---------- Toasts: cute pill ---------- */
+.global-toast, #spToastHost .sp-toast {
+  border-radius: 999px !important;
+  padding: 12px 22px !important;
+  background: white !important;
+  color: #3d2f55 !important;
+  box-shadow: 0 12px 28px rgba(167, 139, 250, 0.3) !important;
+  border: 2px solid rgba(255, 200, 216, 0.5) !important;
+  font-weight: 600;
+  animation: cuteToastIn 0.4s cubic-bezier(.34,1.56,.64,1);
+}
+.global-toast[data-type="success"] {
+  background: linear-gradient(135deg, #c8f7e2, #d8c9ff) !important;
+}
+.global-toast[data-type="error"] {
+  background: linear-gradient(135deg, #ffd2c1, #ffc8d8) !important;
+}
+@keyframes cuteToastIn {
+  from { opacity: 0; transform: translate(-50%, 20px) scale(0.8); }
+  to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+/* ---------- Stories ring (cute rainbow) ---------- */
+.story-ring, .ig-story-ring {
+  background: conic-gradient(from 0deg, #ff8fb1, #a78bfa, #c8f7e2, #ffd2c1, #fff3b0, #ff8fb1) !important;
+  animation: cuteSpin 10s linear infinite;
+}
+
+/* ---------- Couple Home hero card ---------- */
+.couple-hero, .bond-card {
+  background: var(--cute-gradient) !important;
+  border-radius: 28px !important;
+  padding: 24px !important;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(255, 143, 177, 0.25);
+}
+.couple-hero::before {
+  content: "💕";
+  position: absolute;
+  top: -10px; right: -10px;
+  font-size: 80px;
+  opacity: 0.25;
+  animation: cutePulse 3s ease-in-out infinite;
+}
+
+/* Bond score ring with sparkle */
+.bond-score {
+  position: relative;
+}
+.bond-score::after {
+  content: "✨";
+  position: absolute;
+  top: -8px; right: -8px;
+  animation: cuteSparkle 2s ease-in-out infinite;
+}
+@keyframes cuteSparkle {
+  0%, 100% { opacity: 0.4; transform: scale(0.8) rotate(0deg); }
+  50%      { opacity: 1; transform: scale(1.2) rotate(20deg); }
+}
+
+/* ---------- Cute Modal (for archive, notifications, etc.) ---------- */
+.cute-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(60, 40, 80, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: cuteFadeIn 0.25s;
+  padding: 20px;
+}
+@keyframes cuteFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.cute-modal-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fff5fa 100%);
+  border-radius: 28px;
+  padding: 28px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(167, 139, 250, 0.4);
+  border: 2px solid rgba(255, 200, 216, 0.5);
+  animation: cuteModalIn 0.4s cubic-bezier(.34,1.56,.64,1);
+  position: relative;
+}
+@keyframes cuteModalIn {
+  from { opacity: 0; transform: scale(0.85) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+body.theme-dark .cute-modal-card {
+  background: linear-gradient(180deg, #1a1424 0%, #2a1f3a 100%);
+  color: #f6f0ff;
+}
+.cute-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.cute-modal-head h3 {
+  background: var(--cute-gradient-hot);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+  margin: 0;
+  font-size: 22px;
+}
+.cute-modal-close {
+  background: rgba(255, 200, 216, 0.3);
+  border: none;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  font-size: 18px;
+  color: #a78bfa;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cute-modal-close:hover {
+  background: var(--cute-pink-soft);
+  transform: rotate(90deg);
+}
+.cute-modal-body { color: #5b4d75; font-size: 15px; line-height: 1.6; }
+body.theme-dark .cute-modal-body { color: #d8c9ff; }
+.cute-modal-list { list-style: none; padding: 0; margin: 0; }
+.cute-modal-list li {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 240, 248, 0.6);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.2s;
+}
+.cute-modal-list li:hover {
+  transform: translateX(4px);
+  background: rgba(255, 200, 216, 0.4);
+}
+body.theme-dark .cute-modal-list li { background: rgba(50, 40, 70, 0.6); }
+.cute-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9787ad;
+}
+.cute-empty .emoji {
+  font-size: 56px;
+  display: block;
+  margin-bottom: 12px;
+  animation: cutePulse 2s ease-in-out infinite;
+}
+
+/* ---------- Login/signup polish ---------- */
+.auth-container, .login-container, .signup-container {
+  background: var(--cute-gradient) !important;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-container::before, .login-container::before, .signup-container::before {
+  content: "💕 💜 ✨ 🌸 💖 💝 ✨ 💕 💜 🌸";
+  position: absolute;
+  inset: 0;
+  font-size: 28px;
+  opacity: 0.15;
+  letter-spacing: 80px;
+  line-height: 120px;
+  word-break: break-all;
+  pointer-events: none;
+  animation: cuteFloat 20s linear infinite;
+}
+@keyframes cuteFloat {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-100px); }
+}
+.auth-box, .login-box, .signup-box {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px);
+  border-radius: 28px !important;
+  padding: 36px 28px !important;
+  box-shadow: 0 24px 60px rgba(167, 139, 250, 0.3) !important;
+  border: 2px solid rgba(255, 200, 216, 0.5) !important;
+  max-width: 400px;
+  width: 100%;
+  z-index: 1;
+}
+
+/* ---------- Incoming call banner ---------- */
+.incoming-call-banner {
+  background: var(--cute-gradient-hot) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 16px 40px rgba(255, 143, 177, 0.5) !important;
+  animation: cuteIncoming 1.2s ease-in-out infinite;
+}
+@keyframes cuteIncoming {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
+}
+.incoming-actions .accept {
+  background: linear-gradient(135deg, #34d399, #10b981) !important;
+  animation: cutePulse 1s ease-in-out infinite;
+}
+.incoming-actions .decline {
+  background: linear-gradient(135deg, #f87171, #ef4444) !important;
+}
+
+/* ---------- AI smart replies ---------- */
+.ai-suggest-chip {
+  background: linear-gradient(135deg, #ffe5ee, #f0e5ff) !important;
+  border: 2px solid rgba(167, 139, 250, 0.3) !important;
+  color: #5b4d75 !important;
+  border-radius: 999px !important;
+  padding: 8px 16px !important;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(.34,1.56,.64,1) !important;
+}
+.ai-suggest-chip:hover {
+  transform: translateY(-2px) scale(1.05);
+  background: var(--cute-gradient-hot) !important;
+  color: white !important;
+}
+.ai-suggest-label {
+  background: var(--cute-gradient-hot);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+/* ---------- Misc accents ---------- */
+.dm-unread {
+  background: var(--cute-gradient-hot) !important;
+  color: white !important;
+  border-radius: 999px;
+  animation: cutePulse 2s ease-in-out infinite;
+}
+::-webkit-scrollbar {
+  width: 8px; height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ffc8d8, #d8c9ff);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Selection highlight */
+::selection {
+  background: rgba(255, 143, 177, 0.3);
+  color: #3d2f55;
+}
+
+/* Tabs in profile */
+.igp-tabs button {
+  border-radius: 0 !important;
+  transition: all 0.25s !important;
+  border-bottom: 3px solid transparent !important;
+}
+.igp-tabs button.active {
+  color: var(--cute-pink) !important;
+  border-bottom-color: var(--cute-pink) !important;
+  transform: translateY(-2px);
+}
+
+/* Confetti for special moments */
+.cute-confetti {
+  position: fixed;
+  pointer-events: none;
+  top: 0; left: 50%;
+  z-index: 10000;
+  width: 12px; height: 12px;
+  border-radius: 2px;
+  animation: cuteConfettiFall 2s ease-out forwards;
+}
+@keyframes cuteConfettiFall {
+  0%   { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--tx), 100vh) rotate(720deg); }
+}
+
+/* Brand rail collapse on small screens to leave more room */
+@media (max-width: 768px) {
+  .brand-rail { display: none !important; }
+  #cuteHeartsBg .cute-heart { font-size: 16px; }
+}
+
+/* Disable expensive effects when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.1s !important;
+  }
+  #cuteHeartsBg { display: none; }
+}
