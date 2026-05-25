@@ -10,6 +10,7 @@ import { skeletonList } from "../utils/skeleton.js";
 import { toast, toastSuccess, toastWarn, toastError, safe } from "../utils/toast.js";
 import { addMemory, subscribeRecent, deleteMemory, toggleFavoriteMemory } from "../services/memoryService.js";
 import { sendMemory, chatIdFor } from "../services/chatService.js";
+import { aiCall } from "../services/aiProvider.js";
 
 let _container       = null;
 let _offState        = null;
@@ -340,6 +341,23 @@ function renderShell() {
         display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
       }
       @media (min-width: 720px) { .mem-grid { gap: 6px; } }
+
+      /* Title row with ✨ Suggest button */
+      .mem-title-row { display: flex; gap: 6px; align-items: stretch; }
+      .mem-title-row input { flex: 1; min-width: 0; }
+      .mem-title-suggest {
+        flex: 0 0 auto;
+        width: 38px; border-radius: 10px;
+        background: linear-gradient(135deg, rgba(255,196,80,.18), rgba(155,140,255,.18));
+        border: 1px solid rgba(155,140,255,.3);
+        color: #4f3d80; font-size: 16px;
+        cursor: pointer; font-family: inherit;
+        transition: transform .12s, background .15s;
+      }
+      .mem-title-suggest:hover { transform: translateY(-1px); }
+      .mem-title-suggest:disabled { cursor: default; opacity: .8; }
+      .mem-title-suggest.is-spinning { animation: mem-suggest-spin .9s linear infinite; }
+      @keyframes mem-suggest-spin { to { transform: rotate(360deg); } }
       .mem-tile {
         position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer;
         background: linear-gradient(135deg,#ffd2e7,#d8c9ff);
@@ -778,7 +796,11 @@ function openAddMemoryModal() {
       <div class="bond-modal__head">Add a memory 💜</div>
       <div class="bond-modal__body">
         <label class="bond-field"><span>Title</span>
-          <input id="memTitle" type="text" maxlength="120" placeholder="What happened?"></label>
+          <div class="mem-title-row">
+            <input id="memTitle" type="text" maxlength="120" placeholder="What happened?">
+            <button type="button" class="mem-title-suggest" id="memSuggest" title="Suggest a caption from the photo">✨</button>
+          </div>
+        </label>
         <label class="bond-field"><span>Description (optional)</span>
           <textarea id="memDesc" rows="3" maxlength="500" placeholder="A line or two…"></textarea></label>
         <label class="bond-field"><span>Photo / video (optional)</span>
@@ -799,6 +821,39 @@ function openAddMemoryModal() {
   wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
   wrap.querySelector('[data-act="cancel"]').addEventListener("click", close);
   wrap.querySelector("#memTitle").focus();
+
+  // ✨ Suggest a caption — uses aiCall('describeImage', dataUrl)
+  // when a provider is plugged in; otherwise nudges the user.
+  const suggestBtn = wrap.querySelector("#memSuggest");
+  suggestBtn.addEventListener("click", async () => {
+    const fileEl = wrap.querySelector("#memFile");
+    const file   = fileEl.files?.[0];
+    if (!file || !file.type.startsWith("image/")) {
+      toastWarn("Pick a photo first");
+      return;
+    }
+    suggestBtn.disabled = true;
+    suggestBtn.classList.add("is-spinning");
+    try {
+      // Convert to data URL so the provider can run on-device or push.
+      const dataUrl = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload  = () => res(fr.result);
+        fr.onerror = rej;
+        fr.readAsDataURL(file);
+      });
+      const text = await aiCall("describeImage", dataUrl);
+      if (typeof text === "string" && text.trim()) {
+        wrap.querySelector("#memTitle").value = text.trim().slice(0, 120);
+        toastSuccess("Suggested ✨");
+      } else {
+        toast("AI captioning isn't wired up yet — type something quick.");
+      }
+    } finally {
+      suggestBtn.disabled = false;
+      suggestBtn.classList.remove("is-spinning");
+    }
+  });
 
   wrap.querySelector('[data-act="ok"]').addEventListener("click", async () => {
     const title = wrap.querySelector("#memTitle").value.trim();
