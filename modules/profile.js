@@ -74,6 +74,7 @@ function paint(s) {
         <div class="profile-meta">
           <div class="profile-name">${escapeHtml(name)}</div>
           <div class="profile-handle" id="profileHandle">${escapeHtml(handle)}</div>
+          ${renderBirthdayBadge(me.birthday)}
         </div>
       </header>
 
@@ -111,6 +112,10 @@ function paint(s) {
           <li><button data-edit="customStatus" class="identity-row">
             <span class="ic">✨</span><div><div class="row-label">Custom status</div>
             <div class="row-val">${escapeHtml(me.customStatus || "Tap to set")}</div></div>
+            <span class="row-arrow">›</span></button></li>
+          <li><button id="rowBirthday" class="identity-row">
+            <span class="ic">🎂</span><div><div class="row-label">Birthday</div>
+            <div class="row-val">${escapeHtml(formatBirthdayDisplay(me.birthday) || "Tap to set")}</div></div>
             <span class="row-arrow">›</span></button></li>
         </ul>
       </section>
@@ -191,6 +196,8 @@ function wireActions() {
   _container.querySelector("#btnAvatarUpload")?.addEventListener("click", openAvatarPicker);
   // Cover gradient picker
   _container.querySelector("#btnCover")?.addEventListener("click", openCoverPicker);
+  // Birthday picker
+  _container.querySelector("#rowBirthday")?.addEventListener("click", openBirthdayModal);
 
   // Section actions
   _container.querySelectorAll('button[data-act]').forEach((btn) => {
@@ -558,5 +565,79 @@ function openCoverPicker() {
         close();
       }
     });
+  });
+}
+
+
+// =====================================================================
+// Birthday — stored as MM-DD on users/{uid}.birthday. We deliberately
+// don't capture year so we don't ask for a full DOB; just enough to
+// celebrate.
+// =====================================================================
+function formatBirthdayDisplay(mmdd) {
+  if (!mmdd) return "";
+  const m = /^(\d{2})-(\d{2})$/.exec(String(mmdd));
+  if (!m) return "";
+  // Use a fixed leap year so February 29th is parseable for display.
+  const d = new Date(2024, Number(m[1]) - 1, Number(m[2]));
+  return d.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+}
+
+function daysUntilBirthday(mmdd) {
+  if (!mmdd) return null;
+  const m = /^(\d{2})-(\d{2})$/.exec(String(mmdd));
+  if (!m) return null;
+  const month = Number(m[1]) - 1;
+  const day   = Number(m[2]);
+  const today = new Date();
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  let next = new Date(today.getFullYear(), month, day);
+  if (next < todayMid) next.setFullYear(today.getFullYear() + 1);
+  return Math.round((next - todayMid) / 86400000);
+}
+
+function renderBirthdayBadge(mmdd) {
+  const days = daysUntilBirthday(mmdd);
+  if (days === null || days > 30) return "";
+  if (days === 0)  return `<div class="profile-bday is-today">🎂 Happy birthday!</div>`;
+  if (days === 1)  return `<div class="profile-bday">🎂 Birthday tomorrow</div>`;
+  return            `<div class="profile-bday">🎂 ${days} days to your birthday</div>`;
+}
+
+function openBirthdayModal() {
+  const me = getState().user || {};
+  const cur = me.birthday || "";
+  const wrap = document.createElement("div");
+  wrap.className = "tc-modal";
+  wrap.innerHTML = `
+    <div class="tc-modal__panel" role="dialog" aria-modal="true" aria-label="Set birthday">
+      <div class="tc-modal__head">When's your birthday?</div>
+      <div class="tc-modal__body">
+        <p class="tc-fineprint">We only save the month + day so we can light up the app on the day. No year required.</p>
+        <input id="bdayInput" type="date" value="${cur ? "2024-" + cur : ""}" min="2024-01-01" max="2024-12-31">
+      </div>
+      <div class="tc-modal__actions">
+        ${cur ? `<button class="btn btn-ghost"   data-act="clear">Remove</button>` : ""}
+        <button class="btn btn-ghost"   data-act="cancel">Cancel</button>
+        <button class="btn btn-primary" data-act="ok">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener("click", close);
+  wrap.querySelector('[data-act="ok"]').addEventListener("click", async () => {
+    const v = wrap.querySelector("#bdayInput").value;   // "YYYY-MM-DD"
+    if (!v) { toastWarn("Pick a date"); return; }
+    const mmdd = v.slice(5);  // MM-DD
+    await safe(() => updateDoc(doc(db, "users", me.uid), { birthday: mmdd }), "Couldn't save");
+    toastSuccess(`Birthday set · ${formatBirthdayDisplay(mmdd)} 🎂`);
+    close();
+  });
+  wrap.querySelector('[data-act="clear"]')?.addEventListener("click", async () => {
+    await safe(() => updateDoc(doc(db, "users", me.uid), { birthday: null }), "Couldn't clear");
+    toast("Birthday removed");
+    close();
   });
 }

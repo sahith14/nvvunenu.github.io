@@ -282,3 +282,37 @@
   font-size: .75rem; font-weight: 700; color: #4f3d80; text-align: center;
   text-transform: uppercase; letter-spacing: .3px;
 }
+
+
+
+/* Birthday countdown badge under the username */
+.profile-bday {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: .75rem; font-weight: 700;
+  background: linear-gradient(135deg, rgba(255,196,80,.18), rgba(255,126,182,.18));
+  border: 1px solid rgba(255,196,80,.45);
+  color: var(--text, #1a1235);
+}
+.profile-bday.is-today {
+  background: linear-gradient(135deg, #ffd47a, #ff7eb6, #9b8cff);
+  border-color: transparent;
+  color: #fff;
+  animation: bday-glow 2.4s ease-in-out infinite;
+}
+@keyframes bday-glow {
+  0%, 100% { box-shadow: 0 6px 16px rgba(255,126,182,.30); }
+  50%      { box-shadow: 0 12px 28px rgba(255,126,182,.55); }
+}
+
+/* Date input inside the bday modal */
+#bdayInput {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid rgba(155,140,255,.3);
+  border-radius: 12px;
+  font-family: inherit; font-size: 1rem;
+  color: var(--text, #1a1235);
+  background: rgba(255,255,255,.95);
+}
