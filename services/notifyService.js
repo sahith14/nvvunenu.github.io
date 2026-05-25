@@ -41,6 +41,7 @@ export function startNotifyService() {
       _coupleId = null;
       teardownAll();
     }
+    detectPresenceTransition(s);
   });
 }
 
@@ -50,6 +51,7 @@ export function stopNotifyService() {
   teardownAll();
   _myUid = _coupleId = null;
   _firstSnap.clear();
+  _lastPartnerPresence = null;
   resetTabTitle();
 }
 
@@ -369,4 +371,42 @@ function listenChatMessages() {
       toast(txt);
     });
   });
+}
+
+
+// =====================================================================
+// Presence transition — fires a toast the moment the partner ENTERS a
+// Together sub-view (watching, listening, screen-sharing, sleeping,
+// gaming). Detected from appState rather than a Firestore listener
+// because appState already subscribes to the partner doc.
+// =====================================================================
+const PRESENCE_LABELS = {
+  watching:        { label: "Watch Together", icon: "📺" },
+  listening:       { label: "Music Room",     icon: "🎵" },
+  "screen-sharing":{ label: "Screen share",   icon: "🖥" },
+  sleeping:        { label: "Sleep Together", icon: "🌙" },
+  gaming:          { label: "Play Together",  icon: "🎮" },
+};
+let _lastPartnerPresence = null;
+
+function detectPresenceTransition(s) {
+  const t = s?.partner?.activity?.type || null;
+  const prev = _lastPartnerPresence;
+  _lastPartnerPresence = t;
+  if (!prev && t === null) return;     // skip first-load and resting state
+  if (prev === t) return;              // no change
+  if (!t || !PRESENCE_LABELS[t]) return; // either no new state, or not a sub-view
+  // Only celebrate the *enter* transition, not exit.
+  if (!getNotifyEnabled()) return;
+  if (!isNotifPrefOn(getCurrentPrefs(), "presence")) return;
+  // Don't double-notify if user is already on /together.
+  const onTogether = location.hash === "#together" || /\/together$/.test(location.hash);
+  if (!document.hidden && onTogether) return;
+
+  const meta = PRESENCE_LABELS[t];
+  const txt = `${meta.icon} ${_partnerName} is in ${meta.label}`;
+  playChime();
+  pingTabTitle();
+  fireNative("Nuvvu Nenu", txt);
+  toast(txt);
 }
