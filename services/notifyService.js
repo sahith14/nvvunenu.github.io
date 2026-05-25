@@ -477,7 +477,7 @@ function celebratePairing(s) {
   }, 600);
 }
 
-function spawnHeartBurst() {
+export function spawnHeartBurst() {
   if (typeof document === "undefined") return;
   const layer = document.createElement("div");
   layer.className = "nv-heart-burst";

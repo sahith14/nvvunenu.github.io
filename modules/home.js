@@ -14,6 +14,7 @@ import {
 import { formatActivity } from "../services/presenceService.js";
 import { addMemory } from "../services/memoryService.js";
 import { aiCall } from "../services/aiProvider.js";
+import { spawnHeartBurst } from "../services/notifyService.js";
 import {
   doc, addDoc, collection, serverTimestamp, setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -276,6 +277,7 @@ function paintMeta(meta, s) {
         : ""
     }`;
   }
+  maybeCelebrateRecord(streakNow, streakBest);
 
   // My mood (if previously set, reflect it)
   const myMood = meta?.moods?.[s.user?.uid];
@@ -776,4 +778,29 @@ function ymd(d) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+
+// =====================================================================
+// Heart rain when the user hits a new (or repeated) streak record.
+// Fires once per record value per device — the localStorage key holds
+// the last value we celebrated so re-rendering the home page doesn't
+// re-trigger.
+// =====================================================================
+const STREAK_RECORD_KEY = "nvvunenu.streakRecordSeen";
+
+function maybeCelebrateRecord(streakNow, streakBest) {
+  if (!streakNow || !streakBest) return;
+  if (streakNow !== streakBest) return;
+  let lastSeen = 0;
+  try { lastSeen = Number(localStorage.getItem(STREAK_RECORD_KEY) || 0); } catch {}
+  if (lastSeen >= streakNow) return;       // already celebrated this record
+  try { localStorage.setItem(STREAK_RECORD_KEY, String(streakNow)); } catch {}
+
+  // Fire after a short delay so it doesn't compete with the welcome tour
+  // animation when both happen on the same load.
+  setTimeout(() => {
+    try { spawnHeartBurst(); } catch {}
+    toastSuccess(`🏆 Streak record · ${streakNow} day${streakNow === 1 ? "" : "s"}`);
+  }, 700);
 }
