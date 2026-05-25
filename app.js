@@ -31,6 +31,8 @@ import './modules/avatar.js';
 import './modules/cuteFx.js';
 // Side-effect: auto-restores AI demo provider if user enabled it
 import './services/aiProviderMock.js';
+// Side-effect: subscribes to chat doc and paints unread badge on nav
+import './services/chatBadge.js';
 
 // Background services
 import { startIncomingCallListener, stopIncomingCallListener } from './modules/incomingCall.js';
