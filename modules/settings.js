@@ -158,6 +158,13 @@ function shell() {
             <div class="settings-sub">A place for two hearts. Vanilla JS + Firebase.</div>
           </div>
         </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Welcome tour</div>
+            <div class="settings-sub">See the four-card intro again.</div>
+          </div>
+          <button class="btn btn-ghost" id="btnReplayTour">Show tour</button>
+        </div>
       </div>
 
       <div class="card settings-section danger" id="setDanger">
@@ -256,6 +263,11 @@ function paint(container, s, sub) {
   });
   container.querySelector("#btnUpgrade").addEventListener("click", () => {
     if (typeof window.loadPage === "function") window.loadPage("subscription");
+  });
+  container.querySelector("#btnReplayTour")?.addEventListener("click", () => {
+    try { localStorage.removeItem("nvvunenu.tourSeen"); } catch {}
+    toast("Tour reset · heading home");
+    if (typeof window.loadPage === "function") window.loadPage("home");
   });
   container.querySelector("#btnSignOut").addEventListener("click", async () => {
     await safe(() => signOut(auth), "Couldn't sign out");
