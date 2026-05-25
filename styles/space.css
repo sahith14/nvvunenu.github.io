@@ -170,3 +170,137 @@
 /* Game container slot inside space.js */
 .sp-game-slot{margin-top:8px}
 .sp-game-slot:empty{display:none}
+
+
+
+/* =====================================================================
+   New games — trivia, who-knows-better, memory-match, speed-reactions
+   ===================================================================== */
+
+/* COUPLE TRIVIA */
+.sp-tv-q {
+  font-size: 1.0625rem; font-weight: 700; color: var(--nn-text, #1a1235);
+  text-align: center; padding: 14px 8px; line-height: 1.4;
+}
+.sp-tv-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.sp-tv-btn {
+  background: var(--surface, rgba(255,255,255,.85));
+  border: 1px solid var(--border, rgba(255,255,255,.7));
+  border-radius: 14px;
+  padding: 14px 12px;
+  font-family: inherit; font-size: .9375rem; font-weight: 600;
+  color: var(--nn-text, #1a1235); cursor: pointer;
+  text-align: left; transition: all .2s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.sp-tv-btn:hover { background: var(--card-hover, rgba(255,255,255,.95)); transform: translateY(-1px); }
+.sp-tv-btn:disabled { cursor: default; opacity: .9; }
+.sp-tv-btn.is-correct {
+  background: linear-gradient(135deg,#7effc2,#a78bfa) !important;
+  color: #fff !important; border-color: transparent !important;
+}
+.sp-tv-btn.is-wrong {
+  background: linear-gradient(135deg,#ff7e8e,#ff8fb1) !important;
+  color: #fff !important; border-color: transparent !important;
+}
+.sp-tv-done { text-align: center; padding: 24px 12px; }
+.sp-tv-done__score {
+  font-size: 2.4rem; font-weight: 800; color: var(--nn-text, #1a1235);
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sp-tv-done__score small { font-size: 1rem; color: var(--muted, #6b5b9b); -webkit-text-fill-color: #6b5b9b; }
+.sp-tv-done__pct {
+  font-size: .875rem; color: var(--muted, #6b5b9b); margin-top: 4px;
+}
+.sp-tv-done p { color: var(--text-secondary, #4f3d80); margin-top: 12px; }
+
+/* WHO KNOWS BETTER */
+.sp-wkb-prompt {
+  text-align: center; font-size: 1.125rem; font-weight: 700;
+  color: var(--nn-text, #1a1235); padding: 18px 8px;
+}
+.sp-wkb-input {
+  width: 100%; height: 48px; padding: 0 16px;
+  border: 1px solid var(--border, rgba(155,140,255,.3));
+  border-radius: 14px; background: var(--surface, rgba(255,255,255,.85));
+  font-family: inherit; font-size: 1rem; color: var(--nn-text, #1a1235);
+}
+.sp-wkb-next {
+  margin-top: 12px;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff) !important;
+  color: #fff !important; border: 0 !important; border-radius: 999px !important;
+  padding: 12px 20px !important; font-weight: 700 !important; cursor: pointer;
+  font-family: inherit; width: 100%;
+}
+.sp-wkb-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 4px 12px; }
+.sp-wkb-row {
+  background: var(--surface, rgba(255,255,255,.85));
+  border: 1px solid var(--border, rgba(255,255,255,.7));
+  border-radius: 14px; padding: 12px 14px;
+}
+.sp-wkb-q { font-size: .8125rem; color: var(--muted, #6b5b9b); text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+.sp-wkb-a { font-size: 1rem; color: var(--nn-text, #1a1235); font-weight: 600; margin-top: 4px; }
+.sp-wkb-hint { color: var(--muted, #6b5b9b); font-size: .8125rem; text-align: center; margin: 12px 4px; line-height: 1.5; }
+
+/* MEMORY MATCH */
+.sp-mm {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  max-width: 360px; margin: 0 auto;
+}
+.sp-mm__card {
+  aspect-ratio: 1; position: relative;
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff);
+  border: 0; border-radius: 14px; cursor: pointer;
+  font-size: 1.6rem; line-height: 1; padding: 0;
+  transition: transform .35s cubic-bezier(.22,1,.36,1), background .25s;
+  font-family: inherit;
+}
+.sp-mm__face { opacity: 0; transform: rotateY(180deg); display: inline-block; transition: opacity .3s, transform .3s; }
+.sp-mm__card.is-up {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(155,140,255,.3));
+}
+.sp-mm__card.is-up .sp-mm__face { opacity: 1; transform: rotateY(0); }
+.sp-mm__card.is-matched {
+  background: linear-gradient(135deg, rgba(126,255,194,.4), rgba(167,139,250,.3)) !important;
+  border-color: rgba(126,255,194,.6);
+}
+
+/* SPEED REACTIONS */
+.sp-sr-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  max-width: 320px; margin: 0 auto; aspect-ratio: 1;
+}
+.sp-sr-cell {
+  aspect-ratio: 1; border: 0; border-radius: 14px; cursor: pointer;
+  background: var(--surface, rgba(255,255,255,.85));
+  border: 1px solid var(--border, rgba(155,140,255,.25));
+  transition: transform .12s, background .12s;
+  font-family: inherit;
+}
+.sp-sr-cell:hover { background: var(--card-hover, rgba(255,255,255,.95)); }
+.sp-sr-cell:active { transform: scale(.96); }
+.sp-sr-cell.is-active {
+  background: linear-gradient(135deg,#ff7eb6,#9b8cff) !important;
+  box-shadow: 0 0 0 4px rgba(255,126,182,.4), 0 6px 18px rgba(255,126,182,.4);
+  animation: sp-sr-pop .2s ease-out;
+}
+@keyframes sp-sr-pop {
+  0%   { transform: scale(.6); }
+  100% { transform: scale(1); }
+}
+.sp-sr-result {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px 4px 0;
+  max-width: 320px; margin: 12px auto 0;
+}
+.sp-sr-result__row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px; border-radius: 12px;
+  background: var(--surface, rgba(255,255,255,.85));
+  border: 1px solid var(--border, rgba(155,140,255,.25));
+}
+.sp-sr-result__row span { color: var(--muted, #6b5b9b); font-size: .8125rem; }
+.sp-sr-result__row strong { font-size: 1rem; color: var(--nn-text, #1a1235); }
+.sp-sr-result__hint { color: var(--text-secondary, #4f3d80); font-size: .875rem; text-align: center; margin: 6px 0 0; }

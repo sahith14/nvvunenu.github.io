@@ -209,6 +209,23 @@ service cloud.firestore {
     // ---------- watch sessions (couple-scoped) ----------
     match /watchSessions/{coupleId} {
       allow read, write: if inCouple(coupleId);
+      match /reactions/{rid} {
+        allow read:   if inCouple(coupleId);
+        allow create: if inCouple(coupleId)
+          && request.resource.data.by == uid();
+        allow delete: if inCouple(coupleId);
+      }
+    }
+
+    // ---------- music rooms (couple-scoped, mirrors watchSessions) ----------
+    match /musicRooms/{coupleId} {
+      allow read, write: if inCouple(coupleId);
+      match /reactions/{rid} {
+        allow read:   if inCouple(coupleId);
+        allow create: if inCouple(coupleId)
+          && request.resource.data.by == uid();
+        allow delete: if inCouple(coupleId);
+      }
     }
 
     // ---------- bonds (couple-scoped) ----------

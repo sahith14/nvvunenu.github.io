@@ -16,15 +16,17 @@ import { mountGame } from "./spaceGames.js";
 
 let _container   = null;
 let _offState    = null;
-let _activeSub   = null;            // 'play'|'watch'|'screen'|'sleep'|null
+let _activeSub   = null;            // 'play'|'watch'|'music'|'screen'|'sleep'|null
 let _gameInstance = null;
 let _sleepRain   = null;            // <audio> for ambient
 let _sleepTick   = null;            // setInterval for timer
 let _watchView   = null;            // module instance returned by watchTogether
+let _musicView   = null;            // module instance returned by musicRoom
 
 const SUBS = [
   { key: "play",   icon: "🎮", title: "Play Together",   blurb: "Couple games with live presence + reactions.",   accent: "linear-gradient(135deg,#ff7eb6,#9b8cff)" },
   { key: "watch",  icon: "📺", title: "Watch Together",  blurb: "Synced YouTube playback. Same scene, same time.", accent: "linear-gradient(135deg,#7ed7ff,#9b8cff)" },
+  { key: "music",  icon: "🎵", title: "Music Room",      blurb: "Listen to the same track together, in sync.",     accent: "linear-gradient(135deg,#ff7eb6,#7ed7ff)" },
   { key: "screen", icon: "🖥",  title: "Share Screen",    blurb: "Show them what's on your screen, live.",         accent: "linear-gradient(135deg,#9b8cff,#c8baff)" },
   { key: "sleep",  icon: "🌙", title: "Sleep Together",  blurb: "Fall asleep with their breathing on screen.",    accent: "linear-gradient(135deg,#3a2d6e,#7763ff)" },
 ];
@@ -245,6 +247,7 @@ function openSubView(key) {
 
   if (key === "play")   return renderPlay(body);
   if (key === "watch")  return renderWatch(body);
+  if (key === "music")  return renderMusic(body);
   if (key === "screen") return renderScreen(body);
   if (key === "sleep")  return renderSleep(body);
 }
@@ -258,6 +261,7 @@ function closeSubView() {
   if (_sleepRain) { try { _sleepRain.pause(); } catch {} _sleepRain = null; }
   if (_sleepTick) { clearInterval(_sleepTick); _sleepTick = null; }
   if (_watchView?.destroy) { try { _watchView.destroy(); } catch {} _watchView = null; }
+  if (_musicView?.destroy) { try { _musicView.destroy(); } catch {} _musicView = null; }
   setActivity(null);   // clear any activity claim from sub-view
   _activeSub = null;
 }
@@ -270,9 +274,13 @@ function renderPlay(body) {
     <div class="tg-play">
       <div class="tg-play__grid">
         ${[
-          { type: "tictactoe", icon: "❌⭕", name: "Tic Tac Toe",  desc: "Classic, two-player." },
-          { type: "connect4",  icon: "🔴🟡", name: "Connect 4",   desc: "Drop, line up, win." },
-          { type: "chess",     icon: "♔",    name: "Chess",       desc: "Move pieces freely." },
+          { type: "tictactoe",      icon: "❌⭕", name: "Tic Tac Toe",       desc: "Classic, two-player." },
+          { type: "connect4",       icon: "🔴🟡", name: "Connect 4",        desc: "Drop, line up, win." },
+          { type: "chess",          icon: "♔",    name: "Chess",            desc: "Move pieces freely." },
+          { type: "trivia",         icon: "🎯",   name: "Couple Trivia",    desc: "8 questions, MCQ scoring." },
+          { type: "whoknowsbetter", icon: "💞",   name: "Who Knows Better", desc: "Compare honest answers." },
+          { type: "memorymatch",    icon: "🧠",   name: "Memory Match",     desc: "Flip the pairs, beat your time." },
+          { type: "speedreactions", icon: "⚡",   name: "Speed Reactions",  desc: "Tap pink as fast as you can." },
         ].map((g) => `
           <button class="tg-game-tile" data-game="${g.type}">
             <span class="tg-game-tile__icon">${g.icon}</span>
@@ -281,7 +289,7 @@ function renderPlay(body) {
           </button>
         `).join("")}
       </div>
-      <p class="tg-play__more">More games (UNO, Trivia, Draw &amp; Guess, Memory Quiz) are next on the roadmap.</p>
+      <p class="tg-play__more">More games (UNO, Draw &amp; Guess, Typing Race, Music Quiz) are next on the roadmap.</p>
       <div class="tg-game-mount" id="tgGameMount"></div>
     </div>
     <style>
@@ -320,6 +328,15 @@ async function renderWatch(body) {
   const mod = await import("./watchTogether.js");
   _watchView = mod.mountWatchTogether(body);
   setActivity("watching", "YouTube");
+}
+
+// =========================================================================
+// MUSIC — synced audio room
+// =========================================================================
+async function renderMusic(body) {
+  const mod = await import("./musicRoom.js");
+  _musicView = mod.mountMusicRoom(body);
+  setActivity("listening", "Music Room");
 }
 
 // =========================================================================
