@@ -2,10 +2,13 @@
 // services/aiReply.js — local, on-device smart-reply generator.
 // No external API. Uses pattern matching + short conversation memory.
 //
-// Pluggable upgrade: if window.__AI_PROVIDER__ is set to a function
-// `(messages, myUid) => Promise<string[]>`, suggestReplies() will await it
-// and fall back to the local heuristic on error.
+// Pluggable upgrade: if window.__AI_PROVIDER__.suggestReplies(messages, count)
+// is defined, suggestReplies() will await it through aiCall (which absorbs
+// errors) and fall back to the local heuristic when the provider returns
+// nothing or fails.
 // =====================================================================
+
+import { aiCall } from "./aiProvider.js";
 
 const chatMemory = new Map(); // chatId -> [{ sender, text, time }]
 const MEMORY_LIMIT = 20;
@@ -39,15 +42,8 @@ export async function suggestReplies(chatId, myUid) {
   if (!memory.length) return greetings();
 
   // Try a real provider first if one is plugged in.
-  try {
-    const provider = (typeof window !== "undefined") && window.__AI_PROVIDER__;
-    if (typeof provider === "function") {
-      const out = await provider(memory, myUid);
-      if (Array.isArray(out) && out.length) return out.slice(0, 4);
-    }
-  } catch (e) {
-    console.warn("[aiReply] provider failed, falling back to heuristic:", e);
-  }
+  const out = await aiCall("suggestReplies", memory, 4);
+  if (Array.isArray(out) && out.length) return out.slice(0, 4);
 
   return localSuggestions(memory, myUid);
 }
