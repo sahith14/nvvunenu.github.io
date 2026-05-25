@@ -68,6 +68,7 @@ async function showList() {
 
       <div class="ig-tabs">
         <button class="ig-tab ${activeTab==='following'?'active':''}" data-tab="following">Following</button>
+        <button class="ig-tab ${activeTab==='justus'?'active':''}"    data-tab="justus">Just us</button>
         <button class="ig-tab ${activeTab==='explore'?'active':''}"   data-tab="explore">Explore</button>
       </div>
 
@@ -160,6 +161,21 @@ async function switchTab() {
 
   if (activeTab === 'following') {
     unsubFeed = subscribeFeed(me.uid, following, (posts) => renderPosts(posts, true));
+  } else if (activeTab === 'justus') {
+    const partnerId = (typeof window !== 'undefined' && window.appState?.partnerId) || null;
+    if (partnerId) {
+      unsubFeed = subscribeFeed(me.uid, [partnerId], (posts) => renderPosts(posts, true));
+    } else {
+      // Unpaired — show a friendly empty state
+      const list = document.getElementById('igPosts');
+      if (list) {
+        list.innerHTML = `<div class="ig-cta-card">
+          <div class="ig-cta-card__title">Pair up to see your shared feed</div>
+          <p>This tab shows posts by you and your partner only. Connect to fill it.</p>
+          <button class="ig-cta" onclick="window.loadPage?.('bond')">Connect partner</button>
+        </div>`;
+      }
+    }
   } else {
     unsubFeed = subscribeExplore((posts) => renderPosts(posts, false));
   }
