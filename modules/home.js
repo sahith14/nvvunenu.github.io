@@ -49,6 +49,12 @@ export function renderHome(container) {
         <h1 class="home-greeting" id="homeGreeting">…</h1>
       </header>
 
+      <button class="snooze-pill" id="snoozePill" hidden>
+        <span class="snooze-pill__icon">🔕</span>
+        <span class="snooze-pill__text" id="snoozePillText">Notifications snoozed</span>
+        <span class="snooze-pill__cta">Resume</span>
+      </button>
+
       <section class="welcome-tour" id="welcomeTour" hidden>
         <button class="welcome-tour__close" id="welcomeTourClose" aria-label="Dismiss">✕</button>
         <div class="welcome-tour__title">Welcome to Nuvvu Nenu 💜</div>
@@ -254,6 +260,7 @@ function paint(s) {
   paintAnnivBanner(startTs);
   paintBdayBanner(s.partner);
   paintMoodNudge(s);
+  paintSnoozePill();
 }
 
 function paintMeta(meta, s) {
@@ -803,4 +810,39 @@ function maybeCelebrateRecord(streakNow, streakBest) {
     try { spawnHeartBurst(); } catch {}
     toastSuccess(`🏆 Streak record · ${streakNow} day${streakNow === 1 ? "" : "s"}`);
   }, 700);
+}
+
+
+// =====================================================================
+// Snooze pill — surfaces when either global Settings snooze OR per-chat
+// 1-h mute is active. Tap to resume both.
+// =====================================================================
+function paintSnoozePill() {
+  const pill = _container?.querySelector("#snoozePill");
+  if (!pill) return;
+  let globalEnd = 0;
+  try { globalEnd = Number(localStorage.getItem("nvvunenu.notifSnoozeUntil") || 0); } catch {}
+  let chatEnd = 0;
+  try { chatEnd = Number(localStorage.getItem("nvvunenu.chatMutedUntil") || 0); } catch {}
+  const now = Date.now();
+  const globalActive = globalEnd > now;
+  const chatActive   = chatEnd > now;
+  if (!globalActive && !chatActive) { pill.hidden = true; return; }
+
+  pill.hidden = false;
+  const end = Math.max(globalEnd, chatEnd);
+  const minsLeft = Math.max(1, Math.round((end - now) / 60000));
+  const human = minsLeft >= 60 ? `${Math.round(minsLeft / 60)}h` : `${minsLeft}m`;
+  const text = pill.querySelector("#snoozePillText");
+  if (text) {
+    if (globalActive && chatActive)  text.textContent = `Notifications + chat muted · ${human}`;
+    else if (globalActive)           text.textContent = `Notifications snoozed · ${human}`;
+    else                             text.textContent = `Chat muted · ${human}`;
+  }
+  pill.onclick = () => {
+    try { localStorage.removeItem("nvvunenu.notifSnoozeUntil"); } catch {}
+    try { localStorage.removeItem("nvvunenu.chatMutedUntil"); } catch {}
+    toast("Notifications resumed");
+    paintSnoozePill();
+  };
 }

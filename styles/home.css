@@ -430,3 +430,28 @@
   color: #4f3d80;
   border: 1px solid rgba(155,140,255,.35);
 }
+
+
+
+/* Snooze status pill on Home */
+.snooze-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  margin: 0 0 12px;
+  background: linear-gradient(135deg, rgba(155,140,255,.16), rgba(255,196,80,.14));
+  border: 1px solid rgba(155,140,255,.25);
+  border-radius: 999px;
+  color: var(--text, #1a1235);
+  font-family: inherit; font-size: .8125rem; font-weight: 700;
+  cursor: pointer;
+  transition: transform .12s, border-color .15s;
+}
+.snooze-pill:hover { transform: translateY(-1px); border-color: #9b8cff; }
+.snooze-pill__icon { font-size: 14px; }
+.snooze-pill__text { font-weight: 600; color: var(--muted, #6b5b9b); }
+.snooze-pill__cta {
+  font-weight: 800; letter-spacing: .3px;
+  padding: 2px 10px; border-radius: 999px;
+  background: linear-gradient(135deg,#7effc2,#5ed3a3);
+  color: #fff;
+}
