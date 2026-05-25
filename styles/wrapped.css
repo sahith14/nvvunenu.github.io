@@ -1,0 +1,151 @@
+/* ====================================================================
+   Couple's Wrapped — story-style auto-rotating slides
+   ==================================================================== */
+
+.wr-page {
+  position: relative;
+  margin: -16px;                 /* fill the page-content padding */
+  height: calc(100dvh - 72px - 16px);
+  border-radius: 22px;
+  overflow: hidden;
+  background: #1a1235;
+  color: #fff;
+  user-select: none;
+}
+
+/* Progress bars (Instagram/Spotify style) */
+.wr-bars {
+  position: absolute; top: 12px; left: 12px; right: 12px;
+  display: flex; gap: 4px; z-index: 5;
+}
+.wr-bar {
+  flex: 1; height: 3px;
+  background: rgba(255,255,255,.25);
+  border-radius: 2px; overflow: hidden;
+}
+.wr-bar__fill {
+  height: 100%; width: 0;
+  background: rgba(255,255,255,.95);
+  border-radius: inherit;
+  transition: none;
+}
+.wr-bar.is-done .wr-bar__fill   { width: 100%; }
+.wr-bar.is-active .wr-bar__fill { width: 100%; animation: wr-fill 4500ms linear forwards; }
+@keyframes wr-fill { from { width: 0%; } to { width: 100%; } }
+
+/* Tap zones for prev/next */
+.wr-tap {
+  position: absolute; top: 0; bottom: 0;
+  width: 33%;
+  background: transparent; border: 0; cursor: pointer;
+  z-index: 4;
+}
+.wr-tap--prev { left: 0; }
+.wr-tap--next { right: 0; }
+
+/* Slide */
+.wr-stage { position: absolute; inset: 0; }
+.wr-slide {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 24px;
+  animation: wr-slide-in .35s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.wr-slide__bg {
+  position: absolute; inset: 0;
+  background: var(--wr-accent, linear-gradient(135deg,#ff7eb6,#9b8cff));
+}
+.wr-slide__bg::before, .wr-slide__bg::after {
+  content: ""; position: absolute; border-radius: 50%;
+  filter: blur(40px);
+}
+.wr-slide__bg::before {
+  width: 320px; height: 320px;
+  background: rgba(255,255,255,.18);
+  top: -10%; left: -10%;
+  animation: wr-orb 18s ease-in-out infinite;
+}
+.wr-slide__bg::after {
+  width: 240px; height: 240px;
+  background: rgba(255,255,255,.12);
+  bottom: -10%; right: -10%;
+  animation: wr-orb 22s ease-in-out infinite reverse;
+}
+@keyframes wr-orb {
+  0%, 100% { transform: translate(0,0); }
+  50%      { transform: translate(40px, -30px); }
+}
+.wr-slide__inner {
+  position: relative; z-index: 1;
+  max-width: 360px; width: 100%; text-align: center;
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+@keyframes wr-slide-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Slide typography */
+.wr-slide__chip {
+  display: inline-block; padding: 4px 14px;
+  background: rgba(255,255,255,.22);
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 999px;
+  font-size: .75rem; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  color: #fff;
+}
+.wr-slide__big {
+  font-size: 4.5rem; font-weight: 800; line-height: 1;
+  text-shadow: 0 6px 24px rgba(0,0,0,.25);
+  background: linear-gradient(180deg, #fff, rgba(255,255,255,.85));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.wr-slide__giant {
+  font-size: 6rem; line-height: 1;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,.3));
+}
+.wr-slide__title {
+  font-size: 2rem; font-weight: 800;
+  text-shadow: 0 4px 18px rgba(0,0,0,.25);
+}
+.wr-slide__sub {
+  font-size: 1rem; line-height: 1.45;
+  opacity: .96;
+  max-width: 30ch;
+}
+.wr-slide__hint {
+  font-size: .8125rem;
+  opacity: .82;
+  margin-top: 4px;
+}
+.wr-slide__btn {
+  margin-top: 14px; padding: 10px 22px;
+  background: rgba(255,255,255,.96);
+  color: #4f3d80;
+  border: 0; border-radius: 999px;
+  font-family: inherit; font-weight: 800; font-size: .9375rem;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(0,0,0,.25);
+}
+
+/* Loading + unpaired states reuse the dim bg of the page */
+.wr-loading { padding: 24px; }
+
+.wr-unpaired {
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(155,140,255,.18);
+  border-radius: 18px; padding: 28px;
+  text-align: center;
+  color: var(--text, #1a1235);
+}
+.wr-unpaired__icon { font-size: 38px; margin-bottom: 8px; }
+.wr-unpaired h3 { margin: 0 0 4px; }
+.wr-unpaired p { color: var(--muted, #6b5b9b); margin: 0 auto 14px; max-width: 36ch; }
+
+/* On larger screens, center the story like a phone */
+@media (min-width: 720px) {
+  .wr-page {
+    margin: 0 auto; max-width: 420px; height: 720px;
+    box-shadow: 0 24px 60px rgba(40,20,80,.35);
+  }
+}

@@ -133,6 +133,8 @@ function paint(s) {
             <span class="icon">🌹</span><span class="label">Date-night planner</span><span class="arrow">›</span></button></li>
           <li><button class="settings-item" data-act="bucketlist">
             <span class="icon">🪄</span><span class="label">Bucket list</span><span class="arrow">›</span></button></li>
+          <li><button class="settings-item" data-act="wrapped">
+            <span class="icon">🎁</span><span class="label">Couple's Wrapped</span><span class="arrow">›</span></button></li>
           <li><button class="settings-item" data-act="widgets">
             <span class="icon">📱</span><span class="label">Lock-screen widgets</span><span class="arrow">›</span></button></li>
           <li><button class="settings-item" data-act="copyCode">
@@ -206,6 +208,7 @@ function onAction(act) {
     case "timecapsule": return window.loadPage?.("timecapsule");
     case "dates":       return window.loadPage?.("dates");
     case "bucketlist":  return window.loadPage?.("bucketlist");
+    case "wrapped":     return window.loadPage?.("wrapped");
     case "settings":    return window.loadPage?.("settings");
     case "copyCode":    return copyInviteCode();
     case "signOut":     return openSignOutModal();

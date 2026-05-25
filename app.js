@@ -23,6 +23,7 @@ import { renderWidgets }      from './modules/widgets.js';
 import { renderTimeCapsule }  from './modules/timeCapsule.js';
 import { renderDateIdeas }    from './modules/dateIdeas.js';
 import { renderBucketList }   from './modules/bucketList.js';
+import { renderWrapped }      from './modules/wrapped.js';
 import { applyTheme, getStoredTheme } from './modules/settings.js';
 // Side-effect: registers window.avatarFor / window.initialAvatar globals
 import './modules/avatar.js';
@@ -56,7 +57,8 @@ const pages = {
   widgets:      renderWidgets,
   timecapsule:  renderTimeCapsule,
   dates:        renderDateIdeas,
-  bucketlist:   renderBucketList
+  bucketlist:   renderBucketList,
+  wrapped:      renderWrapped
 };
 
 // Pages whose entry exposes a teardownXxx() instead of returning a cleanup fn.
