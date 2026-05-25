@@ -1,60 +1,73 @@
 // =====================================================================
-// modules/incomingCall.js — Listens to calls/{coupleId} doc.
-// When a new ringing call arrives addressed to me, opens the call UI
-// in 'callee' mode so I can accept/decline.
+// modules/incomingCall.js — Listens to calls/{coupleId}.
+// When a new ringing call to ME arrives, opens the call UI in 'callee' mode.
+// Reactive: re-binds the listener whenever appState's coupleId changes.
 // =====================================================================
-import { db, auth } from '../firebase.js';
-import { doc, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { makeCoupleId } from '../utils/coupleId.js';
+import { db } from '../firebase.js';
+import { doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { onAppState } from '../state/appState.js';
+import { getUser } from '../services/partnerService.js';
 import { answerIncoming } from './callView.js';
 
-let unsub = null;
-// Tracks calls we've already opened UI for so we don't re-open on
-// follow-up snapshot fires (e.g. when serverTimestamp resolves).
-let activeCallKey = null;
+let _offState   = null;
+let _unsubCall  = null;
+let _activeCallKey = null;
+let _lastCoupleId  = null;
+let _myUid         = null;
 
 export function startIncomingCallListener() {
-  const me = auth.currentUser;
-  if (!me) return;
+  // Re-attach listener whenever appState is ready / coupleId changes.
+  _offState?.();
+  _offState = onAppState((s) => {
+    if (!s.ready) return;
+    const newCouple = s.coupleId || null;
+    const newUid    = s.user?.uid || null;
+    if (newCouple === _lastCoupleId && newUid === _myUid) return;
 
-  // get partner id
-  getDoc(doc(db, 'users', me.uid)).then((s) => {
-    const partnerId = s.data()?.partnerID || s.data()?.partnerId;
-    if (!partnerId) return;
-    const coupleId = makeCoupleId(me.uid, partnerId);
+    _lastCoupleId = newCouple;
+    _myUid        = newUid;
 
-    unsub?.();
-    unsub = onSnapshot(doc(db, 'calls', coupleId), async (snap) => {
+    // Detach prior call listener
+    try { _unsubCall?.(); } catch {}
+    _unsubCall = null;
+    _activeCallKey = null;
+
+    if (!newCouple || !newUid) return;
+
+    _unsubCall = onSnapshot(doc(db, 'calls', newCouple), async (snap) => {
       const d = snap.data();
       if (!d) return;
 
-      // when call no longer ringing, clear our dedupe gate
+      // Reset dedupe gate when a call is no longer ringing
       if (d.status !== 'ringing') {
-        if (activeCallKey && activeCallKey.startsWith(coupleId + ':')) activeCallKey = null;
+        if (_activeCallKey?.startsWith(newCouple + ':')) _activeCallKey = null;
         return;
       }
+      // Only react if this ring is addressed to me
+      if (d.calleeId !== newUid) return;
 
-      // only react if it's an incoming call to me
-      if (d.calleeId !== me.uid) return;
+      const callKey = `${newCouple}:${d.callerId}`;
+      if (callKey === _activeCallKey) return;
+      _activeCallKey = callKey;
 
-      // dedupe: same caller + ringing window → ignore until status flips
-      const callKey = `${coupleId}:${d.callerId}`;
-      if (callKey === activeCallKey) return;
-      activeCallKey = callKey;
+      // Caller name (cached via partnerService.getUser)
+      let name = "Partner";
+      try {
+        const caller = await getUser(d.callerId);
+        name = caller?.displayName?.split(' ')[0] || caller?.username || "Partner";
+      } catch { /* keep default */ }
 
-      // get caller name
-      const callerSnap = await getDoc(doc(db, 'users', d.callerId)).catch(() => null);
-      const name = callerSnap?.data()?.displayName?.split(' ')[0] || 'Partner';
-
-      // optional: vibrate to alert
-      if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]);
-
+      if (navigator.vibrate) {
+        try { navigator.vibrate([400, 200, 400, 200, 400]); } catch {}
+      }
       answerIncoming(d.callerId, name, d.callType || 'video');
-    });
-  }).catch(() => {});
+    }, (err) => console.warn('[incomingCall] listen error', err));
+  });
 }
 
 export function stopIncomingCallListener() {
-  unsub?.(); unsub = null;
-  activeCallKey = null;
+  try { _offState?.(); } catch {}
+  try { _unsubCall?.(); } catch {}
+  _offState = null; _unsubCall = null;
+  _activeCallKey = null; _lastCoupleId = null; _myUid = null;
 }

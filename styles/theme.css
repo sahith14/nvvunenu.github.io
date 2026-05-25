@@ -105,6 +105,71 @@
   position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(20px);
   background:var(--card);border:1px solid var(--border);border-radius:var(--radius-full);
   padding:12px 24px;font-size:var(--font-sm);color:var(--text);opacity:0;
-  transition:all var(--duration-normal) var(--ease-out);z-index:9999;pointer-events:none;
+  transition:all var(--duration-normal) var(--ease-out);
+  z-index:300;pointer-events:none;
+  max-width:calc(100% - 32px);text-align:center;
+  box-shadow:var(--shadow-md);
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast[data-type="success"]{border-color:rgba(126,255,194,.5);color:#cffce6}
+.toast[data-type="error"]  {border-color:rgba(255,99,99,.6); color:#ffd9d9; background:#2a1212}
+.toast[data-type="warn"]   {border-color:rgba(255,184,140,.55);color:#ffe7d3}
+
+
+/* =====================================================================
+   Light theme — applied via <body class="theme-light">.
+   Overrides surface tokens; accent palette stays the same.
+   ===================================================================== */
+body.theme-light{
+  --bg:#F7F8FB;
+  --surface:#FFFFFF;
+  --card:#FFFFFF;
+  --card-hover:#F1F2F7;
+  --border:rgba(15,17,23,.08);
+  --text:#15171E;
+  --text-secondary:#3A3F4F;
+  --muted:#6B7280;
+  --shadow-sm:0 2px 8px rgba(15,17,23,.06);
+  --shadow-md:0 4px 20px rgba(15,17,23,.08);
+  --shadow-lg:0 8px 40px rgba(15,17,23,.12);
+}
+body.theme-light .glass{
+  background:rgba(255,255,255,.7);
+  border:1px solid rgba(15,17,23,.06);
+}
+body.theme-light .toast[data-type="error"]{
+  background:#fff0f0;color:#7a0e0e;border-color:rgba(180,30,30,.35);
+}
+
+/* =====================================================================
+   Top app header (search + settings entry points). Sits above #page.
+   Hidden on auth pages by leaving #appHeader out of the DOM there.
+   ===================================================================== */
+.app-header{
+  position:sticky;top:0;z-index:60;
+  display:flex;align-items:center;gap:8px;
+  padding:10px 14px env(safe-area-inset-top,10px);
+  background:rgba(15,17,23,.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+body.theme-light .app-header{background:rgba(255,255,255,.85)}
+.app-header .ah-brand{
+  font-weight:800;font-size:1.0625rem;letter-spacing:.2px;
+  background:var(--glow-pink);-webkit-background-clip:text;background-clip:text;color:transparent;
+  margin-right:auto;
+}
+.app-header .ah-btn{
+  width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-full);background:var(--surface);border:1px solid var(--border);
+  font-size:18px;color:var(--text-secondary);
+  transition:all var(--duration-fast) var(--ease-out);
+}
+.app-header .ah-btn:hover{background:var(--card-hover);color:var(--text)}
+.app-header .ah-btn:active{transform:scale(.95)}
+.app-header .ah-btn.has-badge{position:relative}
+.app-header .ah-btn.has-badge::after{
+  content:"";position:absolute;top:8px;right:9px;
+  width:8px;height:8px;border-radius:50%;background:var(--pink);
+  box-shadow:0 0 0 2px var(--bg);
+}

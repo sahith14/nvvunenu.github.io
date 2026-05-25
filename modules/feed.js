@@ -83,11 +83,10 @@ async function showList() {
     </div>
   `;
 
-  // hydrate composer avatar
-  const meSnap = await getDoc(doc(db, 'users', me.uid)).catch(() => null);
-  const myData = meSnap?.data() || {};
+  // hydrate composer avatar (from appState — no extra Firestore read)
+  const meData = (typeof window !== 'undefined' && window.appState?.user) || {};
   const avatarEl = document.getElementById('composerAvatar');
-  if (avatarEl && myData.photoURL) avatarEl.innerHTML = `<img src="${myData.photoURL}" alt="">`;
+  if (avatarEl && meData.photoURL) avatarEl.innerHTML = `<img src="${meData.photoURL}" alt="">`;
 
   // wire tabs
   containerEl.querySelectorAll('.feed-tab').forEach((t) => {
@@ -123,8 +122,8 @@ async function switchTab() {
   unsubFeed?.(); unsubFeed = null;
 
   const me = auth.currentUser;
-  const meSnap = await getDoc(doc(db, 'users', me.uid)).catch(() => null);
-  const following = meSnap?.data()?.following || [];
+  // Read 'following' from appState (already live-synced) instead of refetching.
+  const following = (typeof window !== 'undefined' && window.appState?.user?.following) || [];
 
   if (activeTab === 'following') {
     unsubFeed = subscribeFeed(me.uid, following, (posts) => renderPosts(posts, true));
@@ -196,12 +195,36 @@ function attachPostCardHandlers() {
       if (a === 'open')   { showPost(id); }
       if (a === 'user')   { showUser(uid); }
       if (a === 'delete') {
-        if (confirm('Delete this post?')) {
-          await deletePost(id);
-          window.showToast?.('Post deleted');
-        }
+        confirmDeletePost(id);
       }
     };
+  });
+}
+
+function confirmDeletePost(postId) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bond-modal';
+  wrap.innerHTML = `
+    <div class="bond-modal__panel" role="dialog" aria-modal="true" aria-label="Delete post">
+      <div class="bond-modal__head">Delete this post?</div>
+      <div class="bond-modal__body">
+        <p class="bond-modal__p">This can't be undone. Comments and likes will be removed too.</p>
+      </div>
+      <div class="bond-modal__actions">
+        <button class="btn btn-ghost"   data-act="cancel">Keep it</button>
+        <button class="btn btn-primary" data-act="ok">Delete</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener('click', close);
+  wrap.querySelector('[data-act="ok"]').addEventListener('click', async () => {
+    const ok = wrap.querySelector('[data-act="ok"]');
+    ok.disabled = true;
+    try { await deletePost(postId); window.showToast?.('Post deleted'); close(); }
+    catch (e) { ok.disabled = false; window.showToast?.("Couldn't delete"); }
   });
 }
 

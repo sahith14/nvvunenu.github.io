@@ -1,0 +1,83 @@
+/* =====================================================================
+   styles/cuteFx.css — paired with modules/cuteFx.js
+   All rules are scoped under #cuteHeartsBg / .cute-* — no global leakage.
+   ===================================================================== */
+
+/* Hearts background — a fixed, behind-everything layer */
+#cuteHeartsBg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+}
+#cuteHeartsBg .cute-heart{
+  position:absolute;top:100vh;
+  animation:cuteFloatUp linear forwards;
+  opacity:.7;will-change:transform,opacity;
+  filter:drop-shadow(0 0 8px rgba(255,140,180,.35));
+}
+@keyframes cuteFloatUp{
+  0%   { transform:translateY(0)    rotate(0deg);   opacity:0; }
+  10%  { opacity:.7; }
+  90%  { opacity:.7; }
+  100% { transform:translateY(-110vh) rotate(40deg); opacity:0; }
+}
+@media (prefers-reduced-motion: reduce){
+  #cuteHeartsBg{display:none}
+}
+
+/* Click sparkles */
+.cute-spark{
+  position:fixed;font-size:14px;pointer-events:none;z-index:9998;
+  animation:cuteSparkOut .75s ease-out forwards;
+}
+@keyframes cuteSparkOut{
+  0%   { transform:translate(0,0) scale(.6); opacity:1; }
+  100% { transform:translate(var(--dx,0), var(--dy,0)) scale(1.1); opacity:0; }
+}
+
+/* Button ripple */
+.cute-ripple-dot{
+  position:absolute;border-radius:50%;pointer-events:none;
+  background:rgba(255,255,255,.35);
+  animation:cuteRipple .6s ease-out forwards;
+  transform:scale(0);opacity:.6;
+}
+@keyframes cuteRipple{
+  to{ transform:scale(2); opacity:0; }
+}
+
+/* Confetti */
+.cute-confetti{
+  position:fixed;top:-10vh;width:8px;height:14px;border-radius:2px;
+  pointer-events:none;z-index:9999;
+  animation:cuteConfetti linear forwards;
+}
+@keyframes cuteConfetti{
+  0%   { transform:translate(0,0)               rotate(0deg);   opacity:1; }
+  100% { transform:translate(var(--tx,0),120vh) rotate(720deg); opacity:0; }
+}
+
+/* Cute modal */
+.cute-modal{
+  position:fixed;inset:0;z-index:400;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(4px);
+  display:grid;place-items:center;padding:20px;
+  animation:cuteModalIn .18s var(--ease-out);
+}
+.cute-modal-card{
+  width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:18px;display:flex;flex-direction:column;gap:12px;
+  box-shadow:var(--shadow-lg);
+}
+.cute-modal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cute-modal-head h3{font-size:1rem;font-weight:700;color:var(--text);margin:0}
+.cute-modal-close{
+  width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);
+  display:inline-flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.125rem;
+}
+.cute-modal-close:hover{background:var(--card-hover);color:var(--text)}
+.cute-modal-body{color:var(--text-secondary);font-size:.9375rem;line-height:1.5}
+.cute-modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+
+@keyframes cuteModalIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+
+/* App content stays above the hearts BG */
+#app{position:relative;z-index:1}

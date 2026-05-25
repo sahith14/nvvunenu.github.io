@@ -60,3 +60,77 @@
 .settings-item .icon{font-size:18px;width:24px;text-align:center}
 .settings-item .label{flex:1;font-size:var(--font-sm);font-weight:500}
 .settings-item .arrow{color:var(--muted);font-size:var(--font-sm)}
+
+
+/* =====================================================================
+   Profile (rewrite) — hero, avatar upload, identity rows, plan row
+   ===================================================================== */
+.profile-loading{padding:8px 0}
+
+.profile-hero{
+  display:flex;align-items:center;gap:14px;padding:14px 0;
+}
+.profile-avatar-wrap{
+  position:relative;display:inline-block;width:84px;height:84px;border-radius:50%;
+  background:transparent;border:0;padding:0;cursor:pointer;flex:0 0 84px;
+  transition:transform .15s var(--ease-out);
+}
+.profile-avatar-wrap:hover{transform:scale(1.04)}
+.profile-avatar{
+  width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;
+  background:var(--surface);border:1px solid var(--border);
+}
+.profile-avatar.profile-avatar--initial{
+  display:grid;place-items:center;color:#fff;font-weight:700;font-size:1.6rem;
+  background:linear-gradient(135deg,#FF7EB6,#9B8CFF);
+}
+.profile-avatar-edit{
+  position:absolute;bottom:0;right:0;width:28px;height:28px;border-radius:50%;
+  background:var(--card);border:1px solid var(--border);
+  display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:var(--text);
+}
+.profile-meta{flex:1;min-width:0}
+.profile-name{font-weight:800;font-size:1.125rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile-handle{color:var(--muted);font-size:.875rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.profile-section{display:flex;flex-direction:column;gap:10px}
+.profile-h{font-size:.8125rem;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0}
+.profile-bio{
+  color:var(--text-secondary);font-size:.9375rem;line-height:1.5;
+  white-space:pre-line;min-height:1.4em;
+}
+.profile-bio:empty::before{content:"You haven't added a bio yet.";color:var(--muted);font-style:italic}
+.profile-row-actions{display:flex;flex-wrap:wrap;gap:8px}
+.profile-row-actions .btn{padding:8px 14px;font-size:.8125rem}
+
+/* Identity rows are buttons */
+.identity-list{display:flex;flex-direction:column;gap:6px}
+.identity-row{
+  display:flex;align-items:center;gap:12px;width:100%;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:10px 12px;text-align:left;color:var(--text);font-family:inherit;cursor:pointer;
+  transition:background .15s var(--ease-out);
+}
+.identity-row:hover{background:var(--card-hover)}
+.identity-row .ic{font-size:1.125rem}
+.identity-row .row-label{font-size:.6875rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.identity-row .row-val{font-size:.9375rem;color:var(--text);font-weight:500;margin-top:2px}
+.identity-row .row-arrow{margin-left:auto;color:var(--muted);font-size:1rem}
+
+/* Plan row */
+.profile-plan{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.profile-plan .row-label{font-weight:700;color:var(--text);text-transform:none;letter-spacing:0;font-size:.9375rem}
+.profile-plan .row-val{color:var(--muted);font-size:.875rem;margin-top:2px}
+
+/* Settings-style links + danger */
+.settings-list .settings-item{
+  display:flex;align-items:center;gap:12px;width:100%;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:12px 14px;text-align:left;color:var(--text);font-family:inherit;cursor:pointer;
+}
+.settings-list .settings-item .icon{font-size:1.125rem}
+.settings-list .settings-item .label{flex:1}
+.settings-list .settings-item .arrow{color:var(--muted)}
+.settings-list .settings-item:hover{background:var(--card-hover)}
+.settings-list .settings-item.danger{color:#ff8a8a}
+.settings-list .settings-item.danger:hover{background:rgba(255,99,99,.08)}

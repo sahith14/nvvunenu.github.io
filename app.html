@@ -9,11 +9,29 @@
   <link rel="manifest" href="manifest.json">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+  <!-- Apply saved theme BEFORE stylesheets render to avoid flash -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('nvvunenu.theme') || 'dark';
+        document.documentElement.classList.add('theme-' + t);
+        // Also tag body as soon as it exists
+        document.addEventListener('DOMContentLoaded', function () {
+          document.body.classList.add('theme-' + t);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', t === 'light' ? '#F7F8FB' : '#0F1117');
+        });
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- Core design system -->
   <link rel="stylesheet" href="styles/core.css">
   <link rel="stylesheet" href="styles/theme.css">
   <link rel="stylesheet" href="styles/motion.css">
   <link rel="stylesheet" href="styles/nav.css">
+  <link rel="stylesheet" href="styles/skeleton.css">
+  <link rel="stylesheet" href="styles/cuteFx.css">
 
   <!-- Page styles -->
   <link rel="stylesheet" href="styles/home.css">
@@ -27,9 +45,17 @@
   <link rel="stylesheet" href="styles/chat.css">
   <link rel="stylesheet" href="styles/call.css">
   <link rel="stylesheet" href="styles/feed.css">
+  <link rel="stylesheet" href="styles/profileView.css">
 </head>
 <body>
   <div id="app">
+    <header class="app-header" id="appHeader">
+      <span class="ah-brand">Nuvvu Nenu</span>
+      <button class="ah-btn" data-page="search"   onclick="loadPage('search')"   title="Search"   aria-label="Search">🔍</button>
+      <button class="ah-btn" data-page="bond"     onclick="loadPage('bond')"     title="Bond"     aria-label="Bond" id="hdrBond">💞</button>
+      <button class="ah-btn" data-page="settings" onclick="loadPage('settings')" title="Settings" aria-label="Settings">⚙️</button>
+    </header>
+
     <div class="app-shell"><div id="page"></div></div>
 
     <nav class="bottom-nav" id="nav">

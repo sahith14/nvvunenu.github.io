@@ -1,55 +1,148 @@
 // =====================================================================
-// modules/chat.js — Real-time couple chat UI.
-// Uses services/chatService.js (already built: batched writes, ticks,
-// reactions, typing, paginated history).
-// Adds: voice notes via MediaRecorder + Firebase Storage URL stored in msg.
+// modules/chat.js — Couple chat UI.
+// Reactive: subscribes to appState; rebuilds when partner / coupleId flips.
+// Wires services/chatService.js + services/aiReply.js for smart-reply chips.
 // =====================================================================
-import { db, auth, storage } from '../firebase.js';
-import { doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { db, storage } from '../firebase.js';
+import { onAppState, getState } from '../state/appState.js';
+import { skeletonList } from '../utils/skeleton.js';
+import { toast, toastWarn, toastError, safe } from '../utils/toast.js';
+import { formatDayHeader } from '../utils/time.js';
 import {
   ensureChat, subscribeMessages, sendText, setTyping,
   markDeliveredAndSeen, toggleReaction, subscribeChatMeta, renderTicks
 } from '../services/chatService.js';
+import { rememberMessage, suggestReplies } from '../services/aiReply.js';
+import { gateVoiceNote } from '../services/featureGate.js';
 import { startVideoCall, startAudioCall } from './callView.js';
 
-let unsubMessages = null;
-let unsubMeta     = null;
-let chatId        = null;
-let partnerId     = null;
-let myUid         = null;
-let currentMsgs   = [];
+let _container       = null;
+let _offState        = null;
+let _unsubMessages   = null;
+let _unsubMeta       = null;
+let _typingDebounce  = null;
+let _suggestDebounce = null;
+let _chatId          = null;
+let _myUid           = null;
+let _partnerId       = null;
+let _partnerName     = "Partner";
+let _partnerPhoto    = null;
+let _lastRenderedFor = null;       // (myUid|partnerId) we built the shell for
+let _lastMsgs        = [];
 
-export async function renderChat(container) {
-  myUid = auth.currentUser?.uid;
-  if (!myUid) return;
+export function renderChat(container) {
+  _container = container;
 
-  // resolve partner
-  const meSnap = await getDoc(doc(db, 'users', myUid)).catch(() => null);
-  partnerId = meSnap?.data()?.partnerID || meSnap?.data()?.partnerId || null;
+  // Initial skeleton while we wait for appState
+  _container.innerHTML = `<div class="chat-shell-loading">${skeletonList(5, "msg")}</div>`;
 
-  if (!partnerId) {
-    container.innerHTML = `
-      <div class="chat-empty stagger">
-        <div class="chat-empty-orb"></div>
-        <h2>Chat with your partner 💜</h2>
-        <p>Link your partner first using their invite code.</p>
-        <button class="btn btn-primary" onclick="loadPage('profile')">Go to Profile</button>
-      </div>`;
+  _offState = onAppState(async (s) => {
+    if (!s.ready) return;
+    await onState(s);
+  });
+
+  return cleanup;
+}
+
+export function teardownChat() { cleanup(); }
+
+function cleanup() {
+  try { _offState?.(); } catch {}
+  try { _unsubMessages?.(); } catch {}
+  try { _unsubMeta?.(); } catch {}
+  clearTimeout(_typingDebounce);
+  clearTimeout(_suggestDebounce);
+  _offState = _unsubMessages = _unsubMeta = null;
+  _typingDebounce = _suggestDebounce = null;
+  _container = null;
+  _chatId = _myUid = _partnerId = null;
+  _lastRenderedFor = null;
+  _lastMsgs = [];
+  _partnerPhoto = null;
+}
+
+// =========================================================================
+// State changes
+// =========================================================================
+
+async function onState(s) {
+  _myUid    = s.user?.uid || null;
+  _partnerId = s.partnerId || null;
+  _partnerName  = s.partner?.displayName?.split(' ')[0] || s.partner?.username || "Partner";
+  _partnerPhoto = s.partner?.photoURL || null;
+
+  if (!_partnerId || !_myUid) {
+    paintEmpty();
     return;
   }
 
-  const partnerSnap = await getDoc(doc(db, 'users', partnerId)).catch(() => null);
-  const partnerName = partnerSnap?.data()?.displayName?.split(' ')[0] || 'Partner';
-  const partnerPhoto = partnerSnap?.data()?.photoURL;
-  chatId = await ensureChat(myUid, partnerId);
+  const key = `${_myUid}|${_partnerId}`;
+  if (key !== _lastRenderedFor) {
+    _lastRenderedFor = key;
+    paintShell();
+    // attach (re)subscribers
+    try { _unsubMessages?.(); } catch {}
+    try { _unsubMeta?.(); }    catch {}
+    _unsubMessages = _unsubMeta = null;
 
-  container.innerHTML = `
+    _chatId = await safe(() => ensureChat(_myUid, _partnerId), "Couldn't open chat");
+    if (!_chatId) return;
+
+    _unsubMessages = subscribeMessages(_chatId, (msgs) => {
+      _lastMsgs = msgs;
+      // Feed AI memory
+      for (const m of msgs) {
+        const ms = m.time?.toMillis?.() ?? Date.now();
+        rememberMessage(_chatId, { sender: m.sender, text: m.text || "", time: ms });
+      }
+      renderMessages(msgs);
+      // Mark delivered/seen for inbound
+      markDeliveredAndSeen(_chatId, msgs).catch(() => {});
+      // Refresh smart replies (debounced)
+      scheduleSuggestions();
+    });
+
+    _unsubMeta = subscribeChatMeta(_chatId, (meta) => {
+      const t = meta?.typing?.[_partnerId];
+      const tEl = _container?.querySelector('#chatTyping');
+      if (tEl) tEl.textContent = t ? `${_partnerName} is typing…` : '';
+    });
+  }
+
+  // Always update header presence (fires whenever partner doc updates)
+  updateHeaderPresence(s.partner);
+}
+
+// =========================================================================
+// Render — empty / shell
+// =========================================================================
+
+function paintEmpty() {
+  _container.innerHTML = `
+    <div class="chat-empty stagger">
+      <div class="chat-empty-orb"></div>
+      <h2>Chat with your partner 💜</h2>
+      <p>Connect with your partner first to start chatting.</p>
+      <button class="btn btn-primary" id="chatCtaBond">Find your partner</button>
+    </div>`;
+  _container.querySelector("#chatCtaBond")?.addEventListener("click", () => window.loadPage?.("bond"));
+}
+
+function paintShell() {
+  const initial = (_partnerName || "?").trim().charAt(0).toUpperCase();
+  const avatar = _partnerPhoto
+    ? `<img src="${_partnerPhoto}" alt="" referrerpolicy="no-referrer">`
+    : (typeof window.avatarFor === "function"
+        ? `<img src="${window.avatarFor({ uid: _partnerId, displayName: _partnerName })}" alt="">`
+        : initial);
+
+  _container.innerHTML = `
     <div class="chat-page">
       <header class="chat-header">
         <div class="chat-peer">
-          <div class="chat-peer-avatar">${partnerPhoto ? `<img src="${partnerPhoto}" alt="">` : '💜'}</div>
+          <div class="chat-peer-avatar">${avatar}</div>
           <div class="chat-peer-info">
-            <div class="chat-peer-name">${partnerName}</div>
+            <div class="chat-peer-name">${escapeHtml(_partnerName)}</div>
             <div class="chat-peer-status" id="chatPeerStatus">…</div>
           </div>
         </div>
@@ -59,9 +152,11 @@ export async function renderChat(container) {
         </div>
       </header>
 
-      <div class="chat-stream" id="chatStream"></div>
+      <div class="chat-stream" id="chatStream">${skeletonList(4, "msg")}</div>
 
       <div class="chat-typing" id="chatTyping"></div>
+
+      <div class="chat-suggest" id="chatSuggest" hidden></div>
 
       <footer class="chat-composer">
         <button class="composer-btn" id="btnEmoji"  title="Emoji">😊</button>
@@ -72,52 +167,48 @@ export async function renderChat(container) {
     </div>
   `;
 
-  attachChatHandlers(partnerName);
-
-  // subscribe
-  unsubMessages = subscribeMessages(chatId, (msgs) => {
-    currentMsgs = msgs;
-    renderMessages(msgs);
-    markDeliveredAndSeen(chatId, msgs).catch(() => {});
-  });
-
-  unsubMeta = subscribeChatMeta(chatId, (meta) => {
-    const typing = meta.typing?.[partnerId];
-    const tEl = document.getElementById('chatTyping');
-    if (tEl) tEl.textContent = typing ? `${partnerName} is typing…` : '';
-    const status = document.getElementById('chatPeerStatus');
-    if (status) status.textContent = (partnerSnap?.data()?.status?.online) ? 'Online 💚' : 'Offline';
-  });
+  attachHandlers();
 }
 
-export function teardownChat() {
-  unsubMessages?.(); unsubMessages = null;
-  unsubMeta?.();     unsubMeta     = null;
+function updateHeaderPresence(partner) {
+  const el = _container?.querySelector('#chatPeerStatus');
+  if (!el) return;
+  if (!partner) { el.textContent = "Offline"; return; }
+  const presence = partner.status || {};
+  if (presence.online) { el.textContent = "Online 💚"; return; }
+  if (presence.lastSeen) {
+    const ms = presence.lastSeen?.toMillis?.() ?? +new Date(presence.lastSeen);
+    el.textContent = ms ? "Last seen " + relativeTime(ms) : "Offline";
+    return;
+  }
+  el.textContent = "Offline";
 }
 
 // =========================================================================
-// RENDER
+// Render — messages
 // =========================================================================
+
 function renderMessages(msgs) {
-  const stream = document.getElementById('chatStream');
+  const stream = _container?.querySelector('#chatStream');
   if (!stream) return;
-  if (!msgs.length) {
+  if (!msgs || !msgs.length) {
     stream.innerHTML = `<div class="chat-blank">Say hi 💜</div>`;
     return;
   }
   let html = '';
   let lastDay = '';
   for (const m of msgs) {
-    const ts  = m.time?.toDate?.() || new Date();
-    const day = ts.toDateString();
+    const ts  = m.time?.toDate?.() || (m.time ? new Date(m.time) : new Date());
+    const day = formatDayHeader(ts);
     if (day !== lastDay) {
-      html += `<div class="chat-divider"><span>${formatDay(ts)}</span></div>`;
+      html += `<div class="chat-divider"><span>${escapeHtml(day)}</span></div>`;
       lastDay = day;
     }
-    const mine = m.sender === myUid;
+    const mine = m.sender === _myUid;
     const time = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const reactions = renderReactions(m);
-    let body;
+
+    let body = '';
     if (m.audio) {
       body = `<audio controls src="${m.audio}" class="chat-audio"></audio>`;
     } else if (m.image) {
@@ -131,7 +222,7 @@ function renderMessages(msgs) {
           <div class="chat-text">${body}</div>
           <div class="chat-meta">
             <span class="chat-time">${time}</span>
-            ${mine ? renderTicks(m, myUid) : ''}
+            ${mine ? renderTicks(m, _myUid) : ''}
           </div>
           ${reactions}
         </div>
@@ -140,11 +231,11 @@ function renderMessages(msgs) {
   stream.innerHTML = html;
   stream.scrollTop = stream.scrollHeight;
 
-  // double-tap to react
+  // double-tap to react with ❤️
   stream.querySelectorAll('.chat-row').forEach((row) => {
     row.addEventListener('dblclick', () => {
       const id = row.dataset.id;
-      toggleReaction(chatId, id, '❤️').catch(() => {});
+      toggleReaction(_chatId, id, '❤️').catch(() => {});
     });
   });
 }
@@ -156,108 +247,139 @@ function renderReactions(msg) {
   return `<div class="chat-reactions">${entries.map(([_, e]) => `<span>${e}</span>`).join('')}</div>`;
 }
 
-function formatDay(d) {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const yest  = new Date(today); yest.setDate(yest.getDate() - 1);
-  const target = new Date(d); target.setHours(0,0,0,0);
-  if (target.getTime() === today.getTime()) return 'Today';
-  if (target.getTime() === yest.getTime())  return 'Yesterday';
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+// =========================================================================
+// AI Suggested Replies
+// =========================================================================
+
+function scheduleSuggestions() {
+  clearTimeout(_suggestDebounce);
+  _suggestDebounce = setTimeout(refreshSuggestions, 350);
 }
 
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
+async function refreshSuggestions() {
+  const host = _container?.querySelector('#chatSuggest');
+  if (!host) return;
+
+  // Show only if last message exists AND it's from partner (not me)
+  if (!_lastMsgs.length) { host.hidden = true; return; }
+  const last = _lastMsgs[_lastMsgs.length - 1];
+  if (last.sender === _myUid) { host.hidden = true; return; }
+
+  const replies = await safe(() => suggestReplies(_chatId, _myUid), null);
+  if (!replies || !replies.length) { host.hidden = true; return; }
+
+  host.innerHTML = replies.map((r) =>
+    `<button class="chat-suggest__chip" data-text="${encodeAttr(r)}">${escapeHtml(r)}</button>`
+  ).join('');
+  host.hidden = false;
+
+  host.querySelectorAll('.chat-suggest__chip').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.text || '';
+      if (!text || !_chatId || !_partnerId) return;
+      btn.disabled = true;
+      const ok = await safe(() => sendText(_chatId, _partnerId, text), "Couldn't send");
+      if (ok !== null) host.hidden = true;
+    });
+  });
 }
 
 // =========================================================================
-// HANDLERS
+// Composer / handlers
 // =========================================================================
-function attachChatHandlers(partnerName) {
-  const input = document.getElementById('composerInput');
-  const send  = document.getElementById('btnSend');
-  const voice = document.getElementById('btnVoice');
-  const emoji = document.getElementById('btnEmoji');
-  const audioCallBtn = document.getElementById('btnAudioCall');
-  const videoCallBtn = document.getElementById('btnVideoCall');
 
-  audioCallBtn.onclick = () => startAudioCall(partnerId, partnerName);
-  videoCallBtn.onclick = () => startVideoCall(partnerId, partnerName);
+function attachHandlers() {
+  const input = _container.querySelector('#composerInput');
+  const send  = _container.querySelector('#btnSend');
+  const voice = _container.querySelector('#btnVoice');
+  const emoji = _container.querySelector('#btnEmoji');
+  const audioCallBtn = _container.querySelector('#btnAudioCall');
+  const videoCallBtn = _container.querySelector('#btnVideoCall');
 
-  // typing
-  let typingTimer = null;
+  audioCallBtn.onclick = () => startAudioCall(_partnerId, _partnerName);
+  videoCallBtn.onclick = () => startVideoCall(_partnerId, _partnerName);
+
   input.addEventListener('input', () => {
-    setTyping(chatId, true);
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => setTyping(chatId, false), 1500);
+    if (!_chatId) return;
+    setTyping(_chatId, true);
+    clearTimeout(_typingDebounce);
+    _typingDebounce = setTimeout(() => setTyping(_chatId, false), 1500);
   });
 
   function doSend() {
     const text = input.value.trim();
-    if (!text) return;
-    sendText(chatId, partnerId, text).catch(() => {});
+    if (!text || !_chatId || !_partnerId) return;
+    safe(() => sendText(_chatId, _partnerId, text), "Couldn't send");
     input.value = '';
-    setTyping(chatId, false);
+    setTyping(_chatId, false);
+    // Hide suggestions immediately when user sends
+    const host = _container?.querySelector('#chatSuggest');
+    if (host) host.hidden = true;
   }
-
   send.onclick = doSend;
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSend(); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doSend(); } });
 
-  // emoji palette
   emoji.onclick = () => {
     const palette = ['💜','😘','🥰','😍','😂','🥺','🫶','💋','🌙','✨','🥹','🫨'];
-    const pick = palette[Math.floor(Math.random() * palette.length)];
-    input.value += pick;
+    input.value += palette[Math.floor(Math.random() * palette.length)];
     input.focus();
   };
 
-  // voice note (hold to record)
+  attachVoiceRecorder(voice);
+}
+
+// ---- Voice recorder (hold to record) ----
+function attachVoiceRecorder(voiceBtn) {
   let mediaRecorder = null;
   let chunks = [];
   let pressTimer = null;
+  let stream = null;
 
-  const beginRecord = async () => {
+  const begin = async () => {
+    // Plan check first — gateVoiceNote tracks daily count and routes to /subscription on cap.
+    const gate = await gateVoiceNote();
+    if (gate && gate.allowed === false) {
+      // featureGate.showUpgradePrompt already toasts + routes
+      return;
+    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
       chunks = [];
       mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
       mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
+        try { stream?.getTracks().forEach((t) => t.stop()); } catch {}
         const blob = new Blob(chunks, { type: 'audio/webm' });
         await uploadAndSendAudio(blob);
       };
       mediaRecorder.start();
-      voice.classList.add('recording');
-      window.showToast?.('Recording… release to send');
+      voiceBtn.classList.add('recording');
+      toast('Recording… release to send');
     } catch (e) {
-      window.showToast?.('Mic permission denied');
+      toastError('Microphone permission denied');
     }
   };
-
-  const endRecord = () => {
-    voice.classList.remove('recording');
+  const end = () => {
+    voiceBtn.classList.remove('recording');
     if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
   };
 
-  voice.addEventListener('mousedown', () => { pressTimer = setTimeout(beginRecord, 150); });
-  voice.addEventListener('mouseup',   () => { clearTimeout(pressTimer); endRecord(); });
-  voice.addEventListener('mouseleave',() => { clearTimeout(pressTimer); endRecord(); });
-  voice.addEventListener('touchstart',(e) => { e.preventDefault(); pressTimer = setTimeout(beginRecord, 150); }, { passive: false });
-  voice.addEventListener('touchend',  () => { clearTimeout(pressTimer); endRecord(); });
+  voiceBtn.addEventListener('mousedown',  () => { pressTimer = setTimeout(begin, 150); });
+  voiceBtn.addEventListener('mouseup',    () => { clearTimeout(pressTimer); end(); });
+  voiceBtn.addEventListener('mouseleave', () => { clearTimeout(pressTimer); end(); });
+  voiceBtn.addEventListener('touchstart', (e) => { e.preventDefault(); pressTimer = setTimeout(begin, 150); }, { passive: false });
+  voiceBtn.addEventListener('touchend',   () => { clearTimeout(pressTimer); end(); });
 }
 
-// =========================================================================
-// VOICE NOTE UPLOAD (Firebase Storage if available, else inline base64)
-// =========================================================================
+// ---- Voice note upload ----
 async function uploadAndSendAudio(blob) {
+  if (!_chatId || !_partnerId || !_myUid) return;
   let url = null;
   try {
     if (storage) {
       const { ref, uploadBytes, getDownloadURL } =
         await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
-      const path = `voicenotes/${chatId}/${Date.now()}_${myUid}.webm`;
+      const path = `voicenotes/${_chatId}/${Date.now()}_${_myUid}.webm`;
       const fileRef = ref(storage, path);
       await uploadBytes(fileRef, blob, { contentType: 'audio/webm' });
       url = await getDownloadURL(fileRef);
@@ -265,13 +387,8 @@ async function uploadAndSendAudio(blob) {
   } catch (e) {
     console.warn('[chat] storage upload failed, falling back to base64', e);
   }
-
   if (!url) {
-    // fallback: base64 inline (small notes only)
-    if (blob.size > 600 * 1024) {
-      window.showToast?.('Voice note too large');
-      return;
-    }
+    if (blob.size > 600 * 1024) { toastWarn('Voice note too large'); return; }
     url = await new Promise((res) => {
       const fr = new FileReader();
       fr.onload = () => res(fr.result);
@@ -279,26 +396,42 @@ async function uploadAndSendAudio(blob) {
     });
   }
 
-  // store as message with `audio` field
-  const { collection, doc, addDoc, updateDoc, writeBatch, serverTimestamp, increment } =
+  const { collection, doc, writeBatch, serverTimestamp, increment } =
     await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
   const batch = writeBatch(db);
-  const msgRef  = doc(collection(db, 'chats', chatId, 'messages'));
-  const chatRef = doc(db, 'chats', chatId);
+  const msgRef  = doc(collection(db, 'chats', _chatId, 'messages'));
+  const chatRef = doc(db, 'chats', _chatId);
   batch.set(msgRef, {
-    audio: url,
-    sender: myUid,
-    time: serverTimestamp(),
-    status: 'sent',
-    deliveredAt: null, seenAt: null, reactions: {}
+    audio: url, sender: _myUid, time: serverTimestamp(),
+    status: 'sent', deliveredAt: null, seenAt: null, reactions: {}
   });
   batch.update(chatRef, {
     lastMessage:        '🎙️ Voice note',
     lastMessageTime:    serverTimestamp(),
-    lastMessageSender:  myUid,
-    [`unread.${partnerId}`]: increment(1),
-    [`unread.${myUid}`]:     0
+    lastMessageSender:  _myUid,
+    [`unread.${_partnerId}`]: increment(1),
+    [`unread.${_myUid}`]:     0
   });
-  await batch.commit();
+  await batch.commit().catch((e) => toastError("Couldn't send voice note"));
+}
+
+// ---- helpers ----
+function relativeTime(ms) {
+  const diff = Math.max(0, Date.now() - ms);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const d = Math.floor(hr / 24);
+  return `${d}d ago`;
+}
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+function encodeAttr(s) {
+  return String(s ?? "").replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }

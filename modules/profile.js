@@ -1,281 +1,384 @@
-// NUVVU NENU — You (Profile) Page
-// Now also hosts: public-profile preview, username editor, and inline Bond view.
-import { db, auth } from '../firebase.js';
-import { doc, getDoc, updateDoc, collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { pairWithInviteCode, unpair } from '../services/partnerService.js';
-import { setUsername, isUsernameAvailable } from '../services/feedService.js';
-import { getPartnerId } from '../utils/coupleId.js';
+// =====================================================================
+// modules/profile.js — Your own profile (edit-yourself surface).
+// Migrated to appState (no inline getDoc(users/uid) calls).
+// Avatar upload via services/storageService.js.
+// All editing flows use modals — no prompt() / confirm().
+// =====================================================================
+import { auth, db } from "../firebase.js";
+import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAppState, getState } from "../state/appState.js";
+import { toast, toastSuccess, toastWarn, toastError, safe } from "../utils/toast.js";
+import { skeletonList } from "../utils/skeleton.js";
+import { uploadMedia, compressImage } from "../services/storageService.js";
+import { setUsername, isUsernameAvailable } from "../services/feedService.js";
+import { getSubscription, PLANS } from "../services/subscriptionService.js";
+
+let _container = null;
+let _offState  = null;
 
 export function renderProfile(container) {
-  const user = window.currentUser;
-  const name = user.displayName || 'You';
+  _container = container;
+  _container.innerHTML = `<div class="profile-loading">${skeletonList(3, "card")}</div>`;
 
-  container.innerHTML = `
-    <div class="profile-page stagger">
-      <!-- Couple Identity -->
-      <div class="couple-header">
-        <div class="couple-avatars">
-          <div class="couple-avatar">🫧</div>
-          <span class="couple-heart">♡</span>
-          <div class="couple-avatar">💜</div>
-        </div>
-        <div class="couple-names" id="coupleNames">${name}</div>
-        <div class="couple-days" id="coupleDays">Loading…</div>
-        <div class="profile-handle" id="profileHandle">@…</div>
-      </div>
+  _offState = onAppState(async (s) => {
+    if (!s.ready) return;
+    paint(s);
+    const sub = await safe(() => getSubscription(s.user.uid), null);
+    if (sub) paintPlanRow(sub);
+  });
 
-      <!-- Public profile actions -->
-      <div class="identity-section">
-        <h3>Your Public Profile</h3>
-        <div class="settings-list">
-          <button class="settings-item" onclick="setMyUsername()"><span class="icon">@</span><span class="label">Edit Username</span><span class="arrow">›</span></button>
-          <button class="settings-item" onclick="editBio()"><span class="icon">📝</span><span class="label">Edit Bio</span><span class="arrow">›</span></button>
-          <button class="settings-item" onclick="viewMyPublicProfile()"><span class="icon">👁️</span><span class="label">View My Public Profile</span><span class="arrow">›</span></button>
-        </div>
-      </div>
+  return cleanup;
+}
 
-      <!-- Emotional Identity -->
-      <div class="identity-section">
-        <h3>Your Emotional Identity</h3>
-        <div class="identity-card" onclick="editField('loveStyle')"><span class="icon">💜</span><div class="info"><div class="label">Love Style</div><div class="value" id="loveStyle">Tap to set</div></div></div>
-        <div class="identity-card" onclick="editField('comfortSong')"><span class="icon">🎵</span><div class="info"><div class="label">Comfort Song</div><div class="value" id="comfortSong">Not set</div></div></div>
-        <div class="identity-card" onclick="editField('currentMood')"><span class="icon">🌙</span><div class="info"><div class="label">Current Mood</div><div class="value" id="currentMood">—</div></div></div>
-        <div class="identity-card" onclick="editField('favMemory')"><span class="icon">📸</span><div class="info"><div class="label">Favorite Memory</div><div class="value" id="favMemory">Not set</div></div></div>
-      </div>
+function cleanup() {
+  try { _offState?.(); } catch {}
+  _offState = null; _container = null;
+}
 
-      <!-- Inline Bond view -->
-      <div class="identity-section bond-inline" id="bondInline">
-        <h3>Your Bond 💫</h3>
-        <div class="pulse-card mini">
-          <div class="pulse-orb"></div>
-          <div class="pulse-label">Relationship Pulse</div>
-          <div class="pulse-score" id="profilePulseScore">—</div>
-        </div>
-        <div class="love-langs">
-          <div class="lang-item"><span class="emoji">💬</span><div class="info"><div class="name">Words</div><div class="lang-bar"><div class="fill words" id="profLangWords"  style="width:60%"></div></div></div></div>
-          <div class="lang-item"><span class="emoji">⏰</span><div class="info"><div class="name">Quality Time</div><div class="lang-bar"><div class="fill time" id="profLangTime"  style="width:80%"></div></div></div></div>
-          <div class="lang-item"><span class="emoji">🤗</span><div class="info"><div class="name">Touch</div><div class="lang-bar"><div class="fill touch" id="profLangTouch" style="width:70%"></div></div></div></div>
-        </div>
-        <div class="countdowns">
-          <h3 style="font-size:var(--font-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:500;margin-bottom:8px">Coming Up</h3>
-          <div id="profCountdownList"></div>
-          <button class="btn btn-ghost" onclick="addCountdown()" style="width:100%;margin-top:8px">+ Add Event</button>
-        </div>
-      </div>
+// =========================================================================
+// Render
+// =========================================================================
+function paint(s) {
+  const me = s.user || {};
+  const name = me.displayName || me.username || "You";
+  const handle = me.username ? `@${me.username}` : "Set a username";
+  const initial = (name || "?").trim().charAt(0).toUpperCase();
+  const avatarUrl = me.photoURL ||
+    (typeof window.avatarFor === "function" ? window.avatarFor(me, me.uid) : null);
 
-      <!-- Settings -->
-      <div class="identity-section">
-        <h3>Settings</h3>
-        <div class="settings-list">
-          <button class="settings-item" onclick="editProfile()"><span class="icon">✏️</span><span class="label">Edit Profile (bulk)</span><span class="arrow">›</span></button>
-          <button class="settings-item" onclick="loadPage('subscription')"><span class="icon">⭐</span><span class="label">Premium</span><span class="arrow">›</span></button>
-          <button class="settings-item" onclick="managePartner()"><span class="icon">💜</span><span class="label">Partner Settings</span><span class="arrow">›</span></button>
-          <button class="settings-item" onclick="copyInviteCode()"><span class="icon">🔗</span><span class="label">My Invite Code</span><span class="arrow">›</span></button>
-          <button class="settings-item" onclick="toggleNotifs()"><span class="icon">🔔</span><span class="label">Notifications</span><span class="arrow">›</span></button>
-          <button class="settings-item" onclick="logout()"><span class="icon">👋</span><span class="label">Log Out</span><span class="arrow">›</span></button>
+  _container.innerHTML = `
+    <section class="profile-page stagger">
+      <header class="profile-hero">
+        <button class="profile-avatar-wrap" id="btnAvatarUpload"
+                title="Change photo" aria-label="Change profile photo">
+          ${avatarUrl
+            ? `<img class="profile-avatar" alt="" src="${avatarUrl}" referrerpolicy="no-referrer">`
+            : `<div class="profile-avatar profile-avatar--initial">${escapeHtml(initial)}</div>`}
+          <span class="profile-avatar-edit">📷</span>
+        </button>
+        <div class="profile-meta">
+          <div class="profile-name">${escapeHtml(name)}</div>
+          <div class="profile-handle" id="profileHandle">${escapeHtml(handle)}</div>
         </div>
+      </header>
+
+      <section class="card profile-section">
+        <h3 class="profile-h">About you</h3>
+        <p class="profile-bio" id="profileBio">${escapeHtml(me.bio || "")}</p>
+        <div class="profile-row-actions">
+          <button class="btn btn-ghost"   data-act="editBio">Edit bio</button>
+          <button class="btn btn-ghost"   data-act="editName">Edit username</button>
+          <button class="btn btn-primary" data-act="viewPublic">View public profile</button>
+        </div>
+      </section>
+
+      <section class="card profile-section">
+        <h3 class="profile-h">Your emotional identity</h3>
+        <ul class="identity-list">
+          <li><button data-edit="loveStyle"   class="identity-row">
+            <span class="ic">💜</span><div><div class="row-label">Love style</div>
+            <div class="row-val">${escapeHtml(me.loveStyle || "Tap to set")}</div></div>
+            <span class="row-arrow">›</span></button></li>
+          <li><button data-edit="comfortSong" class="identity-row">
+            <span class="ic">🎵</span><div><div class="row-label">Comfort song</div>
+            <div class="row-val">${escapeHtml(me.comfortSong || "Not set")}</div></div>
+            <span class="row-arrow">›</span></button></li>
+          <li><button data-edit="currentMood" class="identity-row">
+            <span class="ic">🌙</span><div><div class="row-label">Current mood</div>
+            <div class="row-val">${escapeHtml(me.currentMood || "—")}</div></div>
+            <span class="row-arrow">›</span></button></li>
+          <li><button data-edit="favMemory"   class="identity-row">
+            <span class="ic">📸</span><div><div class="row-label">Favorite memory</div>
+            <div class="row-val">${escapeHtml(me.favMemory || "Not set")}</div></div>
+            <span class="row-arrow">›</span></button></li>
+        </ul>
+      </section>
+
+      <section class="card profile-section" id="planRow">
+        <h3 class="profile-h">Plan</h3>
+        <div class="profile-plan">
+          <div>
+            <div class="row-label" id="planName">…</div>
+            <div class="row-val"   id="planSub">—</div>
+          </div>
+          <button class="btn btn-primary" data-act="upgrade">Manage plan</button>
+        </div>
+      </section>
+
+      <section class="card profile-section">
+        <h3 class="profile-h">Quick links</h3>
+        <ul class="settings-list">
+          <li><button class="settings-item" data-act="bond">
+            <span class="icon">💞</span><span class="label">Bond / Pairing</span><span class="arrow">›</span></button></li>
+          <li><button class="settings-item" data-act="copyCode">
+            <span class="icon">🔗</span><span class="label">Copy invite code</span><span class="arrow">›</span></button></li>
+          <li><button class="settings-item" data-act="settings">
+            <span class="icon">⚙️</span><span class="label">Settings</span><span class="arrow">›</span></button></li>
+          <li><button class="settings-item danger" data-act="signOut">
+            <span class="icon">👋</span><span class="label">Sign out</span><span class="arrow">›</span></button></li>
+        </ul>
+      </section>
+    </section>
+  `;
+
+  wireActions();
+}
+
+function paintPlanRow(sub) {
+  const planId = sub?.plan || "free";
+  const def = PLANS[planId] || PLANS.free;
+  const nameEl = _container?.querySelector("#planName");
+  const subEl  = _container?.querySelector("#planSub");
+  if (nameEl) nameEl.textContent = def.label;
+  if (subEl)  subEl.textContent  = planId === "free"
+    ? "You're on the Free plan."
+    : `${def.label} · $${def.priceMonthly.toFixed(2)} / month`;
+}
+
+// =========================================================================
+// Actions
+// =========================================================================
+function wireActions() {
+  // Avatar upload
+  _container.querySelector("#btnAvatarUpload")?.addEventListener("click", openAvatarPicker);
+
+  // Section actions
+  _container.querySelectorAll('button[data-act]').forEach((btn) => {
+    btn.addEventListener("click", () => onAction(btn.dataset.act));
+  });
+
+  // Identity row edits
+  _container.querySelectorAll('button[data-edit]').forEach((btn) => {
+    btn.addEventListener("click", () => openEditFieldModal(btn.dataset.edit));
+  });
+}
+
+function onAction(act) {
+  switch (act) {
+    case "editBio":     return openBioModal();
+    case "editName":    return openUsernameModal();
+    case "viewPublic":  return viewMyPublic();
+    case "upgrade":     return window.loadPage?.("subscription");
+    case "bond":        return window.loadPage?.("bond");
+    case "settings":    return window.loadPage?.("settings");
+    case "copyCode":    return copyInviteCode();
+    case "signOut":     return openSignOutModal();
+  }
+}
+
+async function viewMyPublic() {
+  const s = getState();
+  if (!s.user?.uid) return;
+  window.__viewUserUid = s.user.uid;
+  window.loadPage?.("profileView");
+}
+
+async function copyInviteCode() {
+  const uid = getState().user?.uid;
+  if (!uid) return toastError("Not signed in");
+  try {
+    await navigator.clipboard.writeText(uid);
+    toastSuccess("Invite code copied — share it with your partner");
+  } catch {
+    toastWarn("Couldn't copy automatically — your code is your UID");
+  }
+}
+
+// =========================================================================
+// Modals
+// =========================================================================
+function openModal({ title, body, primary = "Save", onSubmit, onMounted }) {
+  const wrap = document.createElement("div");
+  wrap.className = "bond-modal";
+  wrap.innerHTML = `
+    <div class="bond-modal__panel" role="dialog" aria-modal="true" aria-label="${escapeAttr(title)}">
+      <div class="bond-modal__head">${escapeHtml(title)}</div>
+      <div class="bond-modal__body">${body}</div>
+      <div class="bond-modal__actions">
+        <button class="btn btn-ghost"   data-act="cancel">Cancel</button>
+        <button class="btn btn-primary" data-act="ok">${escapeHtml(primary)}</button>
       </div>
     </div>
   `;
-
-  loadProfileData();
+  document.body.appendChild(wrap);
+  const close = () => { try { wrap.remove(); } catch {} };
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('[data-act="cancel"]').addEventListener("click", close);
+  wrap.querySelector('[data-act="ok"]').addEventListener("click", async () => {
+    const ok = wrap.querySelector('[data-act="ok"]');
+    ok.disabled = true;
+    const handled = await Promise.resolve(onSubmit(wrap));
+    ok.disabled = false;
+    if (handled !== false) close();
+  });
+  onMounted?.(wrap);
+  (wrap.querySelector("textarea, input") || null)?.focus();
 }
 
-async function loadProfileData() {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return;
+const FIELD_LABELS = {
+  loveStyle:   { label: "Love style",   placeholder: "Gentle, Passionate, Playful, Protective…" },
+  comfortSong: { label: "Comfort song", placeholder: "Artist — Song" },
+  currentMood: { label: "Current mood", placeholder: "🌙 Calm" },
+  favMemory:   { label: "Favorite memory", placeholder: "A line about a moment that means a lot…" }
+};
 
-  const snap = await getDoc(doc(db, 'users', uid)).catch(() => null);
-  if (!snap?.exists()) return;
-  const d = snap.data();
+function openEditFieldModal(field) {
+  const def = FIELD_LABELS[field] || { label: field, placeholder: "" };
+  const me  = getState().user || {};
+  const cur = me[field] || "";
 
-  // Username handle
-  const handleEl = document.getElementById('profileHandle');
-  if (handleEl) handleEl.textContent = d.username ? `@${d.username}` : 'Set a username';
-
-  // Couple info
-  const partnerKey = getPartnerId(d);
-  if (partnerKey) {
-    const pSnap = await getDoc(doc(db, 'users', partnerKey)).catch(() => null);
-    const pName = pSnap?.data()?.displayName?.split(' ')[0] || 'Partner';
-    const myName = d.displayName?.split(' ')[0] || 'You';
-    document.getElementById('coupleNames').textContent = `${myName} ♡ ${pName}`;
-    if (d.togetherSince) {
-      const days = Math.floor((Date.now() - d.togetherSince.toMillis()) / 86400000);
-      document.getElementById('coupleDays').textContent = `Together for ${days} days 💜`;
-    } else {
-      document.getElementById('coupleDays').textContent = 'Linked 💜';
+  openModal({
+    title: `Edit: ${def.label}`,
+    body: `<label class="bond-field"><span>${escapeHtml(def.label)}</span>
+             <input id="fldVal" type="text" maxlength="120"
+                    placeholder="${escapeAttr(def.placeholder)}" value="${escapeAttr(cur)}"></label>`,
+    primary: "Save",
+    onSubmit: async (root) => {
+      const v = root.querySelector("#fldVal").value.trim();
+      const ok = await safe(
+        () => updateDoc(doc(db, "users", me.uid), { [field]: v }),
+        "Couldn't save"
+      );
+      if (ok !== null) toastSuccess("Saved 💜");
     }
-    loadInlineBond(uid, partnerKey);
-    document.getElementById('bondInline').style.display = '';
-  } else {
-    document.getElementById('coupleDays').textContent = 'Invite your partner to connect';
-    document.getElementById('bondInline').style.display = 'none';
-  }
-
-  // Identity fields
-  if (d.loveStyle)   document.getElementById('loveStyle').textContent   = d.loveStyle;
-  if (d.comfortSong) document.getElementById('comfortSong').textContent = d.comfortSong;
-  if (d.currentMood) document.getElementById('currentMood').textContent = d.currentMood;
-  if (d.favMemory)   document.getElementById('favMemory').textContent   = d.favMemory;
+  });
 }
 
-async function loadInlineBond(uid, partnerKey) {
-  const coupleId = [uid, partnerKey].sort().join('_');
-  const bondSnap = await getDoc(doc(db, 'bonds', coupleId)).catch(() => null);
-  if (bondSnap?.exists()) {
-    const d = bondSnap.data();
-    const score = document.getElementById('profilePulseScore');
-    if (score) score.textContent = `${d.pulse || 75}%`;
-  } else {
-    const score = document.getElementById('profilePulseScore');
-    if (score) score.textContent = '75%';
-  }
-  // Countdowns
-  try {
-    const cdSnap = await getDocs(query(collection(db, 'bonds', coupleId, 'events'), orderBy('date'), limit(3)));
-    const list = document.getElementById('profCountdownList');
-    if (!list) return;
-    if (cdSnap.empty) {
-      list.innerHTML = `<div style="text-align:center;padding:8px;color:var(--muted);font-size:var(--font-sm)">No upcoming events</div>`;
-    } else {
-      list.innerHTML = '';
-      cdSnap.forEach((d) => {
-        const ev = d.data();
-        const ms = ev.date?.toMillis?.() ?? new Date(ev.date).getTime();
-        const daysLeft = Math.ceil((ms - Date.now()) / 86400000);
-        list.innerHTML += `<div class="countdown-card"><span class="event">${ev.title}</span><span class="days">${daysLeft > 0 ? daysLeft + 'd' : 'Today!'}</span></div>`;
+function openBioModal() {
+  const me = getState().user || {};
+  openModal({
+    title: "Edit your bio",
+    body: `<label class="bond-field"><span>Bio (200 chars max)</span>
+             <textarea id="bioVal" rows="3" maxlength="200" placeholder="A line about you…">${escapeHtml(me.bio || "")}</textarea></label>`,
+    primary: "Save",
+    onSubmit: async (root) => {
+      const v = root.querySelector("#bioVal").value.trim().slice(0, 200);
+      const ok = await safe(() => updateDoc(doc(db, "users", me.uid), { bio: v }), "Couldn't save");
+      if (ok !== null) toastSuccess("Bio updated");
+    }
+  });
+}
+
+function openUsernameModal() {
+  const me = getState().user || {};
+  openModal({
+    title: "Edit username",
+    body: `
+      <label class="bond-field"><span>Username (3+ chars, a–z 0–9 _ . )</span>
+        <input id="userVal" type="text" maxlength="30"
+               placeholder="your_username" value="${escapeAttr(me.username || "")}"></label>
+      <p class="bond-tip" id="userStatus">Type a username and we'll check availability.</p>
+    `,
+    primary: "Save",
+    onSubmit: async (root) => {
+      const v = root.querySelector("#userVal").value.trim().toLowerCase();
+      if (!v) { toastWarn("Pick a username"); return false; }
+      try {
+        const claimed = await setUsername(v);
+        toastSuccess(`Username set: @${claimed}`);
+      } catch (e) {
+        if (e?.message === "USERNAME_TAKEN")        toastError("That username is taken");
+        else if (e?.message === "USERNAME_TOO_SHORT") toastWarn("Username must be 3+ characters");
+        else                                          toastError("Couldn't set username");
+        return false;
+      }
+    },
+    onMounted: (root) => {
+      const inp = root.querySelector("#userVal");
+      const out = root.querySelector("#userStatus");
+      let t = null;
+      inp.addEventListener("input", () => {
+        clearTimeout(t);
+        const v = inp.value.trim().toLowerCase();
+        if (!v || v.length < 3) { out.textContent = "Type at least 3 characters."; return; }
+        out.textContent = "Checking…";
+        t = setTimeout(async () => {
+          try {
+            const ok = await isUsernameAvailable(v);
+            out.textContent = ok ? "✅ Available" : "❌ That one is taken";
+          } catch { out.textContent = ""; }
+        }, 350);
       });
     }
-  } catch {}
+  });
+}
+
+function openSignOutModal() {
+  openModal({
+    title: "Sign out?",
+    body: `<p class="bond-modal__p">You'll be returned to the login screen. Your data stays safe.</p>`,
+    primary: "Sign out",
+    onSubmit: async () => {
+      const ok = await safe(() => signOut(auth), "Couldn't sign out");
+      if (ok !== null) toast("Signed out");
+      // app.js's onAuthStateChanged will redirect to login.html
+    }
+  });
 }
 
 // =========================================================================
-// HANDLERS
+// Avatar upload
 // =========================================================================
-window.editField = function(field) {
-  const uid = auth.currentUser?.uid;
-  const val = prompt(`Set your ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}:`);
-  if (!val) return;
-  updateDoc(doc(db, 'users', uid), { [field]: val }).then(() => {
-    window.showToast('Updated 💜');
-    loadProfileData();
+function openAvatarPicker() {
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = "image/*";
+  inp.style.display = "none";
+  inp.addEventListener("change", async () => {
+    const file = inp.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toastError("Max 8 MB"); return; }
+    await uploadAvatar(file);
   });
-};
+  document.body.appendChild(inp);
+  inp.click();
+  setTimeout(() => inp.remove(), 1000);
+}
 
-window.editProfile = function() {
-  const uid = auth.currentUser?.uid;
-  const loveStyle = prompt('Your love style (e.g. Gentle, Passionate, Playful, Protective)');
-  const comfortSong = prompt('Your comfort song');
-  const mood = prompt('Current mood emoji + word');
+async function uploadAvatar(file) {
+  const me = getState().user;
+  if (!me?.uid) return toastError("Not signed in");
 
-  const updates = {};
-  if (loveStyle) updates.loveStyle = loveStyle;
-  if (comfortSong) updates.comfortSong = comfortSong;
-  if (mood) updates.currentMood = mood;
-
-  if (Object.keys(updates).length) {
-    updateDoc(doc(db, 'users', uid), updates).then(() => {
-      window.showToast('Profile updated 💜');
-      loadProfileData();
-    });
+  // Optimistic preview
+  const wrap = _container?.querySelector("#btnAvatarUpload");
+  let url;
+  try { url = URL.createObjectURL(file); } catch {}
+  if (url && wrap) {
+    const previewHtml = `<img class="profile-avatar" alt="" src="${url}" referrerpolicy="no-referrer">
+                         <span class="profile-avatar-edit">⏳</span>`;
+    wrap.innerHTML = previewHtml;
   }
-};
 
-window.editBio = async function() {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return;
-  const snap = await getDoc(doc(db, 'users', uid)).catch(() => null);
-  const current = snap?.data()?.bio || '';
-  const next = prompt('Your bio (shown on your public profile):', current);
-  if (next === null) return;
-  await updateDoc(doc(db, 'users', uid), { bio: next.slice(0, 200) });
-  window.showToast('Bio updated');
-};
-
-window.setMyUsername = async function() {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return;
-  const snap = await getDoc(doc(db, 'users', uid)).catch(() => null);
-  const current = snap?.data()?.username || '';
-  const next = prompt(
-    'Pick a username (3+ chars, a-z 0-9 _ .):',
-    current
+  toast("Uploading photo…");
+  const compressed = await compressImage(file, 800, 0.85);
+  const upload = await safe(
+    () => uploadMedia(compressed, { folder: `avatars/${me.uid}` }),
+    "Upload failed"
   );
-  if (!next) return;
-  try {
-    const claimed = await setUsername(next);
-    window.showToast(`Username set: @${claimed}`);
-    loadProfileData();
-  } catch (e) {
-    if (e?.message === 'USERNAME_TAKEN')        window.showToast('That username is taken');
-    else if (e?.message === 'USERNAME_TOO_SHORT') window.showToast('Username must be 3+ characters');
-    else window.showToast('Could not set username');
-  }
-};
-
-window.viewMyPublicProfile = function() {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return;
-  // Switch to feed page, then open my profile via the feed module's helper.
-  window.loadPage?.('feed');
-  setTimeout(() => window.openFeedUser?.(uid), 80);
-};
-
-window.managePartner = async function() {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return;
-  const me = await getDoc(doc(db, 'users', uid)).catch(() => null);
-  const linked = getPartnerId(me?.data());
-
-  if (linked) {
-    if (!confirm('You are already linked. Unlink your partner?')) return;
-    try {
-      await unpair(uid);
-      window.showToast('Unlinked');
-      loadProfileData();
-    } catch (e) {
-      window.showToast('Error unlinking');
-    }
+  if (!upload) {
+    if (url) URL.revokeObjectURL(url);
+    paint(getState());
     return;
   }
 
-  const code = prompt(
-    'Paste your partner\'s invite code (their UID).\n' +
-    'They can find it on their Profile → My Invite Code.'
+  await safe(
+    () => updateDoc(doc(db, "users", me.uid), { photoURL: upload.url }),
+    "Saved photo, but couldn't update profile"
   );
-  if (!code) return;
+  if (url) URL.revokeObjectURL(url);
+  toastSuccess("Photo updated 💜");
+  // appState onSnapshot will fire and re-paint via the listener.
+}
 
-  try {
-    await pairWithInviteCode(uid, code);
-    window.showToast('Partner linked! 💜');
-    loadProfileData();
-  } catch (e) {
-    if (e?.message === 'CODE_NOT_FOUND') window.showToast('Invite code not found');
-    else if (e?.message === 'SELF_PAIR') window.showToast("You can't pair with yourself 💜");
-    else window.showToast('Could not link partner');
-  }
-};
-
-window.copyInviteCode = function() {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return;
-  navigator.clipboard?.writeText(uid).catch(() => {});
-  window.showToast('Invite code copied');
-  alert('Your invite code:\n\n' + uid + '\n\nShare this with your partner.');
-};
-
-window.recordVoiceIntro = function() {
-  window.showToast('🎙️ Voice recording coming with Premium');
-};
-
-window.toggleNotifs = function() {
-  window.showToast('Notification settings coming soon');
-};
-
-window.logout = function() {
-  if (confirm('Log out of Nuvvu Nenu?')) {
-    signOut(auth).then(() => window.location.href = 'login.html');
-  }
-};
+// =========================================================================
+// helpers
+// =========================================================================
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function escapeAttr(s) {
+  return String(s ?? "").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}

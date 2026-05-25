@@ -82,3 +82,91 @@
 .game-card:active{transform:scale(.95)}
 .game-card .icon{font-size:28px;margin-bottom:6px}
 .game-card .name{font-size:var(--font-sm);font-weight:600}
+
+
+/* =====================================================================
+   Space Games — TTT, Connect 4, Chess UI shells.
+   All rules scoped under .sp-*. Paired with modules/spaceGames.js.
+   ===================================================================== */
+.sp-game-root{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:14px;display:flex;flex-direction:column;gap:12px;
+}
+.sp-game-root__head{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+}
+.sp-game-root__head h4{font-size:1rem;font-weight:700;color:var(--text);margin:0;flex:1 1 100%}
+.sp-turn{
+  font-size:.75rem;color:var(--muted);
+  display:inline-flex;align-items:center;gap:6px;
+}
+.sp-turn__badge{font-size:1rem}
+.sp-score{
+  font-size:.75rem;color:var(--text-secondary);
+  background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:99px;
+  margin-left:auto;
+}
+.sp-game-reset{
+  font-size:.75rem;padding:6px 12px;border-radius:99px;
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+}
+.sp-game-reset:hover{background:var(--card-hover)}
+.sp-empty{
+  text-align:center;padding:24px 12px;color:var(--muted);
+}
+.sp-empty__icon{font-size:32px;margin-bottom:6px}
+
+/* Tic Tac Toe */
+.sp-ttt{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+  max-width:320px;margin:0 auto;width:100%;aspect-ratio:1;
+}
+.sp-ttt__cell{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-size:2rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  font-family:inherit;color:var(--text);transition:background .15s var(--ease-out);cursor:pointer;
+}
+.sp-ttt__cell:hover{background:var(--card-hover)}
+.sp-ttt__cell.is-win{
+  background:linear-gradient(135deg,rgba(126,255,194,.2),rgba(155,140,255,.2));
+  border-color:rgba(126,255,194,.5);
+}
+
+/* Connect 4 */
+.sp-c4{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:4px;
+  background:linear-gradient(135deg,#2b3057,#1a1d33);padding:8px;border-radius:var(--radius-md);
+}
+.sp-c4__cell{
+  aspect-ratio:1;border-radius:50%;background:var(--bg);cursor:pointer;
+  transition:transform .12s var(--ease-out);
+}
+.sp-c4__cell:hover{transform:scale(1.04)}
+.sp-c4__cell.is-red    { background:linear-gradient(135deg,#ff7e8e,#ff3a55); }
+.sp-c4__cell.is-yellow { background:linear-gradient(135deg,#ffd97e,#ffba33); }
+.sp-c4__cell.is-win    { box-shadow:0 0 0 3px rgba(126,255,194,.7) inset; }
+
+/* Chess */
+.sp-chess{
+  display:grid;grid-template-columns:repeat(8,1fr);
+  max-width:360px;margin:0 auto;width:100%;
+  aspect-ratio:1;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;
+}
+.sp-chess__sq{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;line-height:1;cursor:pointer;border:0;
+  font-family:inherit;color:#1f1f25;
+}
+.sp-chess__sq.is-light{background:#f0e3c8}
+.sp-chess__sq.is-dark {background:#a07a4a;color:#fff}
+.sp-chess__sq.is-sel  {box-shadow:inset 0 0 0 3px var(--violet)}
+
+@media (max-width: 380px){
+  .sp-ttt{max-width:260px}
+  .sp-chess{max-width:300px}
+  .sp-chess__sq{font-size:1.1rem}
+}
+
+/* Game container slot inside space.js */
+.sp-game-slot{margin-top:8px}
+.sp-game-slot:empty{display:none}

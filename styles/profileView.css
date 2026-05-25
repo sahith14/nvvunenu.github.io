@@ -1,0 +1,62 @@
+/* =====================================================================
+   profileView — public, read-only profile (target uid = window.__viewUserUid)
+   All selectors are scoped under .pv-* / .pv-page.
+   ===================================================================== */
+
+.pv-page{display:flex;flex-direction:column;gap:14px;padding-bottom:24px}
+
+.pv-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:16px;display:flex;flex-direction:column;gap:12px;
+}
+.pv-top{display:flex;align-items:center;gap:14px}
+.pv-avatar{
+  width:72px;height:72px;border-radius:50%;flex:0 0 72px;
+  background:var(--surface);border:1px solid var(--border);
+  display:grid;place-items:center;
+  color:#fff;font-weight:700;font-size:1.5rem;overflow:hidden;
+}
+.pv-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.pv-name-row{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pv-name{font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv-handle{color:var(--muted);font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.pv-bio{color:var(--text-secondary);font-size:.9375rem;margin:0;line-height:1.45;white-space:pre-line}
+
+.pv-stats{display:flex;gap:8px;justify-content:space-around}
+.pv-stat{flex:1;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 6px}
+.pv-stat .num{font-size:1rem;font-weight:700;color:var(--text)}
+.pv-stat .label{font-size:.6875rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+
+.pv-actions{display:flex;gap:8px}
+.pv-actions .btn{flex:1}
+
+.pv-section-h{
+  font-size:.75rem;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--muted);font-weight:700;margin:8px 2px 4px;
+}
+
+/* Tile grid — 3-up */
+.pv-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4px;
+}
+.pv-tile{
+  position:relative;aspect-ratio:1;background:var(--surface);
+  border-radius:6px;overflow:hidden;cursor:pointer;
+  transition:opacity .15s var(--ease-out);
+}
+.pv-tile:hover{opacity:.92}
+.pv-tile img{width:100%;height:100%;object-fit:cover;display:block}
+.pv-tile--text{display:flex;align-items:center;justify-content:center;padding:8px;background:linear-gradient(135deg,rgba(155,140,255,.12),rgba(255,126,182,.08))}
+.pv-tile__text{font-size:.75rem;color:var(--text);text-align:center;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical}
+
+/* Empty state */
+.pv-empty{
+  text-align:center;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:28px 18px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.pv-empty--inline{padding:18px 12px;grid-column:1/-1}
+.pv-empty__icon{font-size:36px;line-height:1}
+.pv-empty h3{font-size:1.0625rem;font-weight:700;margin:4px 0 0}
+.pv-empty p{color:var(--muted);font-size:.9375rem;max-width:34ch;margin:0}

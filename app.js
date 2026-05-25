@@ -14,12 +14,23 @@ import { renderProfile }      from './modules/profile.js';
 import { renderSubscription } from './modules/subscription.js';
 import { renderChat, teardownChat } from './modules/chat.js';
 import { renderFeed, teardownFeed } from './modules/feed.js';
+import { renderSettings }     from './modules/settings.js';
+import { renderSearch }       from './modules/search.js';
+import { renderProfileView }  from './modules/profileView.js';
+import { applyTheme, getStoredTheme } from './modules/settings.js';
+// Side-effect: registers window.avatarFor / window.initialAvatar globals
+import './modules/avatar.js';
+// Side-effect: floating hearts BG + click sparkles + ripple + like-bursts
+import './modules/cuteFx.js';
 
 // Background services
 import { startIncomingCallListener, stopIncomingCallListener } from './modules/incomingCall.js';
 import { startPresence, stopPresence } from './services/presenceService.js';
 import { initAppState, teardownAppState } from './state/appState.js';
 import { ensureUsername } from './services/feedService.js';
+
+// Apply saved theme as early as possible to avoid flash of wrong theme.
+try { applyTheme(getStoredTheme()); } catch {}
 
 const pages = {
   home:         renderHome,
@@ -29,8 +40,18 @@ const pages = {
   moments:      renderMoments,
   bond:         renderBond,
   profile:      renderProfile,
-  subscription: renderSubscription
+  subscription: renderSubscription,
+  settings:     renderSettings,
+  search:       renderSearch,
+  profileView:  renderProfileView
 };
+
+// Pages whose entry exposes a teardownXxx() instead of returning a cleanup fn.
+const customTeardowns = {
+  chat: teardownChat,
+  feed: teardownFeed
+};
+
 let currentPage = 'home';
 let lastTeardown = null;
 
@@ -63,15 +84,15 @@ onAuthStateChanged(auth, (user) => {
 window.loadPage = function (page) {
   if (!pages[page]) return;
 
-  // teardown the previous page (chat keeps live listeners)
-  if (currentPage === 'chat' && page !== 'chat') {
-    try { teardownChat(); } catch {}
+  // Run custom teardown for the OUTGOING page (matching old behavior)
+  const outgoingTeardown = customTeardowns[currentPage];
+  if (outgoingTeardown && page !== currentPage) {
+    try { outgoingTeardown(); } catch (e) { console.warn('[router] teardown', currentPage, e); }
   }
-  if (currentPage === 'feed' && page !== 'feed') {
-    try { teardownFeed(); } catch {}
-  }
+
+  // Run cleanup returned by the previous render call
   if (typeof lastTeardown === 'function') {
-    try { lastTeardown(); } catch {}
+    try { lastTeardown(); } catch (e) { console.warn('[router] cleanup', e); }
     lastTeardown = null;
   }
 
@@ -79,16 +100,28 @@ window.loadPage = function (page) {
   const container = document.getElementById('page');
   container.className = 'page-enter';
   container.innerHTML = '';
-  Promise.resolve(pages[page](container)).catch((e) => console.warn('[router] page error', e));
+
+  // Highlight nav (search/settings have no nav button — that's fine)
   updateNav(page);
-  // scroll to top on page swap
+  // Reset scroll
   container.scrollTop = 0;
   window.scrollTo({ top: 0, behavior: 'instant' });
+
+  // Invoke render. If it returns a function, treat that as cleanup.
+  Promise.resolve(pages[page](container))
+    .then((maybeCleanup) => {
+      if (typeof maybeCleanup === 'function') lastTeardown = maybeCleanup;
+    })
+    .catch((e) => console.warn('[router] page error', e));
 };
 
 function updateNav(page) {
   document.querySelectorAll('.bottom-nav button').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.page === page);
+  });
+  // Settings/search are reachable from the header — highlight those if visible.
+  document.querySelectorAll('.app-header .ah-btn[data-page]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.page === page);
   });
 }
 

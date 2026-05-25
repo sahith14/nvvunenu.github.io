@@ -58,3 +58,68 @@
 .quick-action:active{transform:scale(.93);background:var(--card-hover)}
 .quick-action .icon{font-size:28px}
 .quick-action .label{font-size:var(--font-xs);color:var(--text-secondary);font-weight:500;text-align:center}
+
+
+/* =====================================================================
+   Home additions — presence photo+initial, poke, mood grid, battery range
+   ===================================================================== */
+
+/* Presence avatar can hold a photo OR an initial fallback */
+.presence-card{position:relative}
+.presence-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.presence-avatar #partnerInitial{font-weight:700;color:#fff}
+.presence-avatar .orb.presence-orb{
+  background:var(--muted);
+  transition:background-color .25s var(--ease-out), box-shadow .25s var(--ease-out);
+}
+.presence-avatar .orb.presence-orb.online{
+  background:var(--green);
+  box-shadow:0 0 0 2px var(--card), 0 0 8px rgba(126,255,194,.55);
+}
+.presence-card[data-paired="1"]{cursor:default}
+.presence-card:not([data-paired="1"]):hover{background:var(--card-hover)}
+
+/* Poke button */
+.poke-btn{
+  width:42px;height:42px;border-radius:var(--radius-full);
+  background:var(--surface);border:1px solid var(--border);
+  font-size:18px;display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 42px;color:var(--pink);
+  transition:all var(--duration-fast) var(--ease-out);
+}
+.poke-btn:hover{background:var(--card-hover);transform:scale(1.04)}
+.poke-btn:active{transform:scale(.95)}
+.poke-btn:disabled{opacity:.5;cursor:wait}
+
+/* Mood picker (modal contents) */
+.hm-mood-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;
+}
+.hm-mood-btn{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:12px 6px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-md);transition:all var(--duration-fast) var(--ease-out);
+  font-family:inherit;color:var(--text);
+}
+.hm-mood-btn:hover{background:var(--card-hover)}
+.hm-mood-btn.active{border-color:rgba(155,140,255,.6);background:rgba(155,140,255,.08)}
+.hm-mood-emoji{font-size:1.5rem;line-height:1}
+.hm-mood-label{font-size:.75rem;color:var(--muted);font-weight:500}
+.hm-mood-btn.active .hm-mood-label{color:var(--text)}
+
+.hm-battery-wrap{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.hm-battery-label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.hm-battery-label span{color:var(--pink);font-weight:700;letter-spacing:0;text-transform:none;font-size:.875rem}
+.hm-battery-wrap input[type="range"]{
+  -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;
+  background:linear-gradient(90deg,var(--pink),var(--violet));
+  outline:0;
+}
+.hm-battery-wrap input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;
+  background:#fff;border:2px solid var(--violet);cursor:pointer;
+}
+.hm-battery-wrap input[type="range"]::-moz-range-thumb{
+  width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--violet);
+  cursor:pointer;
+}

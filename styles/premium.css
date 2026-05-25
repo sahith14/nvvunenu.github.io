@@ -40,3 +40,36 @@
 .free-tier ul{margin-top:var(--space-sm);display:flex;flex-direction:column;gap:6px}
 .free-tier li{font-size:var(--font-sm);color:var(--text-secondary);padding-left:16px;position:relative}
 .free-tier li::before{content:'•';position:absolute;left:0;color:var(--muted)}
+
+
+/* =====================================================================
+   Premium additions — current-plan badge, off features, fineprint
+   ===================================================================== */
+.plan-card.current{
+  border-color:rgba(126,255,194,.5);
+  box-shadow:0 0 0 1px rgba(126,255,194,.25), var(--shadow-sm);
+}
+.plan-current-badge{
+  position:absolute;top:var(--space-md);right:var(--space-md);
+  padding:4px 10px;border-radius:var(--radius-full);
+  background:rgba(126,255,194,.15);color:#7effc2;font-size:var(--font-xs);font-weight:600;
+  letter-spacing:.3px;
+}
+.plan-card.current .plan-badge{display:none}
+
+.plan-features li.off{
+  color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.18);
+  opacity:.6;
+}
+.plan-features li.off::before{content:'×';color:var(--muted)}
+.plan-features li em{font-style:normal;color:var(--muted);font-size:.75rem;margin-left:4px}
+
+.premium-fineprint{
+  font-size:.75rem;color:var(--muted);text-align:center;padding:8px 12px 0;
+  line-height:1.5;
+}
+
+/* Disable the "you're on this plan" CTA */
+.plan-card.current .btn[data-act="noop"]{
+  opacity:.6;pointer-events:none;background:var(--surface);color:var(--muted);
+}

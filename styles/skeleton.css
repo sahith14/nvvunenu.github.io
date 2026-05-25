@@ -1,0 +1,77 @@
+/* =====================================================================
+   styles/skeleton.css — shimmer placeholders. Paired with utils/skeleton.js.
+   All selectors are scoped under .skeleton to avoid global leakage.
+   ===================================================================== */
+
+.skeleton{display:flex;flex-direction:column;gap:12px;padding:8px 0}
+
+.skeleton .sk-row,
+.skeleton .sk-card,
+.skeleton .sk-msg,
+.skeleton .sk-memory{
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  padding:14px;
+}
+.skeleton .sk-card,
+.skeleton .sk-memory{flex-direction:column;align-items:stretch;gap:10px}
+.skeleton .sk-msg{align-items:flex-start;background:transparent;border:0;padding:6px 0}
+
+.skeleton .sk-circle{
+  width:42px;height:42px;border-radius:50%;
+  flex:0 0 42px;
+}
+.skeleton .sk-square{
+  width:42px;height:42px;border-radius:8px;
+  flex:0 0 42px;
+}
+.skeleton .sk-lines{flex:1;display:flex;flex-direction:column;gap:8px}
+.skeleton .sk-line{height:10px;border-radius:6px}
+.skeleton .sk-line.w30{width:30%}
+.skeleton .sk-line.w40{width:40%}
+.skeleton .sk-line.w50{width:50%}
+.skeleton .sk-line.w60{width:60%}
+.skeleton .sk-line.w70{width:70%}
+.skeleton .sk-line.w80{width:80%}
+
+.skeleton .sk-bubble{
+  width:60%;max-width:220px;height:36px;border-radius:18px;
+}
+.skeleton .sk-box{
+  width:100%;height:120px;border-radius:12px;
+}
+.skeleton .sk-grid{
+  width:100%;height:160px;border-radius:12px;
+}
+
+/* Shimmer */
+.skeleton .sk-circle,
+.skeleton .sk-square,
+.skeleton .sk-line,
+.skeleton .sk-bubble,
+.skeleton .sk-box,
+.skeleton .sk-grid{
+  background:
+    linear-gradient(90deg,
+      rgba(255,255,255,.04) 0%,
+      rgba(255,255,255,.10) 50%,
+      rgba(255,255,255,.04) 100%);
+  background-size:200% 100%;
+  animation:sk-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes sk-shimmer{
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .skeleton .sk-circle,
+  .skeleton .sk-square,
+  .skeleton .sk-line,
+  .skeleton .sk-bubble,
+  .skeleton .sk-box,
+  .skeleton .sk-grid{ animation: none; opacity: .8; }
+}

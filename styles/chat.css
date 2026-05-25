@@ -129,3 +129,33 @@
 
 @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+
+
+
+/* =====================================================================
+   AI suggested-reply chips (between typing indicator and composer)
+   ===================================================================== */
+.chat-suggest{
+  display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;
+  padding:6px 12px 8px;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+  border-top:1px solid var(--border);
+}
+.chat-suggest::-webkit-scrollbar{display:none}
+.chat-suggest__chip{
+  flex:0 0 auto;
+  padding:8px 14px;border-radius:99px;
+  background:var(--card);border:1px solid var(--border);
+  color:var(--text);font-size:.875rem;font-weight:500;
+  white-space:nowrap;cursor:pointer;
+  transition:all var(--duration-fast) var(--ease-out);
+}
+.chat-suggest__chip:hover{
+  background:var(--card-hover);
+  border-color:rgba(155,140,255,.45);
+}
+.chat-suggest__chip:active{transform:scale(.96)}
+.chat-suggest__chip:disabled{opacity:.5;cursor:wait}
+
+/* Loading shell while resolving partner / chatId */
+.chat-shell-loading{padding:16px}
