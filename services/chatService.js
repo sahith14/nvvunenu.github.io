@@ -97,7 +97,6 @@ export async function fetchOlder(chatId, beforeDoc, pageSize = PAGE) {
 }
 
 // ---- SEND ----
-export async function sendText(chatId, partnerId, text) {
 export async function sendText(chatId, partnerId, text, replyTo = null) {
   const uid = auth.currentUser?.uid;
   const trimmed = (text || "").trim();
