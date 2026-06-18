@@ -412,7 +412,6 @@ function renderMessages(msgs) {
 }
 
 function renderReactions(msg) {
-function renderReactions(msg) {
   const r = msg.reactions || {};
   const entries = Object.entries(r);
   if (!entries.length) return '';
